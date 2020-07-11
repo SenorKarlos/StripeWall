@@ -1,10 +1,10 @@
 # Discord Oauth2 Site Wall and Stripe Management
 
-1: Pull Repo & Pull seperate PMSF install. Configure PMSF as fully restricted or to show perhaps areas and geojson, whatever you allow for free.<br/>
+1: Pull Repo & Pull seperate PMSF install. Configure PMSF as fully restricted or to show perhaps areas and geojson, whatever you allow for free. Do not use discord auth/access config on this install.<br/>
 note: I can't reccomend enough a CDN like cloudflare with authenticated origin pull support, SSL, and DNSSEC. Provided NGINX example covers standard SSL config & www-> root redirects.<br/>
 2: Take oauth.php and insert into PMSF Root. create directory oauth. Edit config.php.example and save to this folder as config.php.<br/>
 3: Create Discord bot in Discord Developer Console (or use existing bot), and ensure it has administrative privileges in your server (assign roles and manage members minimum).<br/>
-4: Fill out config.ini.example and remove '.example'.<br/>
+4: Fill out config.ini.example and remove '.example'. Create database per your config and run the SQL at the bottom to make the tables.<br/>
 5: Add redirect_url from your completed config.ini to your Discord Bot. (/login URL) <br/>
 6: Create a webhook in Stripe, add the following events to the stripe webook, point to https://yourmap.com/webhook:<br/>
 charge.refunded, customer.deleted, charge.succeeded, customer.subscription.created, customer.subscription.deleted, customer.subscription.updated, customer.updated, invoice.payment_failed<br\>
