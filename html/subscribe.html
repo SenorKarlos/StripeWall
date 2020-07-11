@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    .rcorners1 {
+        border-radius: 30px;
+        border: 5px solid #52AFFF;
+        padding: 30px;
+        min-width:50px!important;
+        max-width:99.99%!important;
+        margin: 50px;
+        transition: width 0.25s;
+        min-height:50px!important;
+        max-height:99.99%!important;
+        box-shadow:  0 0 20px  rga(0,0,0,0.6);
+        -moz-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        -webkit-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        -o-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+    }
+    .top {
+      background: url("/static/banner_top.png");
+      background-size: 100% 440px;
+      background-repeat: no-repeat;
+      margin: -8px;
+    }
+    .bottom {
+      background: url("/static/banner_bottom.png");
+      background-size: 100% 196px;
+      background-repeat: no-repeat;
+      margin: -10px;
+    }
+    .content {
+      max-width: 480px;
+      margin: auto;
+      text-align: center;
+    }
+    .left {
+      text-align: left;
+      display: inline-block
+    }
+    .unsubscribe {
+      font-size: 10pt;
+    }
+    .fineprint {
+      font-size: 8pt;
+    }
+    .details {
+      font-size: 10pt;
+    }
+    img {
+      width: 100%;
+    }
+    form article label {
+      display: block;
+      margin: 5px;
+    }
+    form .submit {
+      margin: 15px 0;
+    }
+    body {
+        margin: 50px auto;
+        background-color: #F6F6F6;
+        text-align: center;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+
+    /* The Modal (background) */
+    .modal {
+      display: none; /* Hidden by default */
+      position: fixed; /* Stay in place */
+      z-index: 1; /* Sit on top */
+      padding-top: 20px; /* Location of the box */
+      left: 0;
+      top: 0;
+      width: 100%; /* Full width */
+      height: 100%; /* Full height */
+      overflow: auto; /* Enable scroll if needed */
+      background-color: rgb(0,0,0); /* Fallback color */
+      background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    }
+
+    /* Modal Content */
+    .modal-content {
+      background-color: #00FF00;
+      margin: auto;
+      opacity: 0.9;
+      padding: 10px;
+      border: 2px solid #888;
+      height: 60px;
+      width: 80%;
+    }
+
+    /* The Close Button */
+    .close {
+      color: #aaaaaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: #000;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="rcorners1">
+    <center>
+      <div>
+        <div>
+          <h1><%= map_name %></h1>
+          <p><strong><font color="red">We hope you enjoyed the free weekend! Please consider subscribing to support the map and your fellow trainers!</font></strong></p>
+        </div>
+        <div>
+          <h2>Gold Star Trainer Status</h2>
+          <p>
+              This donation will give you access to:<br>
+              <div class="details"><strong>
+                <p>Full and detailed Map</p>
+                <p>Pokemon, Raid, and/or Quest Subscriptions delivered to your DMs</p>
+                <p>Many pre-set Discord Channel feeds for Raids, Pokemon, and Quests.</p>
+              </strong></div>
+          </p>
+          <form action="/success" method="post">
+            <script src="https://checkout.stripe.com/checkout.js" class="stripe-button"
+                    data-key="<%= key %>"
+                    data-image=""
+                    data-name="<%= map_name %>"
+                    data-description="Gold Star Status"
+                    data-amount="499"
+                    data-locale="auto"
+                    data-zip-code="true"
+                    data-panel-label="Subscribe"
+                    data-email="<%= email %>"
+                    data-label="$<%= amt/100 %>/mo"></script>
+          </form>
+        </div>
+
+        <br>
+        <hr>
+
+        <div>
+          <h4>Update Your Payment Method</h4>
+          <form action="/success" method="post">
+            <script src="https://checkout.stripe.com/checkout.js" class="stripe-button"
+                    data-key="<%= key %>"
+                    data-image=""
+                    data-name="<%= map_name %>"
+                    data-description="Update Payment Method"
+                    data-locale="auto"
+                    data-zip-code="true"
+                    data-panel-label="Update"
+                    data-email="<%= email %>"
+                    data-label="Update"></script>
+          </form>
+        </div>
+
+        <br>
+        <hr>
+
+        <div>
+          <div class="fineprint">
+            <p>Your recurring donation can be cancelled at any time by clicking the button below.</p>
+            <form action="/unsubscribed" method="post" id="form1">
+              <input type="submit" value="Unsubscribe">
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="content">
+          <br>
+          <hr>
+          <div class="fineprint">
+            <p>We NEVER receive, store, or view any sensitive customer credit card information.  All of our credit card processing is managed directly and solely by Stripe, a PCI Level 1 Compliant Service Provider.</p>
+            <a href=https://stripe.com/docs/security/stripe>https://stripe.com/docs/security/stripe</a>
+            <p>Do not redistribute data outside of donor channels. Doing so will result in immediate revokation of all access. Due to the nature of these services, there are no guarantees or refunds for donations. <%= map_name %> is a Non-Profit service.</p>
+            <p>We are not associated with Niantic, ThePokemonCompany, or any of it's subsidiaries.</p>
+            <p><strong>All spawn locations, POIs, and data are "crowd-sourced" by the community.</strong></p>
+            <br>
+          </div>
+        </div>
+      </div>
+      <!-- The Modal -->
+      <div id="myModal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <p><strong>You have successfully unsubscribed for the below account and can close the page!<br><%= email %></strong></p>
+        </div>
+
+      </div>
+    </center>
+  </div>
+
+  <script>
+    var modal = document.getElementById("myModal");
+    var btn = document.getElementById("form1");
+    var span = document.getElementsByClassName("close")[0];
+    btn.onsubmit = function() { modal.style.display = "block"; }
+    span.onclick = function() { modal.style.display = "none"; }
+    window.onclick = function(event) {
+      if(event.target == modal) { modal.style.display = "none"; }
+    }
+  </script>
+</body>
+</html>
