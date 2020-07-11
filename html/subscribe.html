@@ -5,7 +5,7 @@
   <style>
     .rcorners1 {
         border-radius: 30px;
-        border: 5px solid #52AFFF;
+        border: 5px solid #F93318;
         padding: 30px;
         min-width:50px!important;
         max-width:99.99%!important;
@@ -114,12 +114,12 @@
       <div>
         <div>
           <h1><%= map_name %></h1>
-          <p><strong><font color="red">We hope you enjoyed the free weekend! Please consider subscribing to support the map and your fellow trainers!</font></strong></p>
+          <p><strong><font color="red">Welcome to <%= map_name %>! You can use this page to start, update or cancel your subscription. Thank you for your support!</font></strong></p>
         </div>
         <div>
-          <h2>Gold Star Trainer Status</h2>
+          <h2><%= plan_name %></h2>
           <p>
-              This donation will give you access to:<br>
+              This subscription will give you access to:<br>
               <div class="details"><strong>
                 <p>Full and detailed Map</p>
                 <p>Pokemon, Raid, and/or Quest Subscriptions delivered to your DMs</p>
@@ -131,8 +131,8 @@
                     data-key="<%= key %>"
                     data-image=""
                     data-name="<%= map_name %>"
-                    data-description="Gold Star Status"
-                    data-amount="499"
+                    data-description="<%= plan_name %>"
+                    data-amount="<%= amt %>"
                     data-locale="auto"
                     data-zip-code="true"
                     data-panel-label="Subscribe"
@@ -165,7 +165,7 @@
 
         <div>
           <div class="fineprint">
-            <p>Your recurring donation can be cancelled at any time by clicking the button below.</p>
+            <p>Your recurring payment can be cancelled at any time by clicking the button below.</p>
             <form action="/unsubscribed" method="post" id="form1">
               <input type="submit" value="Unsubscribe">
             </form>
@@ -180,9 +180,10 @@
           <div class="fineprint">
             <p>We NEVER receive, store, or view any sensitive customer credit card information.  All of our credit card processing is managed directly and solely by Stripe, a PCI Level 1 Compliant Service Provider.</p>
             <a href=https://stripe.com/docs/security/stripe>https://stripe.com/docs/security/stripe</a>
-            <p>Do not redistribute data outside of donor channels. Doing so will result in immediate revokation of all access. Due to the nature of these services, there are no guarantees or refunds for donations. <%= map_name %> is a Non-Profit service.</p>
+            <p>Do not redistribute scanned data. The sole exception being Raids you plan to attend ONLY. Doing so will result in immediate revokation of all access.</p>
             <p>We are not associated with Niantic, ThePokemonCompany, or any of it's subsidiaries.</p>
-            <p><strong>All spawn locations, POIs, and data are "crowd-sourced" by the community.</strong></p>
+            <p><strong>All services are subject to downtimes for various reasons. Please monitor the Discord Server for Updates.</strong></p>
+            <a href=<%= map_url %>/discord><%= map_url %>/discord</a>
             <br>
           </div>
         </div>

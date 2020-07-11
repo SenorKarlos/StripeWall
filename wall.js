@@ -53,7 +53,7 @@ server.get("/login", async (req, res) => {
   }
 
   // REDIRECT IF NO IP IS SEEN
-  if (!req.session.ip || req.session.ip == undefined) {
+/*   if (!req.session.ip || req.session.ip == undefined) {
     return res.redirect(config.map_url);
   }
 
@@ -65,10 +65,10 @@ server.get("/login", async (req, res) => {
     req.session.fp.hash = req.query.fp;
     req.session.fp.device = req.query.device;
     req.session.fp.updated = time_now;
-  }
+  } */
 
   // LOG USER DEVICE
-  if (req.query.device) {
+/*   if (req.query.device) {
     req.session.device = req.query.device;
   }
 
@@ -81,7 +81,7 @@ server.get("/login", async (req, res) => {
   if (!req.session.fp.hash || req.session.fp.updated < (time_now - 3600000)) {
     req.session.fp.updated = time_now;
     return res.redirect(`/fp`);
-  }
+  } */
 
   // CHECK USER TOKEN STATUS
   let bad_token = false;
@@ -109,6 +109,7 @@ server.get("/login", async (req, res) => {
     let user = await oauth2.fetchUser(data.access_token);
 
     req.session.discord_id = user.id;
+    req.session.email = user.email;
     req.session.access_token = data.access_token;
     req.session.refresh_token = data.refresh_token;
     req.session.token_expiration = (unix_now + data.expires_in);
@@ -131,8 +132,8 @@ server.get("/login", async (req, res) => {
 
     database.userTrack(req.session);
     database.runQuery(`INSERT IGNORE INTO oauth_queue (user_id, guild_id, last_login, token, inserted) VALUES (?, ?, ?, ?, ?)`, [req.session.discord_id, config.guild_id, bot.getTime("short"), data.access_token, unix_now]);
-    let user_data = [req.session.discord_id, member.user.username, bot.getTime("short"), config.map_name, config.guild_id, data.access_token, data.refresh_token, req.session.token_expiration, unix_now]
-    database.runQuery(`INSERT IGNORE INTO oauth_users (user_id, user_name, last_login, map_name, map_guild, access_token, refresh_token, token_expiration, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, user_data);
+    let user_data = [req.session.discord_id, member.user.username, bot.getTime("short"), config.map_name, config.guild_id, req.session.email, data.access_token, data.refresh_token, req.session.token_expiration, unix_now]
+    database.runQuery(`INSERT IGNORE INTO oauth_users (user_id, user_name, last_login, map_name, map_guild, email, access_token, refresh_token, token_expiration, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, user_data);
     database.runQuery(`UPDATE IGNORE oauth_users SET access_token = ?, refresh_token = ?, token_expiration = ?, last_updated = ? WHERE user_id = ?`, [data.access_token, data.refresh_token, req.session.token_expiration, unix_now, user.id]);
 
     switch (true) {
@@ -250,14 +251,14 @@ server.get("/login", async (req, res) => {
 server.get("/subscribe", async function(req, res) {
   let time_now = moment().valueOf();
   let unix_now = moment().unix();
-  if (!req.session.fp) {
+/*   if (!req.session.fp) {
     req.session.fp = {};
   }
   if (!req.session.fp.hash || req.session.fp.updated < (time_now - 3600000)) {
     req.session.fp.updated = time_now;
     req.session.fp.forward = "subscribe";
     return res.redirect(`/fp`);
-  }
+  } */
   let user = await database.fetchUser(req.session.discord_id);
   if (!user) {
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.redirect_url}&state=subscribe`);
@@ -276,10 +277,11 @@ server.get("/subscribe", async function(req, res) {
   } else {
     return res.render(__dirname + "/html/subscribe.html", {
       map_name: config.map_name,
+      plan_name: config.STRIPE.plan_name,
       key: config.STRIPE.live_pk,
       email: user.user_name + " - " + user.email,
       id: req.query.id,
-      amt: 499,
+      amt: config.STRIPE.plan_cost,
       guild: config.guild_id
     });
   }
@@ -316,11 +318,16 @@ server.post("/success", async function(req, res) {
   let customer = "",
     subscription = "";
   let user = await database.fetchUser(req.session.discord_id);
+  let member = bot.guilds.cache.get(config.guild_id).members.cache.get(req.session.discord_id);
   if (user.stripe_id) {
     customer = await stripe.customer.fetch(user.stripe_id);
   }
   if (!customer || customer.deleted == true) {
     customer = await stripe.customer.create(user.user_name, user.user_id, user.email, req.body.stripeToken);
+    if (customer == "ERROR") {
+      bot.sendDM(member, "Payment Failed", "Your Subscription payment unfortunately failed. Please check your card account or try a different card.", "FF0000");
+      return res.redirect("/subscribe");
+    }
   }
   if (!customer.subscriptions.data[0]) {
     subscription = await stripe.subscription.create(customer, user.user_id);
@@ -328,12 +335,15 @@ server.post("/success", async function(req, res) {
     subscription = await stripe.customer.update(user.user_id, customer, req.body.stripeToken);
   }
   if (subscription == "ERROR") {
-    let member = bot.guilds.cache.get(config.guild_id).members.cache.get(req.session.discord_id);
-    bot.sendDM(member, "Payment Failed", "Your Subscription payment unfortunately failed. Please check your card account or try a different card please. Have a good day!", "FF0000");
+    bot.sendDM(member, "Payment Failed", "Your Subscription payment unfortunately failed. Please check your card account or try a different card.", "FF0000");
+    return res.redirect("/subscribe");
+  } else if (subscription == "INCOMPLETE") {
+    bot.sendDM(member, "Payment Failed", "Your Subscription payment unfortunately failed, but a customer record was created. Use the Update button after checking your card account or try a different card.", "FF0000");
     return res.redirect("/subscribe");
   } else {
-    bot.assignDonor(req.session.discord_id);
-    return res.redirect(config.map_url);
+    setTimeout(function() {
+      return res.redirect(config.map_url);
+    }, 5000);
   }
 });
 //------------------------------------------------------------------------------
@@ -366,31 +376,33 @@ server.get("/error", async function(req, res) {
 //------------------------------------------------------------------------------
 //  FINGERPRINT PAGE
 //------------------------------------------------------------------------------
-server.get("/fp", async function(req, res) {
+/* server.get("/fp", async function(req, res) {
   return res.render(__dirname + "/html/fingerprint.html");
-});
+}); */
 //------------------------------------------------------------------------------
 //  SYNC USER GUILDS
 //------------------------------------------------------------------------------
-ontime({
+/* ontime({
   cycle: ["03:00:00"]
 }, function(ot) {
   console.info("[" + bot.getTime("stamp") + "] [wall.js] Starting User Guild Check.");
   database.guildsCheck();
   ot.done();
+  console.info("[" + bot.getTime("stamp") + "] [wall.js] User Guild Check Complete.");
   return;
-});
+}); */
 //------------------------------------------------------------------------------
 //  SYNC DISCORD ROLES AND STRIPE SUSBCRIBERS
 //------------------------------------------------------------------------------
 if (config.test_mode != true) {
   let times = ["05:30:00", "11:30:00", "17:30:00", "23:30:00"];
-  console.info("[" + bot.getTime("stamp") + "] [wall.js] Ontime schedule initiated for Stripe database maintenance.");
   ontime({
     cycle: times
   }, function(ot) {
+    console.info("[" + bot.getTime("stamp") + "] [wall.js] Starting Stripe Database Maintenance.");
     database.checkDonors();
     ot.done();
+    console.info("[" + bot.getTime("stamp") + "] [wall.js] Stripe Database Maintenance Complete.");
     return;
   });
 }
@@ -400,9 +412,10 @@ if (config.test_mode != true) {
 ontime({
   cycle: ["05:15:00", "11:15:00", "17:15:00", "23:15:00"]
 }, function(ot) {
-  console.info("[" + bot.getTime("stamp") + "] [wall.js] Starting Stripe customer synchronization.");
+  console.info("[" + bot.getTime("stamp") + "] [wall.js] Starting Stripe Customer Synchronization.");
   stripe.customer.list();
   ot.done();
+  console.info("[" + bot.getTime("stamp") + "] [wall.js] Stripe Customer Synchronization Complete.");
   return;
 });
 //------------------------------------------------------------------------------

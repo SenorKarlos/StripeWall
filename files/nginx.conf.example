@@ -1,17 +1,33 @@
 server {
-    listen 80;
-    server_name map.com.org www.map.com;
+    listen 443;
+    ssl    on;
+    ssl_certificate    /path/to/certs.pem;
+    ssl_certificate_key    /path/to/certs.key;
+    server_name www.yoursite.com;
+    return 301 $scheme://yoursite.com$request_uri;
+}
 
-    location ~ /(\.|cron|lib|LICENSE|config)
+server {
+    listen 443;
+    ssl    on;
+    ssl_certificate    /path/to/certs.pem;
+    ssl_certificate_key    /path/to/certs.key;
+    server_name yoursite.com;
+
+    # Some Basic lockdown of folders and files
+    # Lock folders
+    location ~ /(\.|cron|lib|LICENSE|config|scripts)
     {
         return 444;
     }
-    location ~* \.(conf|md|sql)
+    # Lock Extensions
+    location ~* \.(conf|md|sql|sh|back|backup)
     {
         return 444;
     }
 
     rewrite ^/raw_data$ /raw_data.php?$1 last;
+    rewrite ^/gym_data$ /gym_data.php?$1 last;
     rewrite ^/motd_data$ /motd_data.php?$1 last;
     rewrite ^/submit /submit.php?$1 last;
     rewrite ^/search /search.php?$1 last;
@@ -20,15 +36,12 @@ server {
     rewrite ^/user$ /user.php?$1 last;
     rewrite ^/discord-login$ /discord-login.php?$1 last;
 
-    #charset koi8-r;
-
-    error_log /var/log/nginx/error.log warn;
-
-    #access_log  logs/host.access.log  main;
+    error_log /var/log/nginx/main.error.log warn;
+    access_log /var/log/nginx/main.access.log;
 
     location / {
-        include /etc/nginx/mime.types;
-        root /var/www/html/Tallahassee;
+    include /etc/nginx/mime.types;
+        root /path/to/PMSF;
         index oauth.php index.html index.htm;
     }
 
@@ -38,7 +51,7 @@ server {
     }
 
     location ~ \.php$ {
-        root /var/www/html/Tallahassee;
+        root /path/to/PMSF;
         try_files $uri =404;
         fastcgi_pass unix:/var/run/php/php7.2-fpm.sock;
         fastcgi_index oauth.php;
@@ -48,47 +61,56 @@ server {
         include fastcgi_params;
     }
 
+    # deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    #
     location ~ /\.ht {
         deny all;
     }
 
     location /login {
-        proxy_pass http://localhost:7770/login;
+        proxy_pass http://localhost:7777/login;
     }
 
     location /subscribe {
-        proxy_pass http://localhost:7770/subscribe;
+        proxy_pass http://localhost:7777/subscribe;
     }
 
     location /unsubscribe {
-        proxy_pass http://localhost:7770/subscribe;
+        proxy_pass http://localhost:7777/subscribe;
     }
 
     location /unsubscribed {
-        proxy_pass http://localhost:7770/unsubscribed;
+        proxy_pass http://localhost:7777/unsubscribed;
     }
 
     location /success {
-        proxy_pass http://localhost:7770/success;
+        proxy_pass http://localhost:7777/success;
     }
 
     location /webhook {
-        proxy_pass http://localhost:7770/webhook;
+        proxy_pass http://localhost:7777/webhook;
     }
 
     location /fp {
-        proxy_pass http://localhost:7770/fp;
+        proxy_pass http://localhost:7777/fp;
     }
 
     location /device {
-        proxy_pass http://localhost:7770/device;
+        proxy_pass http://localhost:7777/device;
     }
 
     location /error {
-        proxy_pass http://localhost:7770/error;
+        proxy_pass http://localhost:7777/error;
     }
 
     location /blocked {
-        proxy_pass http://localhost:7770/blocked;
+        proxy_pass http://localhost:7777/blocked;
     }
+
+    location /discord {
+        rewrite ^/discord(.*) https://discord.gg/INVITE permanent;
+    }
+        
 }
+

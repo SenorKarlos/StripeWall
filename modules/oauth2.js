@@ -31,23 +31,21 @@ const oauth2 = {
       });
     });
   },
-  refreshAccessToken: function(refresh_token) {
-    return new Promise(async function(resolve) {
-      let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=refresh_token&refresh_token=${refresh_token}&redirect_uri=${config.refresh_token_url}&scope=${oauth2.scope}`;
-      let headers = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      }
-      axios.post("https://discord.com/api/oauth2/token", data, {
-        headers: headers
-      }).then(async function(response) {
-        console.log("SUCCESSFULLY REFRESHED A TOKEN", response.data);
-        return resolve(response.data);
-      }).catch(error => {
-        console.error("[Oauth2+Stripe] [oauth2.js]", error.response);
-        return resolve(error);
-      });
+/*   refreshAccessToken: function(refresh_token) {
+    let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=refresh_token&refresh_token=${refresh_token}&redirect_uri=${config.redirect_url}&scope=${oauth2.scope}`;
+    let headers = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    }
+    axios.post("https://discord.com/api/oauth2/token", data, {
+      headers: headers
+    }).then(async function(response) {
+      console.log("SUCCESSFULLY REFRESHED A TOKEN", response.data);
+      return resolve(response.data);
+    }).catch(error => {
+      console.error("[Oauth2+Stripe] [oauth2.js]", error.response);
+      return resolve(error);
     });
-  },
+  }, */
   //------------------------------------------------------------------------------
   //  FETCH DISCORD USER
   //------------------------------------------------------------------------------

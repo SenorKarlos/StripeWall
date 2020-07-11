@@ -180,14 +180,14 @@ const object = {
           user_name = "",
           user_id = "";
         bot.users.fetch(session.discord_id).then(async target => {
-          let insert_query = `INSERT IGNORE INTO oauth_fingerprints (user_id, user_name, ip_address, fingerprint, map_name, map_guild, device) VALUES (?,?,?,?,?,?,?)`;
-          let insert_data = [session.discord_id, target.username, session.ip, session.fp.hash, config.map_name, config.guild_id, session.fp.device];
+          let insert_query = `INSERT IGNORE INTO oauth_fingerprints (user_id, user_name, ip_address, map_name, map_guild) VALUES (?,?,?,?,?)`;
+          let insert_data = [session.discord_id, target.username, session.ip, config.map_name, config.guild_id];
           await object.db.query(insert_query, insert_data, function(err, inserted, fields) {
             if (err) {
               console.error(err);
             }
-            let fp_query = `SELECT * FROM oauth_fingerprints WHERE ip_address = ? AND fingerprint = ? AND user_id <> ?`;
-            let fp_data = [session.ip, session.fp.hash, session.discord_id];
+            let fp_query = `SELECT * FROM oauth_fingerprints WHERE ip_address = ? AND user_id <> ?`;
+            let fp_data = [session.ip, session.discord_id];
             object.db.query(fp_query, fp_data, async function(err, users, fields) {
               if (err) {
                 console.error(err);
@@ -201,8 +201,8 @@ const object = {
                 });
                 matches.full = matches.full.slice(0, -1).replace(/,/g, '\n')
               }
-              let match_query = `SELECT * FROM oauth_fingerprints WHERE fingerprint = ? AND map_guild = ? AND user_id <> ?`;
-              let match_data = [session.fp.hash, config.guild_id, session.discord_id];
+              let match_query = `SELECT * FROM oauth_fingerprints WHERE map_guild = ? AND user_id <> ?`;
+              let match_data = [config.guild_id, session.discord_id];
               object.db.query(match_query, match_data, async function(err, users, fields) {
                 if (err) {
                   console.error(err);
@@ -247,12 +247,12 @@ const object = {
               if (member.roles.cache.has(config.donor_role_id)) {
                 if (!user.stripe_id) {
                   bot.removeDonor(member.id);
-                  return bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role.', config.stripe_log_channel);
+                  return bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Internal Check)', config.stripe_log_channel);
                 } else {
                   customer = await stripe.customer.fetch(user.stripe_id);
                   if (!customer || customer.deleted == true || !customer.subscriptions || !customer.subscriptions.data[0]) {
                     bot.removeDonor(member.id);
-                    bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role.', config.stripe_log_channel);
+                    bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Stripe Check)', config.stripe_log_channel);
                     query = `UPDATE oauth_users SET stripe_id = NULL, plan_id = NULL WHERE user_id = ? AND map_guild = ?`;
                     data = [member.id, config.guild_id];
                     return object.runQuery(query, data);
@@ -269,16 +269,21 @@ const object = {
                   await object.runQuery(query, data);
                   return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Updated ' + user.user_name + ' Record to Reflect no Stripe information.', config.stripe_log_channel);
                 } else if (!customer.subscriptions.data[0]) {
-                  stripe.customer.delete(customer.id);
-                  query = `UPDATE oauth_users SET stripe_id = NULL, plan_id = NULL WHERE user_id = ? AND map_guild = ?`;
+                  query = `UPDATE oauth_users SET plan_id = NULL WHERE user_id = ? AND map_guild = ?`;
                   data = [member.id, config.guild_id];
                   await object.runQuery(query, data);
-                  return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Deleted Customer record for ' + user.user_name + ' (' + member.id + ').', config.stripe_log_channel);
+                  return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Deleted Subscription Plan record for ' + user.user_name + ' (' + member.id + ').', config.stripe_log_channel);
                 } else if (customer.subscriptions.data[0].status == 'active') {
                   bot.assignDonor(member.id);
-                  return bot.sendEmbed(member, 'FF0000', 'User found without Donor Role ⚠', 'Assigned Donor Role.', config.stripe_log_channel);
+                  return bot.sendEmbed(member, 'FF0000', 'User found without Donor Role ⚠', 'Assigned Donor Role. (Stripe Check)', config.stripe_log_channel);
                 }
               }
+            } else {
+              member = user.user_id;
+              query = `UPDATE oauth_users SET map_guild = NULL, access_token = NULL, refresh_token = NULL, token_expiration = NULL WHERE user_id = ?`;
+              data = [member.id];
+              await object.runQuery(query, data);
+              return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Tokens and Guild Association for ' + user.user_name + ' (' + member.id + ').', config.stripe_log_channel);
             }
           }, 5000 * index);
         });
@@ -311,7 +316,7 @@ const object = {
                   if (member.roles.cache.has(config.donor_role_id)) {
                     bot.removeDonor(member.id);
                   }
-                  bot.sendEmbed(member, 'FF0000', 'No Customer found for this User ⚠', 'Removed Donor Role.', config.stripe_log_channel);
+                  bot.sendEmbed(member, 'FF0000', 'No Customer found for this User ⚠', 'Removed Donor Role. (Member Check)', config.stripe_log_channel);
                   query = `UPDATE oauth_users SET stripe_id = NULL, plan_id = NULL WHERE user_id = ? AND map_guild = ?`;
                   data = [member.id, config.guild_id];
                   return object.runQuery(query, data);
@@ -331,7 +336,7 @@ const object = {
     return;
   },
   tokenRefresh: function() {
-    let query = `SELECT * FROM oauth_users WHERE token_expiration < UNIX_TIMESTAMP() AND refresh_token is NOT NULL`;
+/*     let query = `SELECT * FROM oauth_users WHERE token_expiration < UNIX_TIMESTAMP() AND refresh_token is NOT NULL`;
     let data = [config.guild_id];
     object.db.query(query, data, async function(err, records, fields) {
       if (err) {
@@ -339,14 +344,14 @@ const object = {
       } else {
         records.forEach((record, i) => {
           setTimeout(function() {
+            console.log('[database.js] ['+bot.getTime('stamp')+'] Refreshing Token for '+record.user_name+' ('+record.user_id+').');
             let new_data = oauth2.refreshAccessToken(record.refresh_token);
-            console.log(new_data);
             object.runQuery(`UPDATE IGNORE oauth_users SET access_token = ?, refresh_token = ?, token_expiration = ?, last_updated = ? WHERE user_id = ?`, [new_data.access_token, new_data.refresh_token, (moment().unix() + new_data.expires_in - 21600), moment().unix(), record.user_id]);
           }, 60000 * i);
         });
       }
     });
-    return;
+    return; */
   },
   //------------------------------------------------------------------------------
   //  USER GUILDS CHECK

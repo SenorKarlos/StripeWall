@@ -81,6 +81,7 @@ bot.assignDonor = (user_id) => {
     return false;
   } else if (!member.roles.cache.has(config.donor_role_id)) {
     member.roles.add(config.donor_role_id);
+    console.error('[' + bot.getTime('stamp') + '] [bot.js] Assigned the User a donor role.');
     return true;
   } else {
     return false;
@@ -97,6 +98,7 @@ bot.removeDonor = (user_id) => {
     return false;
   } else if (member.roles.cache.has(config.donor_role_id)) {
     member.roles.remove(config.donor_role_id);
+    console.error('[' + bot.getTime('stamp') + '] [bot.js] Removed the donor role from the User.');
     return true;
   } else {
     return false;

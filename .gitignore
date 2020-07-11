@@ -24,16 +24,5 @@ hs_err_pid*
 
 *.ini
 /files/*.ini
-files/gainesville
-files/forwalton
-files/columbus
-files/tallahassee
-files/montgomery
-files/jackson
-files/memphis
-files/oklahomacity
-files/rdm
-files/testing
 non-obfuscated
 SampleWebhooks
-test-wall.js
