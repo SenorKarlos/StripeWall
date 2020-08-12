@@ -273,7 +273,7 @@ const object = {
                   data = [member.id, config.guild_id];
                   await object.runQuery(query, data);
                   return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Deleted Subscription Plan record for ' + user.user_name + ' (' + member.id + ').', config.stripe_log_channel);
-                } else if customer.subscriptions.data[0] && (customer.subscriptions.data[0].status == 'active') {
+                } else if (customer.subscriptions.data[0] && customer.subscriptions.data[0].status == 'active') {
                   bot.assignDonor(member.id);
                   return bot.sendEmbed(member, 'FF0000', 'User found without Donor Role ⚠', 'Assigned Donor Role. (Stripe Check)', config.stripe_log_channel);
                 } else {
