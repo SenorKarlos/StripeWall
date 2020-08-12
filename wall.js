@@ -201,14 +201,14 @@ server.get("/login", async (req, res) => {
           database.runQuery(`UPDATE IGNORE oauth_users SET last_login = ? WHERE user_id = ? AND map_guild = ?`, [bot.getTime("short"), req.session.discord_id, config.guild_id]);
           console.info("[" + bot.getTime("stamp") + "] [wall.js] " + member.user.tag + " logged into " + config.map_name + " (" + req.session.ip + ")");
         }
-        if (!req.session.lastLogin || req.session.lastLogin < (time_now - 300000)) {
+/*        if (!req.session.lastLogin || req.session.lastLogin < (time_now - 300000)) {
           req.session.lastLogin = time_now;
           if (matches.partial || matches.full) {
             bot.sendEmbed(member, "FFA500", "Authenticated Login", req.session.ip, config.map_log_channel, "Fingerprint Match History:", matches);
           } else {
             bot.sendEmbed(member, "00FF00", "Authenticated Login", "", config.map_log_channel, "", "");
           }
-        }
+        } */
         if (config.troll_ids && config.troll_ids.indexOf(member.id) >= 0) {
           let troll_sites = config.troll_sites.split(",");
           let value1 = Math.floor(Math.random() * Math.floor(10 - 1)) + 1;
@@ -227,11 +227,11 @@ server.get("/login", async (req, res) => {
         req.session.lastLogin = time_now;
         let matches = await database.userTrack(req.session);
         console.info("[" + bot.getTime("stamp") + "] [wall.js] " + member.user.tag + " sent to Subscription Page (" + req.session.ip + ")");
-        if (matches.partial || matches.full) {
+/*        if (matches.partial || matches.full) {
           bot.sendEmbed(member, "FFA500", "Non-Donor Login", req.session.ip, config.map_log_channel, "Fingerprint Match History:", matches);
         } else {
           bot.sendEmbed(member, "FFFF00", "Non-Donor Login", req.session.ip, config.map_log_channel);
-        }
+        } */
         return res.redirect("/subscribe");
       }
     } else {
