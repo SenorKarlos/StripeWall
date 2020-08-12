@@ -277,6 +277,7 @@ server.get("/subscribe", async function(req, res) {
   } else {
     return res.render(__dirname + "/html/subscribe.html", {
       map_name: config.map_name,
+      map_url: config.map_url,
       plan_name: config.STRIPE.plan_name,
       key: config.STRIPE.live_pk,
       email: user.user_name + " - " + user.email,
