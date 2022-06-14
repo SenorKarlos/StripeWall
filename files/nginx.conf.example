@@ -26,14 +26,6 @@ server {
         return 444;
     }
 
-    rewrite ^/raw_data$ /raw_data.php?$1 last;
-    rewrite ^/gym_data$ /gym_data.php?$1 last;
-    rewrite ^/motd_data$ /motd_data.php?$1 last;
-    rewrite ^/submit /submit.php?$1 last;
-    rewrite ^/search /search.php?$1 last;
-    rewrite ^/weather_data$ /weather_data.php?$1 last;
-    rewrite ^/serviceWorker.min.js$ /static/dist/js/serviceWorker.min.js last;
-    rewrite ^/user$ /user.php?$1 last;
     rewrite ^/discord-login$ /discord-login.php?$1 last;
 
     error_log /var/log/nginx/main.error.log warn;
@@ -41,7 +33,7 @@ server {
 
     location / {
     include /etc/nginx/mime.types;
-        root /path/to/PMSF;
+        root /path/to/site;
         index oauth.php index.html index.htm;
     }
 
@@ -51,7 +43,7 @@ server {
     }
 
     location ~ \.php$ {
-        root /path/to/PMSF;
+        root /path/to/site;
         try_files $uri =404;
         fastcgi_pass unix:/var/run/php/php7.2-fpm.sock;
         fastcgi_index oauth.php;
@@ -113,4 +105,3 @@ server {
     }
         
 }
-

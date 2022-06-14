@@ -4,13 +4,14 @@ listening_port = 7777
 session_key = P4^$535@6cy%OwjSq2^992Z@E!w#36wUoxpSj1SnWCfy&aNt1t
 
 // OPEN MAP. REMOVES DONOR ROLE REQUIREMENT
-open_map = true
+open_map = false
 
 // MAP DETAILS AND URLS
 map_name = YourPokéMap
 map_url = https://yourmap.com
 redirect_url = https://yourmap.com/login
 subscribe_url = https://yourmap.com/subscribe
+access_type = Monthly
 
 // DONOR ROLE ID FOR ACCESS
 donor_role_id =
@@ -24,18 +25,18 @@ donor_welcome = true
 donor_welcome_content = Welcome and Thank You, %usertag%!
 
 // MAP ACCESS DISCORD LOGGING
-map_log = false
+map_log = true
 map_log_channel =
 
 // USER GUILDS DISCORD LOG
-guild_log = false
+guild_log = true
 guild_log_channel =
 
 // STRIPE DISCORD LOG
 stripe_log = true
 stripe_log_channel =
 
-// ACCESS BLACKLIST (Separate IDs with a Comma or delete fully)
+// ACCESS BLACKLIST (Separate IDs with a Comma)
 fetch_bans = true
 blacklist = ID,ID,ID
 
@@ -44,7 +45,7 @@ db_host =
 db_port = 3306
 db_username =
 db_password =
-db_name = rdmdb
+db_name = oauth
 
 // OAUTH DETAILS
 [OAUTH2]
@@ -55,9 +56,8 @@ scope = identify,email,guilds,guilds.join // DO NOT ALTER
 
 // STRIPE DETAILS
 [STRIPE]
-plan_id =  # Looks like plan_EdfhgdfjhhghV (old API) or price_EdfhgdfjhhghV (current API)
-plan_name =  # Your name for the subsciption
-plan_cost = 500 # Plan cost in cents
+plan_id =  # Looks like plan_EdfhgdfjhhghV or price_1Gvz9cErMld8apQJ1eiC4ihw
+plan_cost = 4.99
 live_pk = pk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 live_sk = sk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 

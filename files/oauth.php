@@ -1,5 +1,5 @@
 <?php
-include('oauth/config.php');
+include('files/config.php');
 
 // GRAB IP ADDRESS OF USER
 if (isset($_SERVER["HTTP_X_FORWARDED_FOR"])) {

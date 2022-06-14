@@ -201,7 +201,7 @@ server.get("/login", async (req, res) => {
           database.runQuery(`UPDATE IGNORE oauth_users SET last_login = ? WHERE user_id = ? AND map_guild = ?`, [bot.getTime("short"), req.session.discord_id, config.guild_id]);
           console.info("[" + bot.getTime("stamp") + "] [wall.js] " + member.user.tag + " logged into " + config.map_name + " (" + req.session.ip + ")");
         }
-/*        if (!req.session.lastLogin || req.session.lastLogin < (time_now - 300000)) {
+/*         if (!req.session.lastLogin || req.session.lastLogin < (time_now - 300000)) {
           req.session.lastLogin = time_now;
           if (matches.partial || matches.full) {
             bot.sendEmbed(member, "FFA500", "Authenticated Login", req.session.ip, config.map_log_channel, "Fingerprint Match History:", matches);
@@ -227,7 +227,7 @@ server.get("/login", async (req, res) => {
         req.session.lastLogin = time_now;
         let matches = await database.userTrack(req.session);
         console.info("[" + bot.getTime("stamp") + "] [wall.js] " + member.user.tag + " sent to Subscription Page (" + req.session.ip + ")");
-/*        if (matches.partial || matches.full) {
+/*         if (matches.partial || matches.full) {
           bot.sendEmbed(member, "FFA500", "Non-Donor Login", req.session.ip, config.map_log_channel, "Fingerprint Match History:", matches);
         } else {
           bot.sendEmbed(member, "FFFF00", "Non-Donor Login", req.session.ip, config.map_log_channel);
@@ -277,12 +277,12 @@ server.get("/subscribe", async function(req, res) {
   } else {
     return res.render(__dirname + "/html/subscribe.html", {
       map_name: config.map_name,
+      access_type: config.access_type,
       map_url: config.map_url,
-      plan_name: config.STRIPE.plan_name,
       key: config.STRIPE.live_pk,
       email: user.user_name + " - " + user.email,
       id: req.query.id,
-      amt: config.STRIPE.plan_cost,
+      amt: 500,
       guild: config.guild_id
     });
   }
@@ -396,7 +396,7 @@ server.get("/error", async function(req, res) {
 //  SYNC DISCORD ROLES AND STRIPE SUSBCRIBERS
 //------------------------------------------------------------------------------
 if (config.test_mode != true) {
-  let times = ["05:30:00", "11:30:00", "17:30:00", "23:30:00"];
+  let times = ["05:30:00", "11:30:00", "17:30:00", "00:30:00"];
   ontime({
     cycle: times
   }, function(ot) {
@@ -411,7 +411,7 @@ if (config.test_mode != true) {
 //  SYNC STRIPE CUSTOMER IDs
 //------------------------------------------------------------------------------
 ontime({
-  cycle: ["05:15:00", "11:15:00", "17:15:00", "23:15:00"]
+  cycle: ["05:05:00", "11:05:00", "17:05:00", "00:20:00"]
 }, function(ot) {
   console.info("[" + bot.getTime("stamp") + "] [wall.js] Starting Stripe Customer Synchronization.");
   stripe.customer.list();

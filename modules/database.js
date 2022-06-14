@@ -245,7 +245,7 @@ const object = {
             let customer = '';
             if (member) {
               if (member.roles.cache.has(config.donor_role_id)) {
-                if (!user.stripe_id) {
+                if (!user.stripe_id || user.plan_id != config.STRIPE.plan_id) {
                   bot.removeDonor(member.id);
                   return bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Internal Check)', config.stripe_log_channel);
                 } else {
@@ -273,7 +273,7 @@ const object = {
                   data = [member.id, config.guild_id];
                   await object.runQuery(query, data);
                   return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Deleted Subscription Plan record for ' + user.user_name + ' (' + member.id + ').', config.stripe_log_channel);
-                } else if (customer.subscriptions.data[0] && customer.subscriptions.data[0].status == 'active') {
+                } else if (customer.subscriptions.data[0] && customer.subscriptions.data[0].status == 'active' && user.plan_id == config.STRIPE.plan_id) {
                   bot.assignDonor(member.id);
                   return bot.sendEmbed(member, 'FF0000', 'User found without Donor Role ⚠', 'Assigned Donor Role. (Stripe Check)', config.stripe_log_channel);
                 } else {
@@ -281,11 +281,16 @@ const object = {
                 }
               }
             } else {
-              member = user.user_id;
-              query = `UPDATE oauth_users SET map_guild = NULL, access_token = NULL, refresh_token = NULL, token_expiration = NULL WHERE user_id = ?`;
-              data = [member.id];
+              member = user;
+              member.nickname = user.user_name;
+              member.user = [];
+              member['user']['id'] = user.user_id;
+              customer = await stripe.customer.fetch(user.stripe_id);
+              query = `DELETE FROM oauth_users WHERE user_id = ?`;
+              data = [member.user_id];
               await object.runQuery(query, data);
-              return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Tokens and Guild Association for ' + user.user_name + ' (' + member.id + ').', config.stripe_log_channel);
+              await stripe.subscription.cancelNow(member, customer.subscriptions.data[0].id);
+              return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Tokens and Guild Association for ' + user.user_name + ' (' + member.user_id + ').', config.stripe_log_channel);
             }
           }, 5000 * index);
         });
