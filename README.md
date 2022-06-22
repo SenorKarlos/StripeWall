@@ -1,22 +1,20 @@
 # Discord Oauth2 Site Wall and Stripe Management
 
-note: I can't reccomend enough a CDN like cloudflare with authenticated origin pull support, SSL, and DNSSEC. Provided NGINX example covers standard SSL config & www-> root redirects.
+note: I can't reccomend enough a CDN like cloudflare with authenticated origin pull support, SSL, and DNSSEC. Provided NGINX example covers standard SSL config & www-> root redirects. (Apache info needed, I don't use it)
 
-1: Pull Repo
+- Pull Repo, `npm install`. 
 
-2: Take oauth.php and insert into site root. Create directory oauth. Edit config.php.example and save to this folder as config.php.
+- Create Discord bot in Discord Developer Console (or use existing bot), and ensure it has administrative privileges in your server (assign roles and manage members minimum).
 
-3: Create Discord bot in Discord Developer Console (or use existing bot), and ensure it has administrative privileges in your server (assign roles and manage members minimum).
+- Fill out config.json.example and remove '.example'. Create database per your config and run the SQL at the bottom to make the tables. Modify & Use NGINX example or at least copy the location redirects to your current site. Match the port in the redirects to the one specified in config, and copy a permanent discord invite URL to the last item.
 
-4: Fill out config.ini.example and remove '.example'. Create database per your config and run the SQL at the bottom to make the tables.
+- Add redirect_url from your completed config.json to your Discord Bot. (/login URL)
 
-5: Add redirect_url from your completed config.ini to your Discord Bot. (/login URL)
-
-6: Create a webhook in Stripe, add the following events to the stripe webhook, point to `https://<yourmap.com>/webhook`
+- Create a webhook in Stripe, add the following events to the stripe webhook, point to `https://<yourmap.com>/webhook`
 
 `charge.refunded, customer.deleted, charge.succeeded, customer.subscription.created, customer.subscription.deleted, customer.subscription.updated, customer.updated, invoice.payment_failed`
 
-7: Start the bot with PM2 `pm2 start wall.js`. Read the PM2 docs to have the bot automatically start as a service in the event of a power failure, restart, or other issue.
+- Start the bot with PM2 `pm2 start wall.js`. Read the PM2 docs to have the bot automatically start as a service in the event of a power failure, restart, or other issue.
 
 # FAQ:
 
