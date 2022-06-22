@@ -1,9 +1,7 @@
 var stripe, bot, oauth2;
-const fs = require('fs');
-const ini = require('ini');
 const mysql = require('mysql');
 const moment = require('moment');
-const config = ini.parse(fs.readFileSync('./files/config.ini', 'utf-8'));
+const config = require("../files/config.json");
 const object = {
   // RDM DATABASE CONNECTION
   db: mysql.createPool({

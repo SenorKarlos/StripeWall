@@ -1,7 +1,7 @@
 var database, bot;
-const axios = require('axios'); const ini = require('ini');
-const moment = require('moment'); const fs = require('fs');
-const config = ini.parse(fs.readFileSync('files/config.ini', 'utf-8'));
+const axios = require('axios');
+const moment = require('moment');
+const config = require("../files/config.json");
 const stripe_js = require('stripe')(config.STRIPE.live_sk);
 const stripe = {
   customer: {

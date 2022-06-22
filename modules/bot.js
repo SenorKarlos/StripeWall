@@ -1,5 +1,3 @@
-const fs = require('fs');
-const ini = require('ini');
 const moment = require('moment');
 const Discord = require('discord.js');
 const eventsToDisable = ["PRESENCE_UPDATE", "VOICE_STATE_UPDATE", "TYPING_START", "VOICE_SERVER_UPDATE"];
@@ -9,7 +7,7 @@ const bot = new Discord.Client({
   messageCacheLifetime: 1,
   messageSweepInterval: 1
 });
-const config = ini.parse(fs.readFileSync('./files/config.ini', 'utf-8'));
+const config = require("../files/config.json");
 //------------------------------------------------------------------------------
 //  TIME FUNCTION
 //------------------------------------------------------------------------------

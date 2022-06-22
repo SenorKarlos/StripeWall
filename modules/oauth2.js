@@ -1,8 +1,6 @@
 var bot;
-const fs = require('fs');
-const ini = require('ini');
 const axios = require('axios');
-const config = ini.parse(fs.readFileSync('./files/config.ini', 'utf-8'));
+const config = require("../files/config.json");
 //------------------------------------------------------------------------------
 //  VARIABLES
 //------------------------------------------------------------------------------

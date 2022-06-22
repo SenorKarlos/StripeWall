@@ -26,31 +26,18 @@ server {
         return 444;
     }
 
-    rewrite ^/discord-login$ /discord-login.php?$1 last;
-
     error_log /var/log/nginx/main.error.log warn;
     access_log /var/log/nginx/main.access.log;
 
     location / {
     include /etc/nginx/mime.types;
         root /path/to/site;
-        index oauth.php index.html index.htm;
+        index index.html index.htm;
     }
 
     error_page 404 /404.html;
     location = /404.html {
         root /usr/share/nginx/html;
-    }
-
-    location ~ \.php$ {
-        root /path/to/site;
-        try_files $uri =404;
-        fastcgi_pass unix:/var/run/php/php7.2-fpm.sock;
-        fastcgi_index oauth.php;
-        fastcgi_param HTTP_IF_NONE_MATCH $http_if_none_match;
-        fastcgi_param HTTP_IF_MODIFIED_SINCE $http_if_modified_since;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include fastcgi_params;
     }
 
     # deny access to .htaccess files, if Apache's document root

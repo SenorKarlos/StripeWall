@@ -1,5 +1,3 @@
-const fs = require("fs");
-const ini = require("ini");
 const ontime = require("ontime");
 const moment = require("moment");
 const express = require("express");
@@ -10,7 +8,7 @@ const bot = require(__dirname + "/modules/bot.js");
 const oauth2 = require(__dirname + "/modules/oauth2.js");
 const stripe = require(__dirname + "/modules/stripe.js");
 const database = require(__dirname + "/modules/database.js");
-const config = ini.parse(fs.readFileSync("./files/config.ini", "utf-8"));
+const config = require(__dirname + "/files/config.json");
 
 //------------------------------------------------------------------------------
 //  TEST MODE CONFIGURATIONS

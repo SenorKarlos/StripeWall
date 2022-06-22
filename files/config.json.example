@@ -1,0 +1,46 @@
+{
+    "listening_port": 7777,
+    "session_key": "9kB2K)8uLdDT6xV5Azh#^SU[m4zKB]C;LxM*AfOS$ccJK9*axB",
+    "map_name": "Your Map Name",
+    "map_url": "https://your.site",
+    "redirect_url": "https://your.site/login",
+    "subscribe_url": "https://your.site/subscribe",
+    "access_type": "Monthly",
+    "donor_role_id": 000000000000000000,
+    "guild_id": "000000000000000000",
+    "donor_channel_id": 000000000000000000,
+    "donor_welcome": true,
+    "donor_welcome_content": "Thank You For Subscribing, %usertag%!",
+
+    "map_log": false,
+    "map_log_channel": 000000000000000000,
+
+    "guild_log": false,
+    "guild_log_channel": 000000000000000000,
+
+    "stripe_log": true,
+    "stripe_log_channel": 000000000000000000,
+
+    "fetch_bans": true,
+    "blacklist": "",
+
+    "db_host": "127.0.0.1",
+    "db_port": 3306,
+    "db_username": "db_user",
+    "db_password": "db_pass",
+    "db_name": "stripewall",
+
+    "OAUTH2": {
+        "client_id": "000000000000000000",
+        "client_secret": "your client secret",
+        "bot_token": "your bot toekn",
+        "scope": "identify,email,guilds,guilds.join"
+    },
+
+    "STRIPE": {
+        "plan_id": "your plan or price id",
+        "plan_cost": "5.00",
+        "live_pk": "get from dashboard",
+        "live_sk": "get from dashboard"
+    }
+}
