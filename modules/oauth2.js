@@ -29,21 +29,6 @@ const oauth2 = {
       });
     });
   },
-/*   refreshAccessToken: function(refresh_token) {
-    let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=refresh_token&refresh_token=${refresh_token}&redirect_uri=${config.redirect_url}&scope=${oauth2.scope}`;
-    let headers = {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    }
-    axios.post("https://discord.com/api/oauth2/token", data, {
-      headers: headers
-    }).then(async function(response) {
-      console.log("SUCCESSFULLY REFRESHED A TOKEN", response.data);
-      return resolve(response.data);
-    }).catch(error => {
-      console.error("[Oauth2+Stripe] [oauth2.js]", error.response);
-      return resolve(error);
-    });
-  }, */
   //------------------------------------------------------------------------------
   //  FETCH DISCORD USER
   //------------------------------------------------------------------------------
@@ -59,29 +44,6 @@ const oauth2 = {
       }).catch(error => {
         console.error;
         return resolve(error);
-      });
-    });
-  },
-  //------------------------------------------------------------------------------
-  //  FETCH DISCORD USER'S GUILDS
-  //------------------------------------------------------------------------------
-  fetchUserGuilds: function(access_token) {
-    return new Promise(function(resolve) {
-      console.log("[" + bot.getTime('stamp') + "] [oauth2.js] ACCESS_TOKEN", access_token);
-      axios.get(oauth2.base_url + `users/@me/guilds`, {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Authorization": `Bearer ${access_token}`
-        }
-      }).then(async function(response) {
-        let guilds = [];
-        await response.data.forEach((server, index) => {
-          guilds.push(server.name + '|' + server.id);
-        });
-        return resolve(guilds);
-      }).catch(error => {
-        console.error('[' + bot.getTime('stamp') + '] [oauth2.js] Error fetching user guilds. Reason: `' + error.response.data.message + '`');
-        return resolve('ERROR');
       });
     });
   },

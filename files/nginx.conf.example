@@ -1,51 +1,6 @@
 server {
-    listen 443;
-    ssl    on;
-    ssl_certificate    /path/to/certs.pem;
-    ssl_certificate_key    /path/to/certs.key;
-    server_name www.yoursite.com;
-    return 301 $scheme://yoursite.com$request_uri;
-}
 
-server {
-    listen 443;
-    ssl    on;
-    ssl_certificate    /path/to/certs.pem;
-    ssl_certificate_key    /path/to/certs.key;
-    server_name yoursite.com;
-
-    # Some Basic lockdown of folders and files
-    # Lock folders
-    location ~ /(\.|cron|lib|LICENSE|config|scripts)
-    {
-        return 444;
-    }
-    # Lock Extensions
-    location ~* \.(conf|md|sql|sh|back|backup)
-    {
-        return 444;
-    }
-
-    error_log /var/log/nginx/main.error.log warn;
-    access_log /var/log/nginx/main.access.log;
-
-    location / {
-    include /etc/nginx/mime.types;
-        root /path/to/site;
-        index index.html index.htm;
-    }
-
-    error_page 404 /404.html;
-    location = /404.html {
-        root /usr/share/nginx/html;
-    }
-
-    # deny access to .htaccess files, if Apache's document root
-    # concurs with nginx's one
-    #
-    location ~ /\.ht {
-        deny all;
-    }
+<<Your Existing Site Config>> Can be a map or generic page, as long as these locations aren't in use (check subfolders)
 
     location /login {
         proxy_pass http://localhost:7777/login;
@@ -69,18 +24,6 @@ server {
 
     location /webhook {
         proxy_pass http://localhost:7777/webhook;
-    }
-
-    location /fp {
-        proxy_pass http://localhost:7777/fp;
-    }
-
-    location /device {
-        proxy_pass http://localhost:7777/device;
-    }
-
-    location /error {
-        proxy_pass http://localhost:7777/error;
     }
 
     location /blocked {

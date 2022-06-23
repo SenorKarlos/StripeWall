@@ -6,21 +6,12 @@
     "redirect_url": "https://your.site/login",
     "subscribe_url": "https://your.site/subscribe",
     "access_type": "Monthly",
-    "donor_role_id": 000000000000000000,
+    "donor_role_id": "000000000000000000",
     "guild_id": "000000000000000000",
-    "donor_channel_id": 000000000000000000,
+    "log_channel": "000000000000000000",
+    "donor_channel_id": "000000000000000000",
     "donor_welcome": true,
     "donor_welcome_content": "Thank You For Subscribing, %usertag%!",
-
-    "map_log": false,
-    "map_log_channel": 000000000000000000,
-
-    "guild_log": false,
-    "guild_log_channel": 000000000000000000,
-
-    "stripe_log": true,
-    "stripe_log_channel": 000000000000000000,
-
     "fetch_bans": true,
     "blacklist": "",
 

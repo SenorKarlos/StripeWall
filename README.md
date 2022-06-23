@@ -1,12 +1,12 @@
-# Discord Oauth2 Site Wall and Stripe Management
+# Discord Oauth2 Based Stripe-Role Management
 
-note: I can't reccomend enough a CDN like cloudflare with authenticated origin pull support, SSL, and DNSSEC. Provided NGINX example covers standard SSL config & www-> root redirects. (Apache info needed, I don't use it)
+note: I can't reccomend enough a CDN like cloudflare with authenticated origin pull support, SSL, and DNSSEC.
 
-- Pull Repo, `npm install`. 
+- Pull Repo, `npm install`. Create a MySql database (or add to existing) and run the database.sql file to make the user table.
 
 - Create Discord bot in Discord Developer Console (or use existing bot), and ensure it has administrative privileges in your server (assign roles and manage members minimum).
 
-- Fill out config.json.example and remove '.example'. Create database per your config and run the SQL at the bottom to make the tables. Modify & Use NGINX example or at least copy the location redirects to your current site. Match the port in the redirects to the one specified in config, and copy a permanent discord invite URL to the last item.
+- Fill out config.json.example and remove '.example'. Use the NGINX example to copy location redirects to your current site. Match the port in the redirects to the one specified in config, and copy a permanent discord invite URL to the last item. (Apache info needed, I don't use it)
 
 - Add redirect_url from your completed config.json to your Discord Bot. (/login URL)
 
