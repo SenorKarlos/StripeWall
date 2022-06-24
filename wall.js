@@ -35,9 +35,14 @@ server.get("/subscribe", async function(req, res) {
   let unix_now = moment().unix();
   let user = await database.fetchUser(req.session.discord_id);
   if (!user) {
+    console.info("[" + bot.getTime("stamp") + "] [wall.js] New User logging in");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.redirect_url}&state=subscribe`);
   }
   let member = bot.guilds.cache.get(config.guild_id).members.cache.get(req.session.discord_id);
+  if (!member) {
+    console.info("[" + bot.getTime("stamp") + "] [wall.js] User " + user.user_name + " Joining Guild");
+    return res.redirect(`\login`);
+  }
   if (bot.blacklisted.indexOf(req.session.discord_id) >= 0) {
     bot.users.fetch(user.user_id).then(blocked => {
       let member = {
@@ -46,6 +51,34 @@ server.get("/subscribe", async function(req, res) {
       bot.sendEmbed(member, "FF0000", "Blacklist Login Attempt", "", config.log_channel);
       return res.redirect(`/blocked`);
     });
+  } 
+  let dbChecked = false;
+  if (req.session.email != user.email || req.session.user_name != user.user_name) {
+    database.runQuery(`UPDATE IGNORE stripe_users SET email = ? AND user_name = ? WHERE user_id = ?`, [req.session.email, req.session.user_name, user.user_id]);
+    console.info("[" + bot.getTime("stamp") + "] [wall.js] Updated DB Info for User " + req.session.user_name +  "," + req.session.email + "(" + user.user_name + "," + user.email + ")");
+    dbChecked = true;
+  } else {
+    dbChecked = true;
+  }
+  let stripeChecked = false;
+  if (user.stripe_id) {
+    let customer = await stripe.customer.fetch(user.stripe_id);
+    console.info("[" + bot.getTime("stamp") + "] [wall.js] Found Stripe Info for User " + req.session.user_name);
+    if (req.session.discord_id != customer.description) {
+      bot.sendDM(member, "Error Accessing Subscribe Page", "Please contact SenorKarlos#9419 for further assistance", "FF0000");
+      bot.sendEmbed(member, "FF0000", "User ID Discrepancy Found", "User " + user.user_name + "'s Discord ID not found on matched Stripe Record (" + customer.id + ")", config.log_channel);
+      return res.redirect(config.map_url);
+    } else if (req.session.email != customer.email || req.session.user_name != customer.name) {
+      await stripe.customer.update(user.stripe_id, req.session.email, req.session.user_name);
+      stripeChecked = true;
+    }
+  } else {
+    stripeChecked = true;
+  }
+  if (dbChecked == false || stripeChecked == false) {
+    bot.sendDM(member, "Error Accessing Subscribe Page", "Please contact SenorKarlos#9419 for further assistance", "FF0000");
+    bot.sendEmbed(member, "FF0000", "Subscribe Page Access Error", "User " + user.user_name, config.log_channel);
+    return res.redirect(config.map_url);
   } else {
     return res.render(__dirname + "/html/subscribe.html", {
       map_name: config.map_name,

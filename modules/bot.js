@@ -24,7 +24,7 @@ bot.getTime = (type) => {
 //------------------------------------------------------------------------------
 //  SEND EMBED FUNCTION
 //------------------------------------------------------------------------------
-bot.sendEmbed = (member, color, title, body, channel_id, title2, body2) => {
+bot.sendEmbed = (member, color, title, body, channel_id) => {
   if (!member.nickname) {
     nickname = member.user.username;
   } else {
@@ -37,16 +37,6 @@ bot.sendEmbed = (member, color, title, body, channel_id, title2, body2) => {
     .setTitle(title)
     .setDescription(body)
     .setFooter(config.map_name + ' | ' + bot.getTime('full'));
-  console.log(body2);
-  if (body2 && body2.partial && body2.full) {
-    embed.addField("IP & Fingerprint Matches", body2.full, false);
-    embed.addField("Fingerprint Matches", body2.partial, false);
-  } else if (body2 && body2.partial) {
-    embed.addField("Fingerprint Matches", body2.partial, false);
-  } else if (title2) {
-    embed.addField(title2, body2, false);
-  }
-
   return bot.channels.cache.get(channel_id).send(embed).catch(err => {
     console.error('[' + bot.getTime('stamp') + '] [bot.js] Unable to Send Channel Message.', err);
   });

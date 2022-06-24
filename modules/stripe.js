@@ -28,17 +28,16 @@ const stripe = {
 //------------------------------------------------------------------------------
 //  UPDATE A CUSTOMER
 //------------------------------------------------------------------------------
-    update: function(user_id, customer, token){
+    update: function(customer_id, email, name){
       return new Promise(function(resolve) {
         stripe_js.customers.update(
-          customer.id,
-          { source: token },
+          customer_id,
+          { email: email, name: name },
           function(err, customer) {
             if(err){
               console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Updating Customer.', err.message); return resolve('ERROR');
             } else{
-              console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.id+' has been Updated.');
-              database.runQuery('UPDATE stripe_users SET stripe_id = ? WHERE user_id = ?', [customer.id, user_id]);
+              console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer ' + name + ' (' + customer.id + ') has been Updated.');
               return resolve(customer);
             }
         });

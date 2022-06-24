@@ -126,18 +126,9 @@
                 <p>Many pre-set Discord Channel feeds for Raids, Pokemon, and Quests.</p>
               </strong></div>
           </p>
-          <form action="/success" method="post">
-            <script src="https://checkout.stripe.com/checkout.js" class="stripe-button"
-                    data-key="<%= key %>"
-                    data-image=""
-                    data-name="<%= map_name %>"
-                    data-description="<%= map_name %> <%= access_type %> Access"
-                    data-amount="500"
-                    data-locale="auto"
-                    data-zip-code="true"
-                    data-panel-label="Subscribe"
-                    data-email="<%= email %>"
-                    data-label="$<%= amt/100 %>/mo"></script>
+          <form action="/create-checkout-session" method="post">
+            <input type="hidden" name="priceId" value="price_1JMbO9ErMl1EMpQJwrTKISEI" />
+            <button type="submit">Subscribe</button>
           </form>
         </div>
 
