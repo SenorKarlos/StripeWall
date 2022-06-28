@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    .rcorners1 {
+        border-radius: 30px;
+        border: 5px solid #F93318;
+        padding: 30px;
+        min-width:50px!important;
+        max-width:99.99%!important;
+        margin: 50px;
+        transition: width 0.25s;
+        min-height:50px!important;
+        max-height:99.99%!important;
+        box-shadow:  0 0 20px  rga(0,0,0,0.6);
+        -moz-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        -webkit-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        -o-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+    }
+    .top {
+      background: url("/static/banner_top.png");
+      background-size: 100% 440px;
+      background-repeat: no-repeat;
+      margin: -8px;
+    }
+    .bottom {
+      background: url("/static/banner_bottom.png");
+      background-size: 100% 196px;
+      background-repeat: no-repeat;
+      margin: -10px;
+    }
+    .content {
+      max-width: 480px;
+      margin: auto;
+      text-align: center;
+    }
+    .left {
+      text-align: left;
+      display: inline-block
+    }
+    .unsubscribe {
+      font-size: 10pt;
+    }
+    .fineprint {
+      font-size: 8pt;
+    }
+    .details {
+      font-size: 10pt;
+    }
+    img {
+      width: 100%;
+    }
+    form article label {
+      display: block;
+      margin: 5px;
+    }
+    form .submit {
+      margin: 15px 0;
+    }
+    body {
+        margin: 50px auto;
+        background-color: #F6F6F6;
+        text-align: center;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="rcorners1">
+    <center>
+      <div>
+        <div>
+          <h1><%= map_name %> Checkout</h1>
+          <p><strong><font color="red">Welcome to <%= map_name %>! Choose your preferred billing frequency below to get started. Thank you for your support!</font></strong></p>
+        </div>
+
+        <br>
+        <hr>
+
+        <%- checkoutbody %>
+
+      <div>
+        <div class="content">
+          <div class="fineprint">
+            <p>We NEVER receive, store, or view any sensitive customer credit card information.  All of our credit card processing is managed directly and solely by Stripe, a PCI Level 1 Compliant Service Provider.</p>
+            <a href=https://stripe.com/docs/security/stripe>https://stripe.com/docs/security/stripe</a>
+            <p>Do not redistribute scanned data. The sole exception being Raids you plan to attend ONLY. Doing so will result in immediate revokation of all access.</p>
+            <p>We are not associated with Niantic, ThePokemonCompany, or any of its subsidiaries.</p>
+            <p><strong>All services are subject to downtimes for various reasons. Please monitor the Discord Server for Updates.</strong></p>
+            <a href=<%= map_url %>/discord><%= map_url %>/discord</a>
+            <br>
+          </div>
+        </div>
+      </div>
+    </center>
+  </div>
+
+</body>
+</html>

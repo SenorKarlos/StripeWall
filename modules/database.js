@@ -85,7 +85,7 @@ const object = {
             let customer = '';
             if (member) {
               if (member.roles.cache.has(config.donor_role_id)) {
-                if (!user.stripe_id || user.plan_id != config.STRIPE.plan_id) {
+                if (!user.stripe_id || user.plan_id != config.stripe.plan_id) {
                   bot.removeDonor(member.id);
                   return bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Internal Check)', config.log_channel);
                 } else {
@@ -113,7 +113,7 @@ const object = {
                   data = [member.id];
                   await object.runQuery(query, data);
                   return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Deleted Subscription Plan record for ' + user.user_name + ' (' + member.id + ').', config.log_channel);
-                } else if (customer.subscriptions.data[0] && customer.subscriptions.data[0].status == 'active' && user.plan_id == config.STRIPE.plan_id) {
+                } else if (customer.subscriptions.data[0] && customer.subscriptions.data[0].status == 'active' && user.plan_id == config.stripe.plan_id) {
                   bot.assignDonor(member.id);
                   return bot.sendEmbed(member, 'FF0000', 'User found without Donor Role ⚠', 'Assigned Donor Role. (Stripe Check)', config.log_channel);
                 } else {

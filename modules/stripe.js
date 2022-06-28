@@ -2,18 +2,18 @@ var database, bot;
 const axios = require('axios');
 const moment = require('moment');
 const config = require("../files/config.json");
-const stripe_js = require('stripe')(config.STRIPE.live_sk);
+const stripe_js = require('stripe')(config.stripe.live_sk);
 const stripe = {
   customer: {
 //------------------------------------------------------------------------------
 //  CREATE A CUSTOMER
 //------------------------------------------------------------------------------
-    create: function(user_name, user_id, user_email, token){
+    create: function(user_name, user_id, user_email){
       return new Promise(function(resolve) {
         stripe_js.customers.create({
-          description: user_name+' - '+user_id,
+          description: user_id,
           email: user_email,
-          source: token
+          name: user_name
         }, function(err, customer) {
           if(err){
             console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Creating Customer.', err.message); return resolve('ERROR');
@@ -96,7 +96,7 @@ const stripe = {
     parse: async function(parse){
       parse.forEach((customer,index) => {
         setTimeout(function() {
-          if(customer.subscriptions.data[0] && customer.subscriptions.data[0].plan.id == config.STRIPE.plan_id){
+          if(customer.subscriptions.data[0] && customer.subscriptions.data[0].plan.id == config.stripe.plan_id){
             let unix = moment().unix();
             database.db.query('SELECT * FROM stripe_users WHERE user_id = ?', [customer.description.split(' - ')[1]], async function (err, record, fields) {
               if(err){ return console.error('['+bot.getTime('stamp')+'] [stripe.js]', err.message); }
@@ -124,7 +124,7 @@ const stripe = {
     create: function(customer,user_id){
       return new Promise(function(resolve) {
         stripe_js.subscriptions.create({
-          customer: customer.id, items: [ { plan: config.STRIPE.plan_id, }, ]
+          customer: customer.id, items: [ { plan: config.stripe.plan_id, }, ]
         }, function(err, subscription) {
           if(err){
             console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Creating Subscription.', err.message);
@@ -224,7 +224,7 @@ const stripe = {
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.STRIPE.plan_id: return;
+          case user.plan_id != config.stripe.plan_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Refund webhook for '+member.user.tag+' ('+customer.id+').');
             bot.sendDM(member,'Payment Refunded! 🏧', 'Amount: **$'+webhook.data.object.amount_refunded/100+'**, Access Revoked, Update Payment Information if Continuing','0000FF');
@@ -243,7 +243,7 @@ const stripe = {
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.STRIPE.plan_id: return;
+          case user.plan_id != config.stripe.plan_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Successful Charge webhook for '+member.user.tag+' ('+customer.id+').');
             bot.sendDM(member,'Payment Successful! 💰 ', 'Amount: **$'+parseFloat(webhook.data.object.amount/100).toFixed(2)+'**','00FF00');
@@ -262,7 +262,7 @@ const stripe = {
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.STRIPE.plan_id: return;
+          case user.plan_id != config.stripe.plan_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Deleted Subcscription webhook for '+customer.description.split(' - ')[0]+' ('+webhook.data.object.customer+').');
             bot.sendDM(member,'Subscription Record Deleted! ⚰', 'Access Revoked, Please Start Over if Continuing','FF0000');
@@ -282,7 +282,7 @@ const stripe = {
         switch(true){
           case !user: return console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Created Subscription Webhook - ERROR - ('+customer.id+') Not User.');
           case !member: return console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Created Subscription Webhook - ERROR - ('+customer.id+') Not Member.');
-          case user.plan_id != config.STRIPE.plan_id: return;
+          case user.plan_id != config.stripe.plan_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Created Subscription Webhook for '+member.user.tag+' ('+customer.id+').');
             if(webhook.data.object.status == "active"){
@@ -308,7 +308,7 @@ const stripe = {
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.STRIPE.plan_id: return;
+          case user.plan_id != config.stripe.plan_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Updated Subscription Webhook for '+member.user.tag+' ('+customer.id+').');
             if(webhook.data.object.status == "active" && webhook.data.previous_attributes.status == "incomplete"){
@@ -333,7 +333,7 @@ const stripe = {
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.STRIPE.plan_id: return;
+          case user.plan_id != config.stripe.plan_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Customer Updated webhook for '+member.user.tag+' ('+customer.id+').');
             if(!webhook.data.previous_attributes.default_source){
@@ -374,7 +374,7 @@ const stripe = {
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.STRIPE.plan_id: return;
+          case user.plan_id != config.stripe.plan_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Payment Failed webhook for '+member.user.tag+' ('+customer.id+').');
             bot.removeDonor(customer.description.split(' - ')[1]);
@@ -383,7 +383,7 @@ const stripe = {
               return;
             }
             bot.sendEmbed(member, 'FF0000', 'Payment Failed! ⛔', 'Only Attempt', config.log_channel);
-            return bot.sendDM(member,'Subscription Payment Failed! ⛔', 'Uh Oh! Your Payment failed to '+config.map_name+'. Please visit '+config.subscribe_url+' to Update your payment information.','FF0000');
+            return bot.sendDM(member,'Subscription Payment Failed! ⛔', 'Uh Oh! Your Payment failed to '+config.map_name+'. Please visit '+config.map_url+' to Update your payment information.','FF0000');
 		} return;
     } return;
   }

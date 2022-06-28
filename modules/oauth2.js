@@ -5,11 +5,11 @@ const config = require("../files/config.json");
 //  VARIABLES
 //------------------------------------------------------------------------------
 const oauth2 = {
-  "client_id": config.OAUTH2.client_id,
-  "client_secret": config.OAUTH2.client_secret,
+  "client_id": config.oauth2.client_id,
+  "client_secret": config.oauth2.client_secret,
   "base_url": `https://discord.com/api/`,
   "oauth_url": `https://discord.com/oauth2/authorize`,
-  "scope": config.OAUTH2.scope.replace(/,/g, ('%20')),
+  "scope": config.oauth2.scope.replace(/,/g, ('%20')),
   //------------------------------------------------------------------------------
   //  FETCH ACCESS TOKEN
   //------------------------------------------------------------------------------

@@ -26,210 +26,188 @@ server.use(cookieSession({
   keys: [config.session_key],
   maxAge: sessionAge,
 }));
-
-//------------------------------------------------------------------------------
-//  SUSBCRIBE PAGE
-//------------------------------------------------------------------------------
-server.get("/subscribe", async function(req, res) {
-  let time_now = moment().valueOf();
-  let unix_now = moment().unix();
-  let user = await database.fetchUser(req.session.discord_id);
-  if (!user) {
-    console.info("[" + bot.getTime("stamp") + "] [wall.js] New User logging in");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.redirect_url}&state=subscribe`);
-  }
-  let member = bot.guilds.cache.get(config.guild_id).members.cache.get(req.session.discord_id);
-  if (!member) {
-    console.info("[" + bot.getTime("stamp") + "] [wall.js] User " + user.user_name + " Joining Guild");
-    return res.redirect(`\login`);
-  }
-  if (bot.blacklisted.indexOf(req.session.discord_id) >= 0) {
-    bot.users.fetch(user.user_id).then(blocked => {
-      let member = {
-        user: blocked
-      }
-      bot.sendEmbed(member, "FF0000", "Blacklist Login Attempt", "", config.log_channel);
-      return res.redirect(`/blocked`);
-    });
-  } 
-  let dbChecked = false;
-  if (req.session.email != user.email || req.session.user_name != user.user_name) {
-    database.runQuery(`UPDATE IGNORE stripe_users SET email = ? AND user_name = ? WHERE user_id = ?`, [req.session.email, req.session.user_name, user.user_id]);
-    console.info("[" + bot.getTime("stamp") + "] [wall.js] Updated DB Info for User " + req.session.user_name +  "," + req.session.email + "(" + user.user_name + "," + user.email + ")");
-    dbChecked = true;
-  } else {
-    dbChecked = true;
-  }
-  let stripeChecked = false;
-  if (user.stripe_id) {
-    let customer = await stripe.customer.fetch(user.stripe_id);
-    console.info("[" + bot.getTime("stamp") + "] [wall.js] Found Stripe Info for User " + req.session.user_name);
-    if (req.session.discord_id != customer.description) {
-      bot.sendDM(member, "Error Accessing Subscribe Page", "Please contact SenorKarlos#9419 for further assistance", "FF0000");
-      bot.sendEmbed(member, "FF0000", "User ID Discrepancy Found", "User " + user.user_name + "'s Discord ID not found on matched Stripe Record (" + customer.id + ")", config.log_channel);
-      return res.redirect(config.map_url);
-    } else if (req.session.email != customer.email || req.session.user_name != customer.name) {
-      await stripe.customer.update(user.stripe_id, req.session.email, req.session.user_name);
-      stripeChecked = true;
-    }
-  } else {
-    stripeChecked = true;
-  }
-  if (dbChecked == false || stripeChecked == false) {
-    bot.sendDM(member, "Error Accessing Subscribe Page", "Please contact SenorKarlos#9419 for further assistance", "FF0000");
-    bot.sendEmbed(member, "FF0000", "Subscribe Page Access Error", "User " + user.user_name, config.log_channel);
-    return res.redirect(config.map_url);
-  } else {
-    return res.render(__dirname + "/html/subscribe.html", {
-      map_name: config.map_name,
-      access_type: config.access_type,
-      map_url: config.map_url,
-      key: config.STRIPE.live_pk,
-      email: user.user_name + " - " + user.email,
-      id: req.query.id,
-      amt: 500,
-      guild: config.guild_id
-    });
-  }
-});
 //------------------------------------------------------------------------------
 //  LOGIN/OAUTH FLOW
 //------------------------------------------------------------------------------
 server.get("/login", async (req, res) => {
   let time_now = moment().valueOf();
   let unix_now = moment().unix();
-
-  req.session.guild = config.guild_id;
-
-  // CHECK USER TOKEN STATUS
-  let bad_token = false;
-  if (req.session.discord_id) {
-    let foundUser = await database.fetchUser(req.session.discord_id);
-    switch (true) {
-      case !foundUser:
-        break;
-      case foundUser.access_token == null:
-      case foundUser.refresh_token == null:
-      case foundUser.token_expiration == null:
-      case unix_now > foundUser.token_expiration:
-        bad_token = true;
-        break;
-    }
-  }
+  
+  if (!req.query.code) {
+  //------------------------------------------------------------------------------
+  //  SEND TO DISCORD OAUTH2
+  //------------------------------------------------------------------------------
+    console.info("[" + bot.getTime("stamp") + "] [wall.js] Login from " + req.headers['x-forwarded-for'] + ". Sending User to Discord Oauth2 Authorization URL.");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.redirect_url}`);
+  } else {
   //------------------------------------------------------------------------------
   //  REDIRECT FROM OAUTH WITH CODE
   //------------------------------------------------------------------------------
-  if (req.query.code) {
-
     let data = await oauth2.fetchAccessToken(req.query.code);
-
     let user = await oauth2.fetchUser(data.access_token);
-
-    req.session.discord_id = user.id;
-    req.session.email = user.email;
-    req.session.access_token = data.access_token;
-    req.session.refresh_token = data.refresh_token;
-    req.session.token_expiration = (unix_now + data.expires_in);
-
     if (!user || user == undefined) {
       req.session = null;
-      return console.info("[" + bot.getTime("stamp") + "] [wall.js] Failed to fetch User");
+      console.info("[" + bot.getTime("stamp") + "] [wall.js] Failed to fetch User");
+      return res.redirect(config.map_url);
     }
-
+    //------------------------------------------------------------------------------
+    //  CHECK BLACKLIST & GUILD MEMBER STATUS
+    //------------------------------------------------------------------------------
+    if (bot.blacklisted.indexOf(req.session.discord_id) >= 0) {
+      let member = await bot.guilds.cache.get(config.guild_id).members.cache.get(user.id);
+      if (!member || member == undefined) {
+        await bot.users.fetch(user.id).then(user => {
+          member = {
+            user: user
+          };
+        });
+      }
+      bot.sendEmbed(member, "FF0000", "Blacklist Login Attempt", "", config.log_channel);
+      return res.redirect(`/blocked`);
+    }
     let member = await bot.guilds.cache.get(config.guild_id).members.cache.get(user.id);
-
-    if (!member || member == undefined) {
+    if (!member) {
+      await oauth2.joinGuild(data.access_token, config.guild_id, user.id);
       await bot.users.fetch(user.id).then(user => {
         member = {
           user: user
         };
       });
+      console.info("[" + bot.getTime("stamp") + "] [wall.js] " + member.user.username + "#" + member.user.discriminator + " not a Guild Member, adding.");
     }
+    req.session.discord_id = user.id;
+    req.session.email = user.email;
+    req.session.access_token = data.access_token;
+    req.session.refresh_token = data.refresh_token;
+    req.session.token_expiration = (unix_now + data.expires_in);
     req.session.user_name = member.user.username;
 
     let user_data = [req.session.discord_id, member.user.username, bot.getTime("short"), req.session.email, data.access_token, data.refresh_token, req.session.token_expiration, unix_now]
     database.runQuery(`INSERT IGNORE INTO stripe_users (user_id, user_name, last_login, email, access_token, refresh_token, token_expiration, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, user_data);
     database.runQuery(`UPDATE IGNORE stripe_users SET access_token = ?, refresh_token = ?, token_expiration = ?, last_updated = ? WHERE user_id = ?`, [data.access_token, data.refresh_token, req.session.token_expiration, unix_now, user.id]);
 
-    switch (true) {
-      case member == null:
-      case member == undefined:
-        oauth2.joinGuild(req.session.token, config.guild_id, user.id);
-        console.info("[" + bot.getTime("stamp") + "] [wall.js] " + user.username + "#" + user.discriminator + " not a Guild Member, adding.");
-        return res.redirect(`/subscribe`);
-
-      case req.query.state == "subscribe":
-        return res.redirect(`/subscribe`);
-
-      default:
-        return res.redirect(`/subscribe`);
+    let dbuser = await database.fetchUser(req.session.discord_id);
+    let dbChecked = false;
+    if (req.session.email != dbuser.email || req.session.user_name != dbuser.user_name) {
+      database.runQuery(`UPDATE IGNORE stripe_users SET email = ?, user_name = ? WHERE user_id = ?`, [req.session.email, req.session.user_name, dbuser.user_id]);
+      console.info("[" + bot.getTime("stamp") + "] [wall.js] Updated DB Info for User " + req.session.user_name +  "," + req.session.email + " Formerly: " + dbuser.user_name + "," + dbuser.email);
+      dbChecked = true;
+    } else {
+      dbChecked = true;
     }
-
-  } else if (!req.session.discord_id) {
-    //------------------------------------------------------------------------------
-    //  NO SESSION. SEND TO DISCORD OAUTH2
-    //------------------------------------------------------------------------------
-    console.info("[" + bot.getTime("stamp") + "] [wall.js] No Session Found from " + req.query.ip + ". Sending User to Discord Oauth2 Authorization URL.");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.redirect_url}&state=${req.query.ip}`);
-
-  } else if (bad_token) {
-    //------------------------------------------------------------------------------
-    //  TOKEN IS BAD
-    //------------------------------------------------------------------------------
-    console.info("[" + bot.getTime("stamp") + "] [wall.js] Bad Token Found for " + req.session.user_name + ". Sending User to Discord Oauth2 Authorization URL.");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.redirect_url}&state=${req.query.ip}`);
-
-  } else if (bot.blacklisted.indexOf(req.session.discord_id) >= 0) {
-    //------------------------------------------------------------------------------
-    //  CHECK BLACKLIST
-    //------------------------------------------------------------------------------
-    bot.users.fetch(req.session.discord_id).then(user => {
-      let member = {
-        user: user
+    let stripeChecked = false;
+    if (!dbuser.stripe_id) {
+      let customer = await stripe.customer.create(req.session.user_name, req.session.discord_id, req.session.email);
+      dbuser.stripe_id = customer.id;
+      stripeChecked = true;
+    }
+    let customer = await stripe.customer.fetch(dbuser.stripe_id);
+    if (stripeChecked == false && customer && customer != 'ERROR') {
+      console.info("[" + bot.getTime("stamp") + "] [wall.js] Found Stripe Info for User " + req.session.user_name);
+      if (req.session.discord_id != customer.description) {
+        bot.sendDM(member, "Error Logging In", "Please contact administration for further assistance", "FF0000");
+        bot.sendEmbed(member, "FF0000", "User ID Discrepancy Found", "User " + dbuser.user_name + "'s Discord ID (" + req.session.discord_id + ") not found on matched Stripe Record (" + customer.id + "," + customer.description + ")", config.log_channel);
+        return res.redirect(config.map_url);
       }
-      bot.sendEmbed(member, "FF0000", "Blacklist Login Attempt", "", config.log_channel);
-      return res.redirect(`/blocked`);
-    });
-
-  } else {
-    //------------------------------------------------------------------------------
-    //  CHECK IF GUILD MEMBER
-    //------------------------------------------------------------------------------
-    let member = bot.guilds.cache.get(config.guild_id).members.cache.get(req.session.discord_id);
-    if (!member) {
-      oauth2.joinGuild(req.session.access_token, config.guild_id, req.session.discord_id);
-      setTimeout(async function() {
-        member = bot.guilds.cache.get(config.guild_id).members.cache.get(req.session.discord_id);
-        return res.redirect(`/subscribe`);
-      }, 2000);
+      if (req.session.email != customer.email || req.session.user_name != customer.name) {
+        await stripe.customer.update(dbuser.stripe_id, req.session.email, req.session.user_name);
+      }
+      if (customer.subscriptions.total_count > 0) {
+        if (customer.subscriptions.data[0].plan.id && !dbuser.plan_id || dbuser.plan_id && customer.subscriptions.data[0].plan.id && dbuser.plan_id != customer.subscriptions.data[0].plan.id) {
+          database.runQuery(`UPDATE IGNORE stripe_users SET plan_id = ? WHERE user_id = ?`, [customer.subscriptions.data[0].plan.id, dbuser.user_id]);
+          console.info("[" + bot.getTime("stamp") + "] [wall.js] Updated DB Info for User " + req.session.user_name +  "," + req.session.email + "(Invalid Plan Updated)");
+          dbuser.plan_id = customer.subscriptions.data[0].plan.id;
+        }
+      }
+      if (dbuser.plan_id) {
+        if (customer.subscriptions.total_count == 0) {
+          database.runQuery(`UPDATE IGNORE stripe_users SET plan_id = NULL WHERE user_id = ?`, [dbuser.user_id]);
+          console.info("[" + bot.getTime("stamp") + "] [wall.js] Updated DB Info for User " + req.session.user_name +  "," + req.session.email + "(Invalid Plan Deleted)");
+          dbuser.plan_id = null;
+        }
+      }
+      stripeChecked = true;
     }
-    return;
+    if (dbChecked == false || stripeChecked == false) {
+      bot.sendDM(member, "Error Logging In", "Please contact administration for further assistance", "FF0000");
+      bot.sendEmbed(member, "FF0000", "Login Flow Error", "User " + req.session.user_name + " DB Pass = " + dbChecked + ", Stripe Pass = " + stripeChecked, config.log_channel);
+      return res.redirect(config.map_url);
+    } else {
+      req.session.login = true;
+      req.session.stripe_id = dbuser.stripe_id;
+      if (dbuser.plan_id) {
+        return res.redirect(`/manage`);
+      }
+      return res.redirect(`/checkout`);
+    }
   }
 });
 //------------------------------------------------------------------------------
-//  UNSUSBCRIBE PAGE
+//  PRODUCTS CHECKOUT PAGE
 //------------------------------------------------------------------------------
-server.post("/unsubscribed", async function(req, res) {
-  let user = await database.fetchUser(req.session.discord_id);
-  let member = bot.guilds.cache.get(config.guild_id).members.cache.get(req.session.discord_id);
-  if (user.stripe_id == null) {
-    return;
-  }
-  let customer = await stripe.customer.fetch(user.stripe_id);
-  if (customer.deleted == true) {
-    return;
-  }
-  if (customer && customer != "ERROR") {
-    stripe.subscription.cancel(member, customer.subscriptions.data[0].id);
-    setTimeout(function() {
-      return res.redirect(config.map_url);
-    }, 5000);
+server.get("/checkout", async function(req, res) {
+  let time_now = moment().valueOf();
+  let unix_now = moment().unix();
+  if (!req.session.login) {
+    console.info("[" + bot.getTime("stamp") + "] [wall.js] Direct Link Accessed, Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.redirect_url}`);
   } else {
-    console.info("[wall.js] " + member.user.tag + " attempted to cancel a subscription.");
-    setTimeout(function() {
-      return res.redirect(config.map_url);
-    }, 5000);
+    let checkoutbody = '';
+    for (let i = 0; i < config.stripe.plan_ids.length; i++) {
+      let planhtml = '<div><h2>$' + config.stripe.plan_ids[i].price + ' ' + config.stripe.plan_ids[i].frequency + ' Access</h2><form action="/create-checkout-session" method="post"><input type="hidden" name="priceID" value="' + config.stripe.plan_ids[i].id + '" /><input type="hidden" name="mode" value="' + config.stripe.plan_ids[i].mode + '" /><input type="hidden" name="customerID" value="' + req.session.stripe_id + '" /><button type="submit">Continue</button></form></div><br><hr>';
+      checkoutbody = checkoutbody+planhtml;
+    }
+    return res.render(__dirname + "/html/checkout.html", {
+      checkoutbody: checkoutbody,
+      mode: config.stripe.plan_ids[0].mode,
+      price_id: config.stripe.plan_ids[0].id,
+      customer_id: req.session.stripe_id,
+      map_name: config.map_name,
+      frequency: config.stripe.plan_ids[0].frequency,
+      map_url: config.map_url,
+      user_name: req.session.user_name,
+      email: req.session.email,
+      price: config.stripe.plan_ids[0].price
+    });
   }
+});
+//------------------------------------------------------------------------------
+//  STRIPE CHECKOUT
+//------------------------------------------------------------------------------
+server.post("/create-checkout-session", async (req, res) => {
+console.log(req.body);
+  const priceID = req.body.priceID;
+  const mode = req.body.mode;
+  const customerID = req.body.customerID;
+  return res.redirect(config.map_url);
+/*  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: mode,
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      success_url: config.map_url,
+      cancel_url: config.map_url,
+    });
+
+    return res.redirect(303, session.url);
+  } catch (e) {
+    res.status(400);
+    return res.send({
+      error: {
+        message: e.message,
+      }
+    });
+  }*/
+});
+//------------------------------------------------------------------------------
+//  STRIPE CUSTOMER PORTAL PAGE
+//------------------------------------------------------------------------------
+server.post("/manage", async function(req, res) {
+return res.redirect(config.map_url);
 });
 //------------------------------------------------------------------------------
 //  PAYMENT CAPTURE SUCCESS
@@ -246,7 +224,7 @@ server.post("/success", async function(req, res) {
     customer = await stripe.customer.create(user.user_name, user.user_id, user.email, req.body.stripeToken);
     if (customer == "ERROR") {
       bot.sendDM(member, "Payment Failed", "Your Subscription payment unfortunately failed. Please check your card account or try a different card.", "FF0000");
-      return res.redirect("/subscribe");
+      return res.redirect("/checkout");
     }
   }
   if (!customer.subscriptions.data[0]) {
@@ -256,10 +234,10 @@ server.post("/success", async function(req, res) {
   }
   if (subscription == "ERROR") {
     bot.sendDM(member, "Payment Failed", "Your Subscription payment unfortunately failed. Please check your card account or try a different card.", "FF0000");
-    return res.redirect("/subscribe");
+    return res.redirect("/checkout");
   } else if (subscription == "INCOMPLETE") {
     bot.sendDM(member, "Payment Failed", "Your Subscription payment unfortunately failed, but a customer record was created. Use the Update button after checking your card account or try a different card.", "FF0000");
-    return res.redirect("/subscribe");
+    return res.redirect("/checkout");
   } else {
     setTimeout(function() {
       return res.redirect(config.map_url);
@@ -280,22 +258,20 @@ server.post("/webhook", bodyParser.raw({
 //------------------------------------------------------------------------------
 server.get("/blocked", async function(req, res) {
   return res.render(__dirname + "/html/blocked.html");
-});
+}); /*
 //------------------------------------------------------------------------------
 //  SYNC DISCORD ROLES AND STRIPE SUSBCRIBERS
 //------------------------------------------------------------------------------
-if (config.test_mode != true) {
-  let times = ["05:30:00", "11:30:00", "17:30:00", "00:30:00"];
-  ontime({
-    cycle: times
-  }, function(ot) {
-    console.info("[" + bot.getTime("stamp") + "] [wall.js] Starting Stripe Database Maintenance.");
-    database.checkDonors();
-    ot.done();
-    console.info("[" + bot.getTime("stamp") + "] [wall.js] Stripe Database Maintenance Complete.");
-    return;
-  });
-}
+let times = ["05:30:00", "11:30:00", "17:30:00", "00:30:00"];
+ontime({
+  cycle: times
+}, function(ot) {
+  console.info("[" + bot.getTime("stamp") + "] [wall.js] Starting Stripe Database Maintenance.");
+  database.checkDonors();
+  ot.done();
+  console.info("[" + bot.getTime("stamp") + "] [wall.js] Stripe Database Maintenance Complete.");
+  return;
+});
 //------------------------------------------------------------------------------
 //  SYNC STRIPE CUSTOMER IDs
 //------------------------------------------------------------------------------
@@ -307,7 +283,7 @@ ontime({
   ot.done();
   console.info("[" + bot.getTime("stamp") + "] [wall.js] Stripe Customer Synchronization Complete.");
   return;
-});
+}); */
 //------------------------------------------------------------------------------
 //  LISTEN ON SPECIFIED PORT
 //------------------------------------------------------------------------------

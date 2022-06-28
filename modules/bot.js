@@ -95,25 +95,22 @@ bot.removeDonor = (user_id) => {
 //------------------------------------------------------------------------------
 //  CONFIRM BOT IS ONLINE AND SET STATUS
 //------------------------------------------------------------------------------
+bot.blacklisted = [];
 bot.on('ready', () => {
   console.info('[' + bot.getTime('stamp') + '] [bot.js] The bot (' + bot.user.tag + ') has initialized.');
-  if (config.blacklist) {
-    bot.blacklisted = config.blacklist.split(',');
-  } else {
-    bot.blacklisted = [];
-  }
+  bot.blacklisted = config.blacklist;
   if (bot.blacklisted.length > 0) {
-    console.log('[' + bot.getTime('stamp') + '] [bot.js] Loaded ' + bot.blacklisted.length + ' blacklisted users from the config.');
+    console.log('[' + bot.getTime('stamp') + '] [bot.js] Loaded ' + bot.blacklisted.length + ' blacklisted user(s) from the config.');
   }
   if (config.fetch_bans == true) {
     bot.guilds.cache.get(config.guild_id).fetchBans()
       .then(bans => {
-        console.log('[' + bot.getTime('stamp') + '] [bot.js] Fetched ' + bans.size + ' bans for the blacklist.');
-        bans.map(u => u.id).forEach(id => {
+        console.info('[' + bot.getTime('stamp') + '] [bot.js] Fetched ' + bans.size + ' ban(s) for the blacklist.');
+        bans.map(u => u.user.id).forEach(id => {
           bot.blacklisted.push(id);
         });
       }).catch(console.error);
-  }
+    }
   return bot.user.setActivity(config.map_url.slice(8, 50), {
     type: 'WATCHING'
   });
@@ -122,7 +119,7 @@ bot.on('ready', () => {
 //  LOGIN THE BOT
 //------------------------------------------------------------------------------
 console.info('[' + bot.getTime('stamp') + '] [bot.js] Starting up the bot...');
-bot.login(config.OAUTH2.bot_token);
+bot.login(config.oauth2.bot_token);
 //------------------------------------------------------------------------------
 //  EXPORT BOT
 //------------------------------------------------------------------------------
