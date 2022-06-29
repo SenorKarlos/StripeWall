@@ -154,20 +154,22 @@ server.get("/checkout", async function(req, res) {
   } else {
     let checkoutbody = '';
     for (let i = 0; i < config.stripe.plan_ids.length; i++) {
+      /*let taxhtml = '';
+      if (config.stripe.taxes.active == true) {
+        taxhtml = '<input type="hidden" name="taxrates" value=["' + config.stripe.taxes.rate_ids + ']" />';
+      }*/
       let planhtml = '<div><h2>$' + config.stripe.plan_ids[i].price + ' ' + config.stripe.plan_ids[i].frequency + ' Access</h2><form action="/create-checkout-session" method="post"><input type="hidden" name="priceID" value="' + config.stripe.plan_ids[i].id + '" /><input type="hidden" name="mode" value="' + config.stripe.plan_ids[i].mode + '" /><input type="hidden" name="customerID" value="' + req.session.stripe_id + '" /><button type="submit">Continue</button></form></div><br><hr>';
       checkoutbody = checkoutbody+planhtml;
     }
     return res.render(__dirname + "/html/checkout.html", {
+      welcome: config.checkout.welcome,
+      terms: config.checkout.terms,
+      warning: config.checkout.warning,
       checkoutbody: checkoutbody,
-      mode: config.stripe.plan_ids[0].mode,
-      price_id: config.stripe.plan_ids[0].id,
-      customer_id: req.session.stripe_id,
       map_name: config.map_name,
-      frequency: config.stripe.plan_ids[0].frequency,
       map_url: config.map_url,
       user_name: req.session.user_name,
-      email: req.session.email,
-      price: config.stripe.plan_ids[0].price
+      email: req.session.email
     });
   }
 });
@@ -175,33 +177,7 @@ server.get("/checkout", async function(req, res) {
 //  STRIPE CHECKOUT
 //------------------------------------------------------------------------------
 server.post("/create-checkout-session", async (req, res) => {
-console.log(req.body);
-  const priceID = req.body.priceID;
-  const mode = req.body.mode;
-  const customerID = req.body.customerID;
-  return res.redirect(config.map_url);
-/*  try {
-    const session = await stripe.checkout.sessions.create({
-      mode: mode,
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      success_url: config.map_url,
-      cancel_url: config.map_url,
-    });
-
-    return res.redirect(303, session.url);
-  } catch (e) {
-    res.status(400);
-    return res.send({
-      error: {
-        message: e.message,
-      }
-    });
-  }*/
+  return stripe.sessions.checkout(req, res);
 });
 //------------------------------------------------------------------------------
 //  STRIPE CUSTOMER PORTAL PAGE

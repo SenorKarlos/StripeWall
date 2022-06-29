@@ -3,31 +3,31 @@ server {
 <<Your Existing Site Config>> Can be a map or generic page, as long as these locations aren't in use (check subfolders)
 
     location /login {
-        proxy_pass http://localhost:7779/login;
+        proxy_pass http://localhost:7777/login;
     }
 
     location /checkout {
-        proxy_pass http://localhost:7779/checkout;
+        proxy_pass http://localhost:7777/checkout;
     }
 
     location /create-checkout-session {
-        proxy_pass http://localhost:7779/create-checkout-session;
+        proxy_pass http://localhost:7777/create-checkout-session;
     }
 
     location /manage {
-        proxy_pass http://localhost:7779/manage;
+        proxy_pass http://localhost:7777/manage;
     }
 
     location /unsubscribe {
-        proxy_pass http://localhost:7779/manage;
+        proxy_pass http://localhost:7777/manage;
     }
 
     location /webhook {
-        proxy_pass http://localhost:7779/webhook;
+        proxy_pass http://localhost:7777/webhook;
     }
 
     location /blocked {
-        proxy_pass http://localhost:7779/blocked;
+        proxy_pass http://localhost:7777/blocked;
     }
 
     location /discord {

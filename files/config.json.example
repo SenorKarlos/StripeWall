@@ -1,5 +1,5 @@
 {
-  "listening_port": 7779,
+  "listening_port": 7777,
   "session_key": "9kB2K)8uLdDT6xV5Azh#^SU[m4zKB]C;LxM*AfOS$ccJK9*axB",
   "map_name": "Your Map Name",
   "map_url": "https://your.site",
@@ -12,7 +12,7 @@
   "log_channel": "000000000000000000",
 
   "fetch_bans": true,
-  "blacklist": [],
+  "blacklist": ["000000000000000000","empty if not using"],
 
   "db_host": "127.0.0.1",
   "db_port": 3306,
@@ -27,9 +27,26 @@
     "scope": "identify,email,guilds,guilds.join"
   },
 
+  "checkout": {
+    "welcome": "Choose your preferred billing frequency below to get started. Applicable taxes will be calculated and added during checkout. Thank you for your support!",
+    "terms": "Do not redistribute scanned data. The sole exception being Raids you plan to attend ONLY. Doing so will result in immediate revokation of all access.",
+    "warning": "All services are subject to downtimes for various reasons. Please monitor the Discord Server for Updates."
+  },
+
+
   "stripe": {
     "live_pk": "your live keys",
     "live_sk": "your live keys",
+    "addresses": {
+      "billing": false,
+      "shipping": ["2 Letter Codes","empty if not using"]
+    },
+    "taxes": {
+      "active": false,,
+      "automatic": false,
+      "dynamic": false,
+      "rate_ids": ["txr_","empty if not using"]
+    },
     "plan_ids": [
       {
         "id": "price_ or plan_ ",

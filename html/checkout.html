@@ -66,29 +66,26 @@
     }
   </style>
 </head>
-
 <body>
   <div class="rcorners1">
     <center>
       <div>
         <div>
           <h1><%= map_name %> Checkout</h1>
-          <p><strong><font color="red">Welcome to <%= map_name %>! Choose your preferred billing frequency below to get started. Thank you for your support!</font></strong></p>
+          <p><strong><font color="red">Welcome, <%= user_name %>! (<%= email %>)</font></strong></p>
+          <p><strong><font color="red"><%= welcome %></font></strong></p>
         </div>
-
         <br>
         <hr>
-
         <%- checkoutbody %>
-
       <div>
         <div class="content">
           <div class="fineprint">
             <p>We NEVER receive, store, or view any sensitive customer credit card information.  All of our credit card processing is managed directly and solely by Stripe, a PCI Level 1 Compliant Service Provider.</p>
             <a href=https://stripe.com/docs/security/stripe>https://stripe.com/docs/security/stripe</a>
-            <p>Do not redistribute scanned data. The sole exception being Raids you plan to attend ONLY. Doing so will result in immediate revokation of all access.</p>
+            <p><%= terms %></p>
             <p>We are not associated with Niantic, ThePokemonCompany, or any of its subsidiaries.</p>
-            <p><strong>All services are subject to downtimes for various reasons. Please monitor the Discord Server for Updates.</strong></p>
+            <p><strong><%= warning %></strong></p>
             <a href=<%= map_url %>/discord><%= map_url %>/discord</a>
             <br>
           </div>
@@ -96,6 +93,5 @@
       </div>
     </center>
   </div>
-
 </body>
 </html>

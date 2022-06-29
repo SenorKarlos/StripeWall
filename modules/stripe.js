@@ -4,6 +4,9 @@ const moment = require('moment');
 const config = require("../files/config.json");
 const stripe_js = require('stripe')(config.stripe.live_sk);
 const stripe = {
+//------------------------------------------------------------------------------
+//  STRIPE CUSTOMER FUNCTIONS
+//------------------------------------------------------------------------------
   customer: {
 //------------------------------------------------------------------------------
 //  CREATE A CUSTOMER
@@ -117,6 +120,9 @@ const stripe = {
       });
     }
   },
+//------------------------------------------------------------------------------
+//  STRIPE SUBSCRIPTION FUNCTIONS
+//------------------------------------------------------------------------------
   subscription: {
 //------------------------------------------------------------------------------
 //  CREATE A SUSBCRIPTION
@@ -205,6 +211,61 @@ const stripe = {
             }
         });
       });
+    }
+  },
+//------------------------------------------------------------------------------
+//  STRIPE SESSION FUNCTIONS
+//------------------------------------------------------------------------------
+  sessions: {
+    checkout: async function(req, res) {
+      const mode = req.body.mode;
+      const customerID = req.body.customerID;
+      const priceID = req.body.priceID;
+      var sessionbody = {
+        mode: mode,
+        customer: customerID,
+        line_items: [
+          {
+            price: priceID,
+            quantity: 1,
+          },
+        ],
+        success_url: config.map_url,
+        cancel_url: config.map_url,
+      };
+      if (config.stripe.taxes.active == true) {
+        if (config.stripe.taxes.automatic == true) {
+          sessionbody.automatic_tax = {enabled: true};
+        } else if (config.stripe.taxes.dynamic == true) {
+          sessionbody.line_items[0].dynamic_tax_rates = config.stripe.taxes.rate_ids;
+        } else {
+          sessionbody.line_items[0].tax_rates = config.stripe.taxes.rate_ids;
+        }
+      }
+      if (config.stripe.addresses.billing == true) {
+        sessionbody.billing_address_collection = "required";
+        sessionbody.customer_update = {address: "auto"};
+      }
+      if (config.stripe.addresses.shipping) {
+        sessionbody.shipping_address_collection = {allowed_countries: config.stripe.addresses.shipping};
+        if (sessionbody.customer_update.address) {
+          sessionbody.customer_update.shipping = "auto";
+        } else {
+          sessionbody.customer_update = {shipping: "auto"};
+        }
+      }
+console.log(sessionbody);
+      try {
+        const session = await stripe_js.checkout.sessions.create(sessionbody);
+        return res.redirect(303, session.url);
+      } catch (e) {
+        res.status(400);
+        return res.send({
+          error: {
+            message: e.message,
+          }
+        });
+      }
     }
   },
 //------------------------------------------------------------------------------
