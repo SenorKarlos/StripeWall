@@ -11,16 +11,17 @@ const stripe = {
 //------------------------------------------------------------------------------
 //  CREATE A CUSTOMER
 //------------------------------------------------------------------------------
-    create: function(user_name, user_id, user_email){
+    create: function(user_name, user_id, user_email) {
       return new Promise(function(resolve) {
         stripe_js.customers.create({
+          name: user_name,
           description: user_id,
-          email: user_email,
-          name: user_name
+          email: user_email
         }, function(err, customer) {
-          if(err){
-            console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Creating Customer.', err.message); return resolve('ERROR');
-          } else{
+          if(err) {
+            console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Creating Customer.', err.message);
+            return resolve('ERROR');
+          } else {
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.id+' has been Created.');
             database.runQuery('UPDATE stripe_users SET stripe_id = ? WHERE user_id = ?', [customer.id, user_id]);
             return resolve(customer);
@@ -31,91 +32,128 @@ const stripe = {
 //------------------------------------------------------------------------------
 //  UPDATE A CUSTOMER
 //------------------------------------------------------------------------------
-    update: function(customer_id, email, name){
+    update: function(customer_id, email, name) {
       return new Promise(function(resolve) {
         stripe_js.customers.update(
           customer_id,
           { email: email, name: name },
           function(err, customer) {
-            if(err){
-              console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Updating Customer.', err.message); return resolve('ERROR');
-            } else{
+            if(err) {
+              console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Updating Customer.', err.message);
+              return resolve('ERROR');
+            } else {
               console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer ' + name + ' (' + customer.id + ') has been Updated.');
               return resolve(customer);
             }
-        });
+          }
+        );
       });
     },
 //------------------------------------------------------------------------------
 //  FETCH A CUSTOMER
 //------------------------------------------------------------------------------
-    fetch: function(customer_id){
+    fetch: function(customer_id) {
       return new Promise(function(resolve) {
         stripe_js.customers.retrieve(
           customer_id,
           function(err, customer) {
-            if(err){
-              console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Fetching Customer.', err.message); return resolve('ERROR');
-            } else{ return resolve(customer); }
-          });
+            if(err) {
+              console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Fetching Customer.', err.message);
+              return resolve('ERROR');
+            } else {
+              return resolve(customer);
+            }
+          }
+        );
       });
     },
 //------------------------------------------------------------------------------
 //  DELETE A CUSTOMER
 //------------------------------------------------------------------------------
-    delete: function(customer_id){
+    delete: function(customer_id) {
       return new Promise(function(resolve) {
         stripe_js.customers.del(
           customer_id,
           function(err, confirmation) {
-            if(err){
-              console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Deleting Customer.', err.message); return resolve('ERROR');
-            } else{
+            if(err) {
+              console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Deleting Customer.', err.message);
+              return resolve('ERROR');
+            } else {
               console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer_id+' has been Deleted.');
-              return resolve(confirmation); }
-          });
+              return resolve(confirmation);
+            }
+          }
+        );
       });
     },
 //------------------------------------------------------------------------------
 //  LIST CUSTOMERS
 //------------------------------------------------------------------------------
-    list: async function(last){
-      console.info("[stripe.js] Starting user check.")
+    list: async function(last) {
       stripe_js.customers.list(
         {limit: 100, starting_after: last},
         async function(err, list) {
-          if(err){ console.log(err.message); }
-          else{
+          if(err) {
+            console.log(err.message);
+          } else {
+            console.info("["+bot.getTime('stamp')+"] [stripe.js] Parsing users, 100 max.")
             await stripe.customer.parse(list.data);
-            if(list.has_more != false){
+            if(list.has_more == true) {
               stripe.customer.list(list.data[list.data.length - 1].id);
-            }
+            } else {
+              console.info("["+bot.getTime("stamp")+"] [stripe.js] Stripe Customer Synchronization Complete.");
           }
-      });
+        }
+      );
     },
 //------------------------------------------------------------------------------
 //  PARSE CUSTOMERS
 //------------------------------------------------------------------------------
-    parse: async function(parse){
+    parse: async function(parse) {
       parse.forEach((customer,index) => {
         setTimeout(function() {
-          if(customer.subscriptions.data[0] && customer.subscriptions.data[0].plan.id == config.stripe.plan_id){
-            let unix = moment().unix();
-            database.db.query('SELECT * FROM stripe_users WHERE user_id = ?', [customer.description.split(' - ')[1]], async function (err, record, fields) {
-              if(err){ return console.error('['+bot.getTime('stamp')+'] [stripe.js]', err.message); }
-              if(record[0]){
-                if(record[0].stripe_id == 'Lifetime'){ return; }
-                else{
-                  database.runQuery('UPDATE stripe_users SET user_name = ?, stripe_id = ?, plan_id = ?, email = ?, last_updated = ? WHERE user_id = ?',
-                    [customer.description.split(' - ')[0], customer.id, customer.subscriptions.data[0].plan.id, customer.email, unix, customer.description.split(' - ')[1]]);
-                }
-              } else{
-                database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, plan_id, email, last_updated) VALUES (?, ?, ?, ?, ?, ?)',
-                  [customer.description.split(' - ')[0], customer.description.split(' - ')[1], customer.id, customer.subscriptions.data[0].plan.id, customer.email, unix]);
-                return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.description.split(' - ')[0]+' ('+customer.description.split(' - ')[1]+' | '+customer.id+') Inserted User into the User Database.');
-              }
-            });
-          }
+          for (let i = 0; i < config.stripe.plan_ids.length; i++) {
+            if(customer.subscriptions.data[0]) {
+              for (let x = 0; x < customer.subscriptions.data.length; x++) {
+                if(customer.subscriptions.data[x].plan.id == config.stripe.plan_ids[i].id) {
+                  let unix = moment().unix();
+                  database.db.query('SELECT * FROM stripe_users WHERE user_id = ?', [customer.description], async function (err, record, fields) {
+                    if(err) { return console.error('['+bot.getTime('stamp')+'] [stripe.js]', err.message); }
+                    if(record[0]){
+                      if(record[0].stripe_id == 'Manual') { return;
+                      } else {
+                        if (record[0].access_token != null || record[0].refresh_token != null) {
+                          let data;
+                          data.access_token = record[0].access_token;
+                          if (unix > record[0].token_expiration) { data = await oauth2.refreshAccessToken(record[0].refresh_token); }
+                          let user = await oauth2.fetchUser(data.access_token);
+                          if (user.email != customer.email || user.username != customer.name) {
+                            customer = await stripe.customer.update(customer.id, user.email, user.username);
+                          }
+                          if (customer.name != record[0].user_name || customer.id != record[0].stripe_id || customer.subscriptions.data[x].plan.id != record[0].plan_id || customer.email != record[0].email) {
+                            database.runQuery('UPDATE stripe_users SET user_name = ?, stripe_id = ?, plan_id = ?, email = ?, last_updated = ? WHERE user_id = ?',
+                            [customer.name, customer.id, customer.subscriptions.data[x].plan.id, customer.email, unix, customer.description]);
+                            return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Updated User info in Database.');
+                          }
+                        return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Database & Stripe records verified against Discord.');
+                        } else { // end access_token begin if not
+                          if (customer.id != record[0].stripe_id || customer.subscriptions.data[x].plan.id != record[0].plan_id) {
+                            database.runQuery('UPDATE stripe_users SET stripe_id = ?, plan_id = ?, last_updated = ? WHERE user_id = ?',
+                            [customer.id, customer.subscriptions.data[x].plan.id, unix, customer.description]);
+                            return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Updated Stripe info in Database.');
+                          }
+                        }
+                      }
+                    } else { // end if in database start not
+                      database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, plan_id, email, last_updated) VALUES (?, ?, ?, ?, ?, ?)',
+                        [customer.name, customer.description, customer.id, customer.subscriptions.data[x].plan.id, customer.email, unix]);
+                      return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database.');
+                    }
+                  }); // dead end after database fetch
+                } // dead end of customer plan vs config plan
+              }// dead end for each sub in array (usually 1)
+            } // open end if customer has sub(s)
+          } // dead end for every plan in config
         }, 5000 * index);
       });
     }
@@ -124,74 +162,6 @@ const stripe = {
 //  STRIPE SUBSCRIPTION FUNCTIONS
 //------------------------------------------------------------------------------
   subscription: {
-//------------------------------------------------------------------------------
-//  CREATE A SUSBCRIPTION
-//------------------------------------------------------------------------------
-    create: function(customer,user_id){
-      return new Promise(function(resolve) {
-        stripe_js.subscriptions.create({
-          customer: customer.id, items: [ { plan: config.stripe.plan_id, }, ]
-        }, function(err, subscription) {
-          if(err){
-            console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Creating Subscription.', err.message);
-            return resolve('ERROR');
-          } else if (subscription.status == 'incomplete') {
-            database.runQuery('UPDATE stripe_users SET stripe_id = ?, plan_id = ? WHERE user_id = ?', [subscription.customer, subscription.plan.id, user_id]);
-            console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Charging Subscription, but record created.');
-            return resolve('INCOMPLETE');
-          } else{
-            database.runQuery('UPDATE stripe_users SET stripe_id = ?, plan_id = ? WHERE user_id = ?', [subscription.customer, subscription.plan.id, user_id]);
-            console.log('['+bot.getTime('stamp')+'] [stripe.js] A New Stripe Subscription has been Created.');
-            return resolve(subscription);
-          }
-        });
-      });
-    },
-//------------------------------------------------------------------------------
-//  PAY OUTSTANDING INVOICE
-//------------------------------------------------------------------------------
-    pay: function(member,invoice_id){
-      return new Promise(function(resolve) {
-        stripe_js.invoices.pay(
-          invoice_id,
-          function(err, invoice) {
-            if(err){
-              bot.sendEmbed(member, 'FF0000', 'Invoice Payment Attempt Failed', '', config.log_channel);
-              console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Paying Subscription Invoice.', err.message);
-              return resolve('ERROR');
-            } else if (invoice.paid == false) {
-              bot.sendEmbed(member, 'FF0000', 'Invoice Payment Attempt Failed', '', config.log_channel);
-              console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Paying Subscription Invoice.');
-              return resolve('ERROR');
-            } else if (invoice.paid == true) {
-              bot.sendEmbed(member, '00FF00', 'Failed Subscription Invoice Paid', '', config.log_channel);
-              console.log("["+bot.getTime("stamp")+"] [stripe.js] "+member.user.tag+"'s subscription payment was successful.");
-              return resolve('PAID');
-            }
-        });
-      });
-    },
-//------------------------------------------------------------------------------
-//  CANCEL A SUSBCRIPTION (NORMAL)
-//------------------------------------------------------------------------------
-    cancel: function(member, subscription_id){
-      return new Promise(function(resolve) {
-        stripe_js.subscriptions.update(
-          subscription_id,
-          { cancel_at_period_end: true },
-          function(err, confirmation) {
-            if(err){
-              console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Canceling Subscription.', err.message);
-              return resolve(null);
-            } else{
-              bot.sendEmbed(member, 'FF0000', 'Subscription Cancellation', '', config.log_channel);
-              bot.sendDM(member,'Subscription Cancellation', 'Your subscription has been set to cancel at current period end.','FFFF00');
-              console.log("["+bot.getTime("stamp")+"] [stripe.js] "+member.user.tag+"'s subscription has been set to cancel at current period end.");
-              return resolve(confirmation);
-            }
-        });
-      });
-    },
 //------------------------------------------------------------------------------
 //  CANCEL A SUSBCRIPTION (USER-LEFT)
 //------------------------------------------------------------------------------
@@ -217,6 +187,9 @@ const stripe = {
 //  STRIPE SESSION FUNCTIONS
 //------------------------------------------------------------------------------
   sessions: {
+//------------------------------------------------------------------------------
+//  CHECKOUT
+//------------------------------------------------------------------------------
     checkout: async function(req, res) {
       const mode = req.body.mode;
       const customerID = req.body.customerID;
@@ -246,7 +219,7 @@ const stripe = {
         sessionbody.billing_address_collection = "required";
         sessionbody.customer_update = {address: "auto"};
       }
-      if (config.stripe.addresses.shipping) {
+      if (config.stripe.addresses.shipping != false) {
         sessionbody.shipping_address_collection = {allowed_countries: config.stripe.addresses.shipping};
         if (sessionbody.customer_update.address) {
           sessionbody.customer_update.shipping = "auto";
@@ -254,10 +227,29 @@ const stripe = {
           sessionbody.customer_update = {shipping: "auto"};
         }
       }
-console.log(sessionbody);
       try {
         const session = await stripe_js.checkout.sessions.create(sessionbody);
         return res.redirect(303, session.url);
+      } catch (e) {
+        res.status(400);
+        return res.send({
+          error: {
+            message: e.message,
+          }
+        });
+      }
+    },
+//------------------------------------------------------------------------------
+//  CUSTOMER PORTAL
+//------------------------------------------------------------------------------
+    portal: async function(req, res) {
+      try {
+        const customerID = req.body.customerID;
+        const session = await stripe_js.billingPortal.sessions.create({
+          customer: customerID,
+          return_url: config.map_url,
+        });
+        return res.redirect(session.url);
       } catch (e) {
         res.status(400);
         return res.send({

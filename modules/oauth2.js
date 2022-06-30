@@ -24,9 +24,31 @@ const oauth2 = {
       }).then(async function(response) {
         return resolve(response.data);
       }).catch(error => {
-        console.error("[Oauth2+Stripe] [oauth2.js]", error.response);
+        console.error("["+bot.getTime('stamp')+"] [oauth2.js]", error.response);
         return resolve(error);
       });
+    });
+  },
+  //------------------------------------------------------------------------------
+  //  FETCH ACCESS TOKEN
+  //------------------------------------------------------------------------------
+  refreshAccessToken: function(refresh_token) {
+    let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=refresh_token&refresh_token=${refresh_token}&redirect_uri=${config.redirect_url}&scope=${oauth2.scope}`;
+    let headers = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    }
+    axios.post("https://discord.com/api/oauth2/token", data, {
+      headers: headers
+    }).then(async function(response) {
+      console.log("[oauth2.js] Successfully Refreshed a Token", response.data);
+      let user = await database.db.query('SELECT * FROM stripe_users WHERE refresh_token = ?', [refresh_token]);
+      let token_expiration = (unix_now + response.data.expires_in);
+      database.runQuery(`UPDATE IGNORE stripe_users SET access_token = ?, refresh_token = ?, token_expiration = ?, last_updated = ? WHERE user_id = ?`, [response.data.access_token, response.data.refresh_token, token_expiration, unix_now, user.user_id]);
+      console.info('['+bot.getTime('stamp')+'] [oauth2.js] '+user.user_name+' ('+user.user_id+') Updated Discord OAuth2 info in Database.');
+      return resolve(response.data);
+    }).catch(error => {
+      console.error("["+bot.getTime('stamp')+"] [oauth2.js]", error.response);
+      return resolve(error);
     });
   },
   //------------------------------------------------------------------------------
@@ -42,7 +64,7 @@ const oauth2 = {
       }).then(function(response) {
         return resolve(response.data);
       }).catch(error => {
-        console.error;
+        console.error("[oauth2.js]", error.response);
         return resolve(error);
       });
     });
@@ -67,4 +89,5 @@ const oauth2 = {
 module.exports = oauth2;
 
 // SCRIPT REQUIREMENTS
+database = require(__dirname + '/database.js');
 bot = require(__dirname + '/bot.js');

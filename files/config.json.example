@@ -27,19 +27,22 @@
     "scope": "identify,email,guilds,guilds.join"
   },
 
-  "checkout": {
-    "welcome": "Choose your preferred billing frequency below to get started. Applicable taxes will be calculated and added during checkout. Thank you for your support!",
-    "terms": "Do not redistribute scanned data. The sole exception being Raids you plan to attend ONLY. Doing so will result in immediate revokation of all access.",
-    "warning": "All services are subject to downtimes for various reasons. Please monitor the Discord Server for Updates."
+  "pages": {
+    "general":{
+      "terms": "Do not redistribute scanned data. The sole exception being Raids you plan to attend ONLY. Doing so will result in immediate revokation of all access.",
+      "warning": "All services are subject to downtimes for various reasons. Please monitor the Discord Server for Updates."
+    },
+    "checkout": {
+      "welcome": "Choose your preferred billing frequency below to get started. Applicable taxes will be calculated and added during checkout. Thank you for your support!"
+    }
   },
-
 
   "stripe": {
     "live_pk": "your live keys",
     "live_sk": "your live keys",
     "addresses": {
       "billing": false,
-      "shipping": ["2 Letter Codes","empty if not using"]
+      "shipping": ["2 Letter Codes","delete array and set false if not using"]
     },
     "taxes": {
       "active": false,,
