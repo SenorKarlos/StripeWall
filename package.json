@@ -4,7 +4,7 @@
   "description": "1: Pull Repo<br/>\r 2: Take index.php.example and insert into PMSF index.php file at line ##. If your File directory does not match what is in the example, you will need to alter it.<br/>\r 3: Create Discord bot in Discord Developer Console (or use existing bot), and ensure it has administrative privileges in your server (assign roles and manage members minimum).<br/>\r 4: Fill out config.ini.example and remove '.example'.<br/>\r 5: Add redirect_url from your completed config.ini to your Discord Bot.<br/>\r 6: Create a webhook in Stripe, add the following events to the stripe webook, point to https://yourmapurl.com/webhook (If you want console and discord logs):\r - charge.refunded, customer.deleted, charge.succeeded, customer.subscription.created, customer.subscription.deleted, customer.subscription.updated, customer.updated, invoice.payment_failed<br\\>\r 7: Start the bot with PM2 `pm2 start wall.js`. Read the PM2 docs to have the bot automatically start as a service in the event of a power failure, restart, or other issue.",
   "main": "wall.js",
   "dependencies": {
-    "axios": "^0.19.2",
+    "axios": "0.21.1",
     "cookie-session": "^1.4.0",
     "discord-oauth2": "^2.2.0",
     "discord.js": "^12.2.0",
@@ -14,7 +14,7 @@
     "moment": "^2.26.0",
     "mysql": "^2.18.1",
     "ontime": "0.0.6",
-    "stripe": "^8.60.0"
+    "stripe": "9.11.0"
   },
   "devDependencies": {},
   "scripts": {
