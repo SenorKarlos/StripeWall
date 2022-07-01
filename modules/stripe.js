@@ -55,7 +55,7 @@ const stripe = {
     fetch: function(customer_id) {
       return new Promise(function(resolve) {
         stripe_js.customers.retrieve(
-          customer_id,
+          customer_id, { expand: ['customer.subscriptions.data'], }
           function(err, customer) {
             if(err) {
               console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Fetching Customer.', err.message);
@@ -91,7 +91,7 @@ const stripe = {
 //------------------------------------------------------------------------------
     list: async function(last) {
       stripe_js.customers.list(
-        {limit: 100, starting_after: last},
+        {limit: 100, expand: ['customer.subscriptions.data'], starting_after: last},
         async function(err, list) {
           if(err) {
             console.log(err.message);
@@ -102,6 +102,7 @@ const stripe = {
               stripe.customer.list(list.data[list.data.length - 1].id);
             } else {
               console.info("["+bot.getTime("stamp")+"] [stripe.js] Stripe Customer Synchronization Complete.");
+            }
           }
         }
       );
@@ -118,41 +119,40 @@ const stripe = {
                 if(customer.subscriptions.data[x].plan.id == config.stripe.plan_ids[i].id) {
                   let unix = moment().unix();
                   database.db.query('SELECT * FROM stripe_users WHERE user_id = ?', [customer.description], async function (err, record, fields) {
-                    if(err) { return console.error('['+bot.getTime('stamp')+'] [stripe.js]', err.message); }
+                    if(err) { return console.error('['+bot.getTime('stamp')+'] [stripe.js]'+customer.name+' '+customer.id, err.message); }
                     if(record[0]){
-                      if(record[0].stripe_id == 'Manual') { return;
-                      } else {
-                        if (record[0].access_token != null || record[0].refresh_token != null) {
-                          let data;
-                          data.access_token = record[0].access_token;
-                          if (unix > record[0].token_expiration) { data = await oauth2.refreshAccessToken(record[0].refresh_token); }
-                          let user = await oauth2.fetchUser(data.access_token);
-                          if (user.email != customer.email || user.username != customer.name) {
-                            customer = await stripe.customer.update(customer.id, user.email, user.username);
-                          }
-                          if (customer.name != record[0].user_name || customer.id != record[0].stripe_id || customer.subscriptions.data[x].plan.id != record[0].plan_id || customer.email != record[0].email) {
-                            database.runQuery('UPDATE stripe_users SET user_name = ?, stripe_id = ?, plan_id = ?, email = ?, last_updated = ? WHERE user_id = ?',
-                            [customer.name, customer.id, customer.subscriptions.data[x].plan.id, customer.email, unix, customer.description]);
-                            return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Updated User info in Database.');
-                          }
-                        return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Database & Stripe records verified against Discord.');
-                        } else { // end access_token begin if not
-                          if (customer.id != record[0].stripe_id || customer.subscriptions.data[x].plan.id != record[0].plan_id) {
-                            database.runQuery('UPDATE stripe_users SET stripe_id = ?, plan_id = ?, last_updated = ? WHERE user_id = ?',
-                            [customer.id, customer.subscriptions.data[x].plan.id, unix, customer.description]);
-                            return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Updated Stripe info in Database.');
-                          }
-                        }
-                      }
-                    } else { // end if in database start not
+                      if(record[0].stripe_id == 'Manual') { return; } else {
+                        if (customer.id != record[0].stripe_id || customer.subscriptions.data[x].plan.id != record[0].plan_id) {
+                          database.runQuery('UPDATE stripe_users SET stripe_id = ?, plan_id = ?, last_updated = ? WHERE user_id = ?', [customer.id, customer.subscriptions.data[x].plan.id, unix, customer.description]);
+                          return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Updated Stripe info in Database.'); 
+                        } return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Verified Stripe info in Database.');
+                      } // end if not Manual tracked user
+                    } else { // end if in database
                       database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, plan_id, email, last_updated) VALUES (?, ?, ?, ?, ?, ?)',
                         [customer.name, customer.description, customer.id, customer.subscriptions.data[x].plan.id, customer.email, unix]);
                       return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database.');
-                    }
+                    } // end not in database
                   }); // dead end after database fetch
                 } // dead end of customer plan vs config plan
-              }// dead end for each sub in array (usually 1)
-            } // open end if customer has sub(s)
+              } // dead end for each sub in customer array (usually 1)
+            } else { //end customer has sub
+              let unix = moment().unix();
+              database.db.query('SELECT * FROM stripe_users WHERE user_id = ?', [customer.description], async function (err, record, fields) {
+                if(err) { return console.error('['+bot.getTime('stamp')+'] [stripe.js]'+customer.name+' '+customer.id, err.message); }
+                if(record[0]){
+                  if(record[0].stripe_id == 'Manual') { return; } else {
+                    if (customer.id != record[0].stripe_id) {
+                      database.runQuery('UPDATE stripe_users SET stripe_id = ?, last_updated = ? WHERE user_id = ?', [customer.id, unix, customer.description]);
+                      return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Updated Stripe info in Database.');
+                    } return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Verified Stripe info in Database.');
+                  } // end if not Manual tracked user
+                } else { // end of in DB
+                  database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, email, last_updated) VALUES (?, ?, ?, ?, ?)',
+                    [customer.name, customer.description, customer.id, customer.email, unix]);
+                  return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database.');
+                } //end not in db
+              }); // dead end after database fetch
+            } // end of customer has no sub data
           } // dead end for every plan in config
         }, 5000 * index);
       });
