@@ -33,12 +33,12 @@ bot.sendEmbed = (member, color, title, body, channel_id) => {
 
   let embed = new Discord.MessageEmbed()
     .setColor(color)
-    .setAuthor(nickname + ' (' + member.user.id + ')', member.user.displayAvatarURL)
+    .setAuthor(nickname+' ('+member.user.id+')', member.user.displayAvatarURL)
     .setTitle(title)
     .setDescription(body)
-    .setFooter(config.map_name + ' | ' + bot.getTime('full'));
+    .setFooter(config.map_name+' | '+bot.getTime('full'));
   return bot.channels.cache.get(channel_id).send(embed).catch(err => {
-    console.error('[' + bot.getTime('stamp') + '] [bot.js] Unable to Send Channel Message.', err);
+    console.error('['+bot.getTime('stamp')+'] [bot.js] Unable to Send Channel Message.', err);
   });
 }
 //------------------------------------------------------------------------------
@@ -49,8 +49,8 @@ bot.sendDM = (member, title, body, color) => {
     .setColor(color)
     .setTitle(title)
     .setDescription(body)
-    .setFooter(config.map_name + ' | ' + bot.getTime('full'));
-  bot.guilds.cache.get(config.guild_id).members.fetch(member.id).then(TARGET => {
+    .setFooter(config.map_name+' | '+bot.getTime('full'));
+  bot.guilds.cache.get(config.discord.guild_id).members.fetch(member.id).then(TARGET => {
     return TARGET.send(embed).catch(error => {
       if (error) {
         console.error('[Send_DM]', error);
@@ -62,14 +62,14 @@ bot.sendDM = (member, title, body, color) => {
 //  ASSIGN DONOR ROLE TO A MEMBER
 //------------------------------------------------------------------------------
 bot.assignDonor = (user_id) => {
-  let member = bot.guilds.cache.get(config.guild_id).members.cache.get(user_id);
-  console.log('[' + bot.getTime('stamp') + '] [bot.js] ' + member.user.tag + ' has Donor Role: ' + member.roles.cache.has(config.donor_role_id));
+  let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user_id);
+  console.log('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' has Donor Role: '+member.roles.cache.has(config.donor_role_id));
   if (!member) {
-    console.error('[' + bot.getTime('stamp') + '] [bot.js] Unable to Assign the User a donor role.');
+    console.error('['+bot.getTime('stamp')+'] [bot.js] Unable to Assign the User a donor role.');
     return false;
   } else if (!member.roles.cache.has(config.donor_role_id)) {
     member.roles.add(config.donor_role_id);
-    console.error('[' + bot.getTime('stamp') + '] [bot.js] Assigned the User a donor role.');
+    console.error('['+bot.getTime('stamp')+'] [bot.js] Assigned the User a donor role.');
     return true;
   } else {
     return false;
@@ -79,14 +79,14 @@ bot.assignDonor = (user_id) => {
 //  REMOVE DONOR ROLE FROM A MEMBER
 //------------------------------------------------------------------------------
 bot.removeDonor = (user_id) => {
-  let member = bot.guilds.cache.get(config.guild_id).members.cache.get(user_id);
-  console.log('[bot.js] [removeDonor] ' + member.user.tag + ' has Donor Role: ' + member.roles.cache.has(config.donor_role_id));
+  let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user_id);
+  console.log('[bot.js] [removeDonor] '+member.user.tag+' has Donor Role: '+member.roles.cache.has(config.donor_role_id));
   if (!member) {
-    console.error('[' + bot.getTime('stamp') + '] [bot.js] Unable to Remove the donor role from the User.');
+    console.error('['+bot.getTime('stamp')+'] [bot.js] Unable to Remove the donor role from the User.');
     return false;
   } else if (member.roles.cache.has(config.donor_role_id)) {
     member.roles.remove(config.donor_role_id);
-    console.error('[' + bot.getTime('stamp') + '] [bot.js] Removed the donor role from the User.');
+    console.error('['+bot.getTime('stamp')+'] [bot.js] Removed the donor role from the User.');
     return true;
   } else {
     return false;
@@ -97,29 +97,29 @@ bot.removeDonor = (user_id) => {
 //------------------------------------------------------------------------------
 bot.blacklisted = [];
 bot.on('ready', () => {
-  console.info('[' + bot.getTime('stamp') + '] [bot.js] The bot (' + bot.user.tag + ') has initialized.');
-  bot.blacklisted = config.blacklist;
+  console.info('['+bot.getTime('stamp')+'] [bot.js] The bot ('+bot.user.tag+') has initialized.');
+  bot.blacklisted = config.discord.blacklist;
   if (bot.blacklisted.length > 0) {
-    console.log('[' + bot.getTime('stamp') + '] [bot.js] Loaded ' + bot.blacklisted.length + ' blacklisted user(s) from the config.');
+    console.log('['+bot.getTime('stamp')+'] [bot.js] Loaded '+bot.blacklisted.length+' blacklisted user(s) from the config.');
   }
-  if (config.fetch_bans == true) {
-    bot.guilds.cache.get(config.guild_id).fetchBans()
+  if (config.discord.fetch_bans == true) {
+    bot.guilds.cache.get(config.discord.guild_id).fetchBans()
       .then(bans => {
-        console.info('[' + bot.getTime('stamp') + '] [bot.js] Fetched ' + bans.size + ' ban(s) for the blacklist.');
+        console.info('['+bot.getTime('stamp')+'] [bot.js] Fetched '+bans.size+' ban(s) for the blacklist.');
         bans.map(u => u.user.id).forEach(id => {
           bot.blacklisted.push(id);
         });
       }).catch(console.error);
     }
-  return bot.user.setActivity(config.map_url.slice(8, 50), {
+  return bot.user.setActivity('for subscribers', {
     type: 'WATCHING'
   });
 });
 //------------------------------------------------------------------------------
 //  LOGIN THE BOT
 //------------------------------------------------------------------------------
-console.info('[' + bot.getTime('stamp') + '] [bot.js] Starting up the bot...');
-bot.login(config.oauth2.bot_token);
+console.info('['+bot.getTime('stamp')+'] [bot.js] Starting up the bot...');
+bot.login(config.discord.bot_token);
 //------------------------------------------------------------------------------
 //  EXPORT BOT
 //------------------------------------------------------------------------------

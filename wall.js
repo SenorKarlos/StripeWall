@@ -32,13 +32,12 @@ server.use(cookieSession({
 server.get("/login", async (req, res) => {
   let time_now = moment().valueOf();
   let unix_now = moment().unix();
-  
   if (!req.query.code) {
   //------------------------------------------------------------------------------
   //  SEND TO DISCORD OAUTH2
   //------------------------------------------------------------------------------
     console.info("[" + bot.getTime("stamp") + "] [wall.js] Login from " + req.headers['x-forwarded-for'] + ". Sending User to Discord Oauth2 Authorization URL.");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.redirect_url}`);
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   } else {
   //------------------------------------------------------------------------------
   //  REDIRECT FROM OAUTH WITH CODE
@@ -54,7 +53,7 @@ server.get("/login", async (req, res) => {
     //  CHECK BLACKLIST & GUILD MEMBER STATUS
     //------------------------------------------------------------------------------
     if (bot.blacklisted.indexOf(req.session.discord_id) >= 0) {
-      let member = await bot.guilds.cache.get(config.guild_id).members.cache.get(user.id);
+      let member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.id);
       if (!member || member == undefined) {
         await bot.users.fetch(user.id).then(user => {
           member = {
@@ -62,12 +61,12 @@ server.get("/login", async (req, res) => {
           };
         });
       }
-      bot.sendEmbed(member, "FF0000", "Blacklist Login Attempt", "", config.log_channel);
+      bot.sendEmbed(member, "FF0000", "Blacklist Login Attempt", "", config.discord.log_channel);
       return res.redirect(`/blocked`);
     }
-    let member = await bot.guilds.cache.get(config.guild_id).members.cache.get(user.id);
+    let member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.id);
     if (!member) {
-      await oauth2.joinGuild(data.access_token, config.guild_id, user.id);
+      await oauth2.joinGuild(data.access_token, config.discord.guild_id, user.id);
       await bot.users.fetch(user.id).then(user => {
         member = {
           user: user
@@ -106,7 +105,7 @@ server.get("/login", async (req, res) => {
       console.info("[" + bot.getTime("stamp") + "] [wall.js] Found Stripe Info for User " + req.session.user_name);
       if (req.session.discord_id != customer.description) {
         bot.sendDM(member, "Error Logging In", "Please contact administration for further assistance", "FF0000");
-        bot.sendEmbed(member, "FF0000", "User ID Discrepancy Found", "User " + dbuser.user_name + "'s Discord ID (" + req.session.discord_id + ") not found on matched Stripe Record (" + customer.id + "," + customer.description + ")", config.log_channel);
+        bot.sendEmbed(member, "FF0000", "User ID Discrepancy Found", "User " + dbuser.user_name + "'s Discord ID (" + req.session.discord_id + ") not found on matched Stripe Record (" + customer.id + "," + customer.description + ")", config.discord.log_channel);
         return res.redirect(config.map_url);
       }
       if (req.session.email != customer.email || req.session.user_name != customer.name) {
@@ -130,7 +129,7 @@ server.get("/login", async (req, res) => {
     }
     if (dbChecked == false || stripeChecked == false) {
       bot.sendDM(member, "Error Logging In", "Please contact administration for further assistance", "FF0000");
-      bot.sendEmbed(member, "FF0000", "Login Flow Error", "User " + req.session.user_name + " DB Pass = " + dbChecked + ", Stripe Pass = " + stripeChecked, config.log_channel);
+      bot.sendEmbed(member, "FF0000", "Login Flow Error", "User " + req.session.user_name + " DB Pass = " + dbChecked + ", Stripe Pass = " + stripeChecked, config.discord.log_channel);
       return res.redirect(config.map_url);
     } else {
       req.session.login = true;
@@ -148,11 +147,11 @@ server.get("/login", async (req, res) => {
 server.get("/checkout", async function(req, res) {
   if (!req.session.login) {
     console.info("[" + bot.getTime("stamp") + "] [wall.js] Direct Link Accessed, Sending to Login");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.redirect_url}`);
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   } else {
     let checkoutbody = '';
-    for (let i = 0; i < config.stripe.plan_ids.length; i++) {
-      let planhtml = '<div><h2>$' + config.stripe.plan_ids[i].price + ' ' + config.stripe.plan_ids[i].frequency + ' Access</h2><form action="/create-checkout-session" method="post"><input type="hidden" name="priceID" value="' + config.stripe.plan_ids[i].id + '" /><input type="hidden" name="mode" value="' + config.stripe.plan_ids[i].mode + '" /><input type="hidden" name="customerID" value="' + req.session.stripe_id + '" /><button type="submit">Continue</button></form></div><br><hr>';
+    for (let i = 0; i < config.stripe.price_ids.length; i++) {
+      let planhtml = '<div><h2>$' + config.stripe.price_ids[i].price + ' ' + config.stripe.price_ids[i].frequency + ' Access</h2><form action="/create-checkout-session" method="post"><input type="hidden" name="priceID" value="' + config.stripe.price_ids[i].id + '" /><input type="hidden" name="mode" value="' + config.stripe.price_ids[i].mode + '" /><input type="hidden" name="customerID" value="' + req.session.stripe_id + '" /><button type="submit">Continue</button></form></div><br><hr>';
       checkoutbody = checkoutbody+planhtml;
     }
     return res.render(__dirname + "/html/checkout.html", {
@@ -179,7 +178,7 @@ server.post("/create-checkout-session", async (req, res) => {
 server.get("/manage", async function(req, res) {
   if (!req.session.login) {
     console.info("[" + bot.getTime("stamp") + "] [wall.js] Direct Link Accessed, Sending to Login");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.redirect_url}`);
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   } else {
     return res.render(__dirname + "/html/manage.html", {
       terms: config.pages.general.terms,
@@ -216,27 +215,26 @@ server.get("/blocked", async function(req, res) {
 //------------------------------------------------------------------------------
 //  SYNC DISCORD ROLES AND STRIPE SUSBCRIBERS
 //------------------------------------------------------------------------------
-let times = ["05:30:00", "11:30:00", "17:30:00", "00:30:00"];
 ontime({
-  cycle: times
+  cycle: config.sync.discord
 }, function(ot) {
   console.info("[" + bot.getTime("stamp") + "] [wall.js] Starting Stripe Database Maintenance.");
   database.checkDonors();
   ot.done();
   console.info("[" + bot.getTime("stamp") + "] [wall.js] Stripe Database Maintenance Complete.");
   return;
-});
+}); */
 //------------------------------------------------------------------------------
 //  SYNC STRIPE CUSTOMER IDs
 //------------------------------------------------------------------------------
 ontime({
-  cycle: ["05:05:00", "11:05:00", "17:05:00", "00:20:00"]
+  cycle: config.sync.stripe
 }, function(ot) {
   console.info("[" + bot.getTime("stamp") + "] [wall.js] Starting Stripe Customer Synchronization.");
   stripe.customer.list();
   ot.done();
   return;
-}); */
+});
 //------------------------------------------------------------------------------
 //  LISTEN ON SPECIFIED PORT
 //------------------------------------------------------------------------------

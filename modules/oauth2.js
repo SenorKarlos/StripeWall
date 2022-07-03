@@ -5,17 +5,17 @@ const config = require("../files/config.json");
 //  VARIABLES
 //------------------------------------------------------------------------------
 const oauth2 = {
-  "client_id": config.oauth2.client_id,
-  "client_secret": config.oauth2.client_secret,
+  "client_id": config.discord.client_id,
+  "client_secret": config.discord.client_secret,
   "base_url": `https://discord.com/api/`,
   "oauth_url": `https://discord.com/oauth2/authorize`,
-  "scope": config.oauth2.scope.replace(/,/g, ('%20')),
+  "scope": "identify%20guilds%20guilds.join%20email",
   //------------------------------------------------------------------------------
   //  FETCH ACCESS TOKEN
   //------------------------------------------------------------------------------
   fetchAccessToken: function(code) {
     return new Promise(async function(resolve) {
-      let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=authorization_code&code=${code}&redirect_uri=${config.redirect_url}&scope=${oauth2.scope}`;
+      let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=authorization_code&code=${code}&redirect_uri=${config.discord.redirect_url}&scope=${oauth2.scope}`;
       let headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
       }
@@ -33,7 +33,7 @@ const oauth2 = {
   //  FETCH ACCESS TOKEN
   //------------------------------------------------------------------------------
   refreshAccessToken: function(refresh_token, user) {
-    let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=refresh_token&refresh_token=${refresh_token}&redirect_uri=${config.redirect_url}&scope=${oauth2.scope}`;
+    let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=refresh_token&refresh_token=${refresh_token}&redirect_uri=${config.discord.redirect_url}&scope=${oauth2.scope}`;
     let headers = {
       'Content-Type': 'application/x-www-form-urlencoded',
     }
@@ -76,7 +76,7 @@ const oauth2 = {
       let options = {
         'accessToken': access_token
       }
-      bot.guilds.cache.get(config.guild_id).addMember(user, options);
+      bot.guilds.cache.get(config.discord.guild_id).addMember(user, options);
       return 'success';
     });
   }

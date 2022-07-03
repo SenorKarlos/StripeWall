@@ -1,30 +1,34 @@
 {
   "listening_port": 7777,
   "session_key": "9kB2K)8uLdDT6xV5Azh#^SU[m4zKB]C;LxM*AfOS$ccJK9*axB",
-  "map_name": "Your Map Name",
-  "map_url": "https://your.site",
-  "redirect_url": "https://your.site/login",
-  "guild_id": "000000000000000000",
-  "donor_channel_id": "000000000000000000",
-  "donor_welcome": true,
-  "donor_welcome_content": "Thank You For Subscribing, %usertag%!",
+  "map_name": "Your map name",
+  "map_url": "https://yourmap.site",
+  
+  "sync": {
+    "stripe": ["00:05:00", "06:05:00", "12:05:00", "18:05:00"],
+    "discord": ["00:35:00", "06:35:00", "12:35:00", "18:35:00"]
+  },
 
-  "log_channel": "000000000000000000",
-
-  "fetch_bans": true,
-  "blacklist": ["000000000000000000","empty if not using"],
-
-  "db_host": "127.0.0.1",
-  "db_port": 3306,
-  "db_username": "dbuser",
-  "db_password": "dbpass",
-  "db_name": "dbname",
-
-  "oauth2": {
+  "database": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "username": "",
+    "password": "",
+    "name": "stripewall"
+  },
+  
+  "discord": {
     "client_id": "000000000000000000",
     "client_secret": "your client secret",
     "bot_token": "your bot token",
-    "scope": "identify,email,guilds,guilds.join"
+    "redirect_url": "https://yourmap.site/login",
+    "guild_id": "000000000000000000",
+    "log_channel": "000000000000000000",
+    "donor_welcome": true,
+    "donor_welcome_channel": "000000000000000000",
+    "donor_welcome_content": "Thank You For Subscribing, %usertag%!",
+    "fetch_bans": true,
+    "blacklist": []
   },
 
   "pages": {
@@ -40,6 +44,7 @@
   "stripe": {
     "live_pk": "your live keys",
     "live_sk": "your live keys",
+    "wh_secret": "",
     "addresses": {
       "billing": false,
       "shipping": ["2 Letter Codes","delete array and set false if not using"]
@@ -50,26 +55,26 @@
       "dynamic": false,
       "rate_ids": ["txr_","empty if not using"]
     },
-    "plan_ids": [
+    "price_ids": [
       {
-        "id": "price_ or plan_ ",
+        "id": "price_",
         "price": "5.00",
         "donor_role_id": "000000000000000000",
         "frequency": "Monthly Subscription",
         "mode": "subscription"
       },
       {
-        "id": "price_ or plan_ ",
+        "id": "price_",
         "price": "50.00",
         "donor_role_id": "000000000000000000",
         "frequency": "Annual Subscription",
         "mode": "subscription"
       },
       {
-        "id": "price_ or plan_ ",
+        "id": "price_",
         "price": "10.00",
         "donor_role_id": "000000000000000000",
-        "frequency": "30 Days (No Commitment)",
+        "frequency": "One Month Access",
         "mode": "payment"
       }
     ]
