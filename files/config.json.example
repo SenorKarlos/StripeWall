@@ -37,7 +37,11 @@
       "warning": "All services are subject to downtimes for various reasons. Please monitor the Discord Server for Updates."
     },
     "checkout": {
-      "welcome": "Choose your preferred billing frequency below to get started. Applicable taxes will be calculated and added during checkout. Thank you for your support!"
+      "welcome": "Choose your preferred billing price_title below to get started. Applicable taxes will be calculated and added during checkout. Thank you for your support!"
+    },
+    "expiry": {
+      "time_zone": "America/Toronto",
+      "tz_text": "Eastern Time"
     }
   },
 
@@ -60,21 +64,21 @@
         "id": "price_",
         "price": "5.00",
         "donor_role_id": "000000000000000000",
-        "frequency": "Monthly Subscription",
+        "price_title": "Monthly Subscription",
         "mode": "subscription"
       },
       {
         "id": "price_",
         "price": "50.00",
         "donor_role_id": "000000000000000000",
-        "frequency": "Annual Subscription",
+        "price_title": "Annual Subscription",
         "mode": "subscription"
       },
       {
         "id": "price_",
         "price": "10.00",
         "donor_role_id": "000000000000000000",
-        "frequency": "One Month Access",
+        "price_title": "One Month Access",
         "mode": "payment"
       }
     ]

@@ -42,7 +42,7 @@ const stripe = {
               console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Updating Customer.', err.message);
               return resolve('ERROR');
             } else {
-              console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer ' + name + ' (' + customer.id + ') has been Updated.');
+              console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+name+' ('+customer.id+') has been Updated.');
               return resolve(customer);
             }
           }
@@ -89,50 +89,48 @@ const stripe = {
 //------------------------------------------------------------------------------
 //  LIST CUSTOMERS
 //------------------------------------------------------------------------------
-    list: async function(last) {
-      stripe_js.customers.list(
-        {limit: 100, expand: ['data.subscriptions'], starting_after: last},
-        async function(err, list) {
-          if(err) {
-            console.log(err.message);
-          } else {
-            console.info("["+bot.getTime('stamp')+"] [stripe.js] Parsing "+list.data.length+" users.")
-            await stripe.customer.parse(list.data);
-            if(list.has_more == true) {
-              stripe.customer.list(list.data[list.data.length - 1].id);
-            } else {
-              console.info("["+bot.getTime("stamp")+"] [stripe.js] Stripe Customer Synchronization Complete.");
-            }
-          }
-        }
-      );
+    list: async function() {
+      console.info("["+bot.getTime("stamp")+"] [stripe.js] Starting Stripe Customer Synchronization.");
+      let list = [];
+      for await (const customer of stripe_js.customers.list({limit: 100, expand: ['data.subscriptions']})) {
+        list.push(customer);
+      } return stripe.customer.parse(list);
     },
 //------------------------------------------------------------------------------
 //  PARSE CUSTOMERS
 //------------------------------------------------------------------------------
     parse: async function(parse) {
+      console.info("["+bot.getTime('stamp')+"] [stripe.js] Parsing "+parse.length+" users.")
       let unix = moment().unix();
       parse.forEach((customer,index) => {
-console.log(customer);
+        let indexcounter = index + 1;
         setTimeout(function() {
           if(customer.subscriptions.data[0]) {
-console.log(customer.subscriptions.data[0]);
             for (let x = 0; x < customer.subscriptions.data.length; x++) {
               for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                if(customer.subscriptions.data[x].plan.id == config.stripe.price_ids[i].id) {
+                if(customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
                   database.db.query('SELECT * FROM stripe_users WHERE user_id = ?', [customer.description], async function (err, record, fields) {
                     if(err) { return console.error('['+bot.getTime('stamp')+'] [stripe.js]'+customer.name+' '+customer.id, err.message); }
                     if(record[0]){
                       if(record[0].stripe_id == 'Manual') { return; } else {
-                        if (customer.id != record[0].stripe_id || customer.subscriptions.data[x].plan.id != record[0].plan_id) {
-                          database.runQuery('UPDATE stripe_users SET stripe_id = ?, plan_id = ?, last_updated = ? WHERE user_id = ?', [customer.id, customer.subscriptions.data[x].plan.id, unix, customer.description]);
-                          return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Updated Stripe info in Database.'); 
-                        } return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Verified Stripe info in Database.');
+                        if (customer.id != record[0].stripe_id || customer.subscriptions.data[x].items.data[0].price.id != record[0].price_id) {
+                          database.runQuery('UPDATE stripe_users SET stripe_id = ?, price_id = ?, last_updated = ? WHERE user_id = ?', [customer.id, customer.subscriptions.data[x].items.data[0].price.id, unix, customer.description]);
+                          console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Updated Stripe info in Database.');
+                          if (indexcounter === parse.length) {
+                            console.info("["+bot.getTime("stamp")+"] [stripe.js] Stripe Customer Synchronization Complete.");
+                          }
+                        } console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Verified Stripe info in Database.');
+                        if (indexcounter === parse.length) {
+                          console.info("["+bot.getTime("stamp")+"] [stripe.js] Stripe Customer Synchronization Complete.");
+                        }
                       } // end if not Manual tracked user
                     } else { // end if in database
-                      database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, plan_id, email, last_updated) VALUES (?, ?, ?, ?, ?, ?)',
-                        [customer.name, customer.description, customer.id, customer.subscriptions.data[x].plan.id, customer.email, unix]);
-                      return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database.');
+                      database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, price_id, email, last_updated) VALUES (?, ?, ?, ?, ?, ?)',
+                        [customer.name, customer.description, customer.id, customer.subscriptions.data[x].items.data[0].price.id, customer.email, unix]);
+                      console.info('['+bot.getTime('stamp')+'] [stripe.js]  ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database.');
+                      if (indexcounter === parse.length) {
+                        console.info("["+bot.getTime("stamp")+"] [stripe.js] Stripe Customer Synchronization Complete.");
+                      }
                     } // end not in database
                   }); // dead end after database fetch
                 } // dead end of customer plan vs config plan
@@ -149,11 +147,11 @@ console.log(customer.subscriptions.data[0]);
                     database.runQuery('UPDATE stripe_users SET stripe_id = ?, last_updated = ? WHERE user_id = ?', [customer.id, unix, customer.description]);
                     dbUpdated = true;
                   }
-                  if (record[0].plan_id != null) {
+                  if (record[0].price_id != null) {
                     for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                      if (record[0].plan_id == config.stripe.price_ids[i].id) {
+                      if (record[0].price_id == config.stripe.price_ids[i].id) {
                         if (config.stripe.price_ids[i].mode == "subscription") {
-                          database.runQuery('UPDATE stripe_users SET plan_id = null, last_updated = ? WHERE user_id = ?', [unix, customer.description]);
+                          database.runQuery('UPDATE stripe_users SET price_id = null, last_updated = ? WHERE user_id = ?', [unix, customer.description]);
                           dbUpdated = true;
                       /*  } else { //end if mode is sub */
                           
@@ -162,20 +160,29 @@ console.log(customer.subscriptions.data[0]);
                     } // dead end for each plan in config
                   } // end if db plan not null
                   if (dbUpdated == true) {
-                    return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Updated Stripe info in Database.');
+                    console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Updated Stripe info in Database.');
+                    if (indexcounter === parse.length) {
+                      console.info("["+bot.getTime("stamp")+"] [stripe.js] Stripe Customer Synchronization Complete.");
+                    }
                   } else {
-                    return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Verified Stripe info in Database.');
+                    console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Verified Stripe info in Database.');
+                    if (indexcounter === parse.length) {
+                      console.info("["+bot.getTime("stamp")+"] [stripe.js] Stripe Customer Synchronization Complete.");
+                    }
                   } // end if updated or verified
                 } // end if not Manual tracked user
               } else { // end of in DB
                 database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, email, last_updated) VALUES (?, ?, ?, ?, ?)',
                   [customer.name, customer.description, customer.id, customer.email, unix]);
-                return console.info('['+bot.getTime('stamp')+'] [stripe.js] '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database.');
+                console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database.');
+                if (indexcounter === parse.length) {
+                  console.info("["+bot.getTime("stamp")+"] [stripe.js] Stripe Customer Synchronization Complete.");
+                }
               } //end not in db
             }); // dead end after database fetch
           } // end of customer has no sub data
         }, 2500 * index);
-      });
+      }); //end for each customer
     }
   },
 //------------------------------------------------------------------------------
@@ -297,7 +304,7 @@ console.log(customer.subscriptions.data[0]);
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.stripe.plan_id: return;
+          case user.price_id != config.stripe.price_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Refund webhook for '+member.user.tag+' ('+customer.id+').');
             bot.sendDM(member,'Payment Refunded! 🏧', 'Amount: **$'+webhook.data.object.amount_refunded/100+'**, Access Revoked, Update Payment Information if Continuing','0000FF');
@@ -316,13 +323,13 @@ console.log(customer.subscriptions.data[0]);
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.stripe.plan_id: return;
+          case user.price_id != config.stripe.price_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Successful Charge webhook for '+member.user.tag+' ('+customer.id+').');
             bot.sendDM(member,'Payment Successful! 💰 ', 'Amount: **$'+parseFloat(webhook.data.object.amount/100).toFixed(2)+'**','00FF00');
             bot.assignDonor(customer.description.split(' - ')[1]);
             bot.sendEmbed(member, '00FF00', 'Payment Successful! 💰 ', 'Amount: **$'+parseFloat(webhook.data.object.amount/100).toFixed(2)+'**', config.discord.log_channel);
-            return database.runQuery('UPDATE stripe_users SET stripe_id = ?, plan_id = ? WHERE user_id = ?', [customer.id, customer.subscriptions.data[0].plan.id, customer.description.split(' - ')[1]]);
+            return database.runQuery('UPDATE stripe_users SET stripe_id = ?, price_id = ? WHERE user_id = ?', [customer.id, customer.subscriptions.data[0].items.data[0].price.id, customer.description.split(' - ')[1]]);
         } return;
 //------------------------------------------------------------------------------
 //   SUBSCRIPTION DELETED WEBHOOK
@@ -335,13 +342,13 @@ console.log(customer.subscriptions.data[0]);
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.stripe.plan_id: return;
+          case user.price_id != config.stripe.price_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Deleted Subcscription webhook for '+customer.description.split(' - ')[0]+' ('+webhook.data.object.customer+').');
             bot.sendDM(member,'Subscription Record Deleted! ⚰', 'Access Revoked, Please Start Over if Continuing','FF0000');
             bot.removeDonor(customer.description.split(' - ')[1]);
             bot.sendEmbed(member, 'FF0000', 'Subscription Record Deleted! ⚰', '', config.discord.log_channel);
-            return database.runQuery('UPDATE stripe_users SET plan_id = NULL WHERE user_id = ?', [customer.description.split(' - ')[1]]);
+            return database.runQuery('UPDATE stripe_users SET price_id = NULL WHERE user_id = ?', [customer.description.split(' - ')[1]]);
         } return;
 //------------------------------------------------------------------------------
 //   SUBSCRIPTION CREATED WEBHOOK
@@ -355,7 +362,7 @@ console.log(customer.subscriptions.data[0]);
         switch(true){
           case !user: return console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Created Subscription Webhook - ERROR - ('+customer.id+') Not User.');
           case !member: return console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Created Subscription Webhook - ERROR - ('+customer.id+') Not Member.');
-          case user.plan_id != config.stripe.plan_id: return;
+          case user.price_id != config.stripe.price_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Created Subscription Webhook for '+member.user.tag+' ('+customer.id+').');
             if(webhook.data.object.status == "active"){
@@ -368,7 +375,7 @@ console.log(customer.subscriptions.data[0]);
               bot.sendEmbed(member, '00FF00', 'New Subscription Sucessfully Created! 📋', '', config.discord.log_channel);
             } else {
               bot.sendEmbed(member, 'FFFF00', 'New Subscription Partially Created ⚠️', '', config.discord.log_channel);
-              return database.runQuery('UPDATE stripe_users SET plan_id = ? WHERE user_id = ?', [customer.subscriptions.data[0].plan.id, member.user.id]);
+              return database.runQuery('UPDATE stripe_users SET price_id = ? WHERE user_id = ?', [customer.subscriptions.data[0].items.data[0].price.id, member.user.id]);
             } return;
           } return;
 //------------------------------------------------------------------------------
@@ -381,7 +388,7 @@ console.log(customer.subscriptions.data[0]);
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.stripe.plan_id: return;
+          case user.price_id != config.stripe.price_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Updated Subscription Webhook for '+member.user.tag+' ('+customer.id+').');
             if(webhook.data.object.status == "active" && webhook.data.previous_attributes.status == "incomplete"){
@@ -392,7 +399,7 @@ console.log(customer.subscriptions.data[0]);
                   .catch(console.error);
               }
               bot.sendEmbed(member, '00FF00', 'Subscription Sucessfully Updated! 📋', '', config.discord.log_channel);
-              return database.runQuery('UPDATE stripe_users SET plan_id = ? WHERE user_id = ?', [customer.subscriptions.data[0].plan.id, member.user.id]);
+              return database.runQuery('UPDATE stripe_users SET price_id = ? WHERE user_id = ?', [customer.subscriptions.data[0].items.data[0].price.id, member.user.id]);
             } else { return;
             } return;
           } return;
@@ -406,7 +413,7 @@ console.log(customer.subscriptions.data[0]);
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.stripe.plan_id: return;
+          case user.price_id != config.stripe.price_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Customer Updated webhook for '+member.user.tag+' ('+customer.id+').');
             if(!webhook.data.previous_attributes.default_source){
@@ -447,7 +454,7 @@ console.log(customer.subscriptions.data[0]);
         switch(true){
           case !user: return;
           case !member: return;
-          case user.plan_id != config.stripe.plan_id: return;
+          case user.price_id != config.stripe.price_id: return;
           default:
             console.log('['+bot.getTime('stamp')+'] [stripe.js] Received Payment Failed webhook for '+member.user.tag+' ('+customer.id+').');
             bot.removeDonor(customer.description.split(' - ')[1]);
@@ -464,5 +471,5 @@ console.log(customer.subscriptions.data[0]);
 // EXPORT OBJECT
 module.exports = stripe;
 // SCRIPT REQUIREMENTS
-database = require(__dirname + '/database.js');
-bot = require(__dirname + '/bot.js');
+database = require(__dirname+'/database.js');
+bot = require(__dirname+'/bot.js');

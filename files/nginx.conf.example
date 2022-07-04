@@ -1,6 +1,6 @@
 server {
 
-<<Your Existing Site Config>> Can be a map or generic page, as long as these locations aren't in use (check subfolders)
+<<Your Existing Site Config>> Recommend site root but any subdomain will do, as long as these locations aren't in use (check subfolders/rewrites/redirects etc). May interfere with existing maps if put on those.
 
     location /login {
         proxy_pass http://localhost:7777/login;
@@ -8,6 +8,10 @@ server {
 
     location /checkout {
         proxy_pass http://localhost:7777/checkout;
+    }
+
+    location /expiry {
+        proxy_pass http://localhost:7777/expiry;
     }
 
     location /create-checkout-session {

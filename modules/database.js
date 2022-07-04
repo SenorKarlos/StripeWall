@@ -85,7 +85,7 @@ const object = {
             let customer = '';
             if (member) {
               if (member.roles.cache.has(config.donor_role_id)) {
-                if (!user.stripe_id || user.plan_id != config.stripe.plan_id) {
+                if (!user.stripe_id || user.price_id != config.stripe.price_id) {
                   bot.removeDonor(member.id);
                   return bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Internal Check)', config.discord.log_channel);
                 } else {
@@ -93,7 +93,7 @@ const object = {
                   if (!customer || customer.deleted == true || !customer.subscriptions || !customer.subscriptions.data[0]) {
                     bot.removeDonor(member.id);
                     bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Stripe Check)', config.discord.log_channel);
-                    query = `UPDATE stripe_users SET stripe_id = NULL, plan_id = NULL WHERE user_id = ?`;
+                    query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL WHERE user_id = ?`;
                     data = [member.id];
                     return object.runQuery(query, data);
                   } else if (customer.subscriptions.data[0].status != 'active') {
@@ -104,16 +104,16 @@ const object = {
               } else if (user.stripe_id && user.stripe_id.startsWith('cus')) {
                 customer = await stripe.customer.fetch(user.stripe_id);
                 if (!customer || customer.deleted == true) {
-                  query = `UPDATE stripe_users SET stripe_id = NULL, plan_id = NULL WHERE user_id = ?`;
+                  query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL WHERE user_id = ?`;
                   data = [member.id];
                   await object.runQuery(query, data);
-                  return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Updated ' + user.user_name + ' Record to Reflect no Stripe information.', config.discord.log_channel);
-                } else if (!customer.subscriptions.data[0] && user.plan_id) {
-                  query = `UPDATE stripe_users SET plan_id = NULL WHERE user_id = ?`;
+                  return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Updated '+user.user_name+' Record to Reflect no Stripe information.', config.discord.log_channel);
+                } else if (!customer.subscriptions.data[0] && user.price_id) {
+                  query = `UPDATE stripe_users SET price_id = NULL WHERE user_id = ?`;
                   data = [member.id];
                   await object.runQuery(query, data);
-                  return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Deleted Subscription Plan record for ' + user.user_name + ' (' + member.id + ').', config.discord.log_channel);
-                } else if (customer.subscriptions.data[0] && customer.subscriptions.data[0].status == 'active' && user.plan_id == config.stripe.plan_id) {
+                  return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Deleted Subscription Plan record for '+user.user_name+' ('+member.id+').', config.discord.log_channel);
+                } else if (customer.subscriptions.data[0] && customer.subscriptions.data[0].status == 'active' && user.price_id == config.stripe.price_id) {
                   bot.assignDonor(member.id);
                   return bot.sendEmbed(member, 'FF0000', 'User found without Donor Role ⚠', 'Assigned Donor Role. (Stripe Check)', config.discord.log_channel);
                 } else {
@@ -130,7 +130,7 @@ const object = {
               data = [member.user_id];
               await object.runQuery(query, data);
               await stripe.subscription.cancelNow(member, customer.subscriptions.data[0].id);
-              return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Tokens and Guild Association for ' + user.user_name + ' (' + member.user_id + ').', config.discord.log_channel);
+              return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Tokens and Guild Association for '+user.user_name+' ('+member.user_id+').', config.discord.log_channel);
             }
           }, 5000 * index);
         });
@@ -164,7 +164,7 @@ const object = {
                     bot.removeDonor(member.id);
                   }
                   bot.sendEmbed(member, 'FF0000', 'No Customer found for this User ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
-                  query = `UPDATE stripe_users SET stripe_id = NULL, plan_id = NULL WHERE user_id = ?`;
+                  query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL WHERE user_id = ?`;
                   data = [member.id];
                   return object.runQuery(query, data);
                 } else if (customer.subscriptions.data[0].status != 'active' && member.roles.cache.has(config.donor_role_id)) {
@@ -188,6 +188,6 @@ const object = {
 module.exports = object;
 
 // SCRIPT REQUIREMENTS
-stripe = require(__dirname + '/stripe.js');
-bot = require(__dirname + '/bot.js');
-oauth2 = require(__dirname + '/oauth2.js');
+stripe = require(__dirname+'/stripe.js');
+bot = require(__dirname+'/bot.js');
+oauth2 = require(__dirname+'/oauth2.js');

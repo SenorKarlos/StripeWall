@@ -41,7 +41,7 @@ const oauth2 = {
       headers: headers
     }).then(async function(response) {
       console.log("[oauth2.js] Successfully Refreshed a Token", response.data);
-      let token_expiration = (unix_now + response.data.expires_in);
+      let token_expiration = (unix_now+response.data.expires_in);
       database.runQuery(`UPDATE IGNORE stripe_users SET access_token = ?, refresh_token = ?, token_expiration = ?, last_updated = ? WHERE user_id = ?`, [response.data.access_token, response.data.refresh_token, token_expiration, unix_now, user.user_id]);
       console.info('['+bot.getTime('stamp')+'] [oauth2.js] '+user.user_name+' ('+user.user_id+') Updated Discord OAuth2 info in Database.');
       return resolve(response.data);
@@ -55,7 +55,7 @@ const oauth2 = {
   //------------------------------------------------------------------------------
   fetchUser: function(access_token) {
     return new Promise(async function(resolve) {
-      axios.get(oauth2.base_url + `v6/users/@me`, {
+      axios.get(oauth2.base_url+`v6/users/@me`, {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           "Authorization": `Bearer ${access_token}`
@@ -88,5 +88,5 @@ const oauth2 = {
 module.exports = oauth2;
 
 // SCRIPT REQUIREMENTS
-database = require(__dirname + '/database.js');
-bot = require(__dirname + '/bot.js');
+database = require(__dirname+'/database.js');
+bot = require(__dirname+'/bot.js');
