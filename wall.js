@@ -119,7 +119,7 @@ server.get("/login", async (req, res) => {
         }
       }
       if (dbuser.price_id) {
-        if (customer.subscriptions.total_count == 0 && dbuser.temp_plan_expiration == null) {
+        if (customer.subscriptions.total_count == 0 && dbuser.temp_plan_expiration < unix_now) {
           database.runQuery(`UPDATE IGNORE stripe_users SET price_id = NULL WHERE user_id = ?`, [dbuser.user_id]);
           console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.user_name+ ","+req.session.email+"(Invalid Plan Deleted)");
           dbuser.price_id = null;
@@ -209,7 +209,7 @@ server.get("/expiry", async function(req, res) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   } else {
-    let expiry = new Date(req.session.expiry * 1000).toLocaleString('en-US', { timeZone: config.pages.expiry.time_zone });
+    let expiry = new Date(req.session.expiry * 1000).toLocaleString(config.pages.expiry.tz_locale, { timeZone: config.pages.expiry.time_zone });
     return res.render(__dirname+"/html/expiry.html", {
       terms: config.pages.general.terms,
       warning: config.pages.general.warning,
@@ -237,21 +237,19 @@ server.post("/webhook", bodyParser.raw({
 //------------------------------------------------------------------------------
 server.get("/blocked", async function(req, res) {
   return res.render(__dirname+"/html/blocked.html");
-}); /*
+});
 //------------------------------------------------------------------------------
 //  SYNC DISCORD ROLES AND STRIPE SUSBCRIBERS
 //------------------------------------------------------------------------------
 ontime({
   cycle: config.sync.discord
 }, function(ot) {
-  console.info("["+bot.getTime("stamp")+"] [wall.js] Starting Stripe Database Maintenance.");
   database.checkDonors();
   ot.done();
-  console.info("["+bot.getTime("stamp")+"] [wall.js] Stripe Database Maintenance Complete.");
   return;
-}); */
+});
 //------------------------------------------------------------------------------
-//  SYNC STRIPE CUSTOMER IDs
+//  SYNC STRIPE CUSTOMER INFO
 //------------------------------------------------------------------------------
 ontime({
   cycle: config.sync.stripe

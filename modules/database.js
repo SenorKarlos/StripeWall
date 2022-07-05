@@ -12,7 +12,6 @@ const object = {
     port: config.database.port,
     database: config.database.name
   }),
-
   //------------------------------------------------------------------------------
   //  RUN QUERY FUNCTION
   //------------------------------------------------------------------------------
@@ -71,9 +70,9 @@ const object = {
   //  DONOR CHECK
   //------------------------------------------------------------------------------
   checkDonors: async function() {
-    console.info("[database.js] Starting user check.")
+    console.info("["+bot.getTime("stamp")+"] [database.js] Starting Discord Role Maintenance.");
     let query = `SELECT * FROM stripe_users WHERE stripe_id != ?`;
-    let data = ['Lifetime'];
+    let data = ['Manual'];
     await object.db.query(query, data, async function(err, records, fields) {
       if (err) {
         console.error(err);
@@ -84,103 +83,52 @@ const object = {
             let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.user_id);
             let customer = '';
             if (member) {
-              if (member.roles.cache.has(config.donor_role_id)) {
-                if (!user.stripe_id || user.price_id != config.stripe.price_id) {
-                  bot.removeDonor(member.id);
-                  return bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Internal Check)', config.discord.log_channel);
-                } else {
-                  customer = await stripe.customer.fetch(user.stripe_id);
-                  if (!customer || customer.deleted == true || !customer.subscriptions || !customer.subscriptions.data[0]) {
+              for (let i = 0; i < config.stripe.price_ids.length; i++) {
+                if (member.roles.cache.has(config.stripe.price_ids[i]role_id)) {
+                  if (!user.stripe_id || user.price_id != config.stripe.price_ids[i].id) {
                     bot.removeDonor(member.id);
-                    bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Stripe Check)', config.discord.log_channel);
+                    console.info("["+bot.getTime("stamp")+"] [database.js] ");
+                    return bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Internal Check)', config.discord.log_channel);
+                  } else { // end if no stripe ID or plan not matched to role
+                    customer = await stripe.customer.fetch(user.stripe_id);
+                    if (!customer || customer.deleted == true) {
+                      bot.removeDonor(member.id);
+                      bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Stripe Check)', config.discord.log_channel);
+                      query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL WHERE user_id = ?`;
+                      data = [member.id];
+                      return object.runQuery(query, data);
+                    } //end if customer doesn't exist or is deleted (if they exist, they are in stripe sync and id & plan are verified)
+                  } // end if they have an id and the plan matched role
+                } else if (user.stripe_id) { // end if member role matches config role
+                  customer = await stripe.customer.fetch(user.stripe_id);
+                  if (!customer || customer.deleted == true) {
                     query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL WHERE user_id = ?`;
                     data = [member.id];
-                    return object.runQuery(query, data);
-                  } else if (customer.subscriptions.data[0].status != 'active') {
-                    bot.removeDonor(member.id);
-                    return bot.sendEmbed(member, 'FF0000', 'User found without an Active Subscription ⚠', 'Removed Donor Role. (Stripe Check)', config.discord.log_channel);
+                    await object.runQuery(query, data);
+                    return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Updated '+user.user_name+' Record to Reflect no Stripe information.', config.discord.log_channel);
+                  } else if (customer.subscriptions.data[0] && customer.subscriptions.data[0].status == 'active' && user.price_id == config.stripe.price_id) {
+                    bot.assignDonor(member.id);
+                    return bot.sendEmbed(member, 'FF0000', 'User found without Donor Role ⚠', 'Assigned Donor Role. (Stripe Check)', config.discord.log_channel);
+                  } else {
+                    return;
                   }
-                }
-              } else if (user.stripe_id && user.stripe_id.startsWith('cus')) {
-                customer = await stripe.customer.fetch(user.stripe_id);
-                if (!customer || customer.deleted == true) {
-                  query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL WHERE user_id = ?`;
-                  data = [member.id];
-                  await object.runQuery(query, data);
-                  return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Updated '+user.user_name+' Record to Reflect no Stripe information.', config.discord.log_channel);
-                } else if (!customer.subscriptions.data[0] && user.price_id) {
-                  query = `UPDATE stripe_users SET price_id = NULL WHERE user_id = ?`;
-                  data = [member.id];
-                  await object.runQuery(query, data);
-                  return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Deleted Subscription Plan record for '+user.user_name+' ('+member.id+').', config.discord.log_channel);
-                } else if (customer.subscriptions.data[0] && customer.subscriptions.data[0].status == 'active' && user.price_id == config.stripe.price_id) {
-                  bot.assignDonor(member.id);
-                  return bot.sendEmbed(member, 'FF0000', 'User found without Donor Role ⚠', 'Assigned Donor Role. (Stripe Check)', config.discord.log_channel);
-                } else {
-                  return;
-                }
-              }
-            } else {
+                } // end if user has stripe id
+              } // end for each plan in config
+            } else { //end if guild member
               member = user;
               member.nickname = user.user_name;
               member.user = [];
               member['user']['id'] = user.user_id;
               customer = await stripe.customer.fetch(user.stripe_id);
-              query = `DELETE FROM stripe_users WHERE user_id = ?`;
-              data = [member.user_id];
-              await object.runQuery(query, data);
               await stripe.subscription.cancelNow(member, customer.subscriptions.data[0].id);
               return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Tokens and Guild Association for '+user.user_name+' ('+member.user_id+').', config.discord.log_channel);
-            }
+            } // end not guild member
           }, 5000 * index);
-        });
+        }); //end for each user record
         return;
-      }
-    });
-    let guild = bot.guilds.cache.get(config.discord.guild_id);
-    let members = guild.roles.cache.find(role => role.id === config.donor_role_id).members.map(m => m);
-    members.forEach((member, index) => {
-      setTimeout(function() {
-        let query = `SELECT * FROM stripe_users WHERE user_id = ?`;
-        let data = [member.id],
-          removed = '';
-        object.db.query(query, data, async function(err, record, fields) {
-          if (err) {
-            return console.error(err);
-          }
-          switch (true) {
-            case !record[0]:
-              return;
-            case record[0].stripe_id == "Lifetime":
-              return;
-            case record[0].stripe_id != "Lifetime":
-              if (!record[0].stripe_id && member.roles.cache.has(config.donor_role_id)) {
-                bot.removeDonor(member.id);
-                return bot.sendEmbed(member, 'FF0000', 'User found without a Stripe ID ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
-              } else {
-                customer = await stripe.customer.fetch(record[0].stripe_id);
-                if (!customer || customer.deleted == true || !customer.subscriptions || !customer.subscriptions.data[0]) {
-                  if (member.roles.cache.has(config.donor_role_id)) {
-                    bot.removeDonor(member.id);
-                  }
-                  bot.sendEmbed(member, 'FF0000', 'No Customer found for this User ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
-                  query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL WHERE user_id = ?`;
-                  data = [member.id];
-                  return object.runQuery(query, data);
-                } else if (customer.subscriptions.data[0].status != 'active' && member.roles.cache.has(config.donor_role_id)) {
-                  bot.removeDonor(member.id);
-                  return bot.sendEmbed(member, 'FF0000', 'User found without an Active Subscription ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
-                }
-              }
-              return;
-            case member.roles.cache.has(config.donor_role_id):
-              bot.removeDonor(member.id);
-              return bot.sendEmbed(member, 'FF0000', 'User found without a DB Record ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
-          }
-        });
-      }, 5000 * index);
-    });
-    return;
+      } //end if records returned
+    }); //end query all db users except Manual
+    // Removed member block
   }
 }
 

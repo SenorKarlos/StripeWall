@@ -22,7 +22,7 @@ const stripe = {
             console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Creating Customer.', err.message);
             return resolve('ERROR');
           } else {
-            console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.id+' has been Created.');
+            console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.name+' ('+customer.description+' | '+customer.id+') has been Created.');
             database.runQuery('UPDATE stripe_users SET stripe_id = ? WHERE user_id = ?', [customer.id, user_id]);
             return resolve(customer);
           }
@@ -42,7 +42,7 @@ const stripe = {
               console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Updating Customer.', err.message);
               return resolve('ERROR');
             } else {
-              console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+name+' ('+customer.id+') has been Updated.');
+              console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.name+' ('+customer.description+' | '+customer.id+') has been Updated.');
               return resolve(customer);
             }
           }
@@ -79,7 +79,7 @@ const stripe = {
               console.error('['+bot.getTime('stamp')+'] [stripe.js] Error Deleting Customer.', err.message);
               return resolve('ERROR');
             } else {
-              console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer_id+' has been Deleted.');
+              console.log('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.name+' ('+customer.description+' | '+customer.id+') has been Deleted.');
               return resolve(confirmation);
             }
           }
@@ -153,9 +153,9 @@ const stripe = {
                         if (config.stripe.price_ids[i].mode == "subscription") {
                           database.runQuery('UPDATE stripe_users SET price_id = null, last_updated = ? WHERE user_id = ?', [unix, customer.description]);
                           dbUpdated = true;
-                      /*  } else { //end if mode is sub */
-                          
-                        } 
+                        /*} else {*/
+                          /* Maybe something about checking invoice details & expiry calc, but probably too much and not needed */
+                        } //end if mode is sub
                       } // end if record plan matches config plan
                     } // dead end for each plan in config
                   } // end if db plan not null
