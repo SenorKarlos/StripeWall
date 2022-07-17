@@ -1,14 +1,13 @@
 CREATE TABLE stripe_users (
- `user_id` varchar(255) NOT NULL,
- `user_name` varchar(255) NOT NULL,
- `last_login` varchar(255) DEFAULT NULL,
- `stripe_id` varchar(255) DEFAULT NULL,
- `price_id` varchar(255) DEFAULT NULL,
- `email` varchar(255) DEFAULT NULL,
- `temp_plan_expiration` varchar(255) DEFAULT NULL,
- `access_token` varchar(255) DEFAULT NULL,
- `refresh_token` varchar(255) DEFAULT 'NULL',
- `token_expiration` varchar(255) DEFAULT NULL,
- `last_updated` varchar(255) DEFAULT 'NULL',
- PRIMARY KEY (`user_id`)
+  `user_id` VARCHAR(255) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+  `user_name` VARCHAR(255) NOT NULL COLLATE 'utf8mb4_unicode_ci',
+  `email` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+  `access_token` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+  `refresh_token` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+  `token_expiration` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+  `manual` VARCHAR(255) NOT NULL DEFAULT 'false' COLLATE 'utf8mb4_unicode_ci',
+  `stripe_id` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+  `price_id` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+  `temp_plan_expiration` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+  PRIMARY KEY (`user_id`)
 );

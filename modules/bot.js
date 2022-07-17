@@ -33,7 +33,7 @@ bot.sendEmbed = (member, color, title, body, channel_id) => {
 
   let embed = new Discord.MessageEmbed()
     .setColor(color)
-    .setAuthor(nickname+' ('+member.user.id+')', member.user.displayAvatarURL)
+    .setAuthor(nickname+' ('+member.user.id+')')
     .setTitle(title)
     .setDescription(body)
     .setFooter(config.map_name+' | '+bot.getTime('full'));
@@ -59,36 +59,38 @@ bot.sendDM = (member, title, body, color) => {
   });
 }
 //------------------------------------------------------------------------------
-//  ASSIGN DONOR ROLE TO A MEMBER
+//  ASSIGN ROLE TO A MEMBER
 //------------------------------------------------------------------------------
-bot.assignDonor = (user_id) => {
+bot.assignRole = (user_id, role_id) => {
   let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user_id);
-  console.log('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' has Donor Role: '+member.roles.cache.has(config.donor_role_id));
+  console.log('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' Requires Role: '+role_id);
   if (!member) {
-    console.error('['+bot.getTime('stamp')+'] [bot.js] Unable to Assign the User a donor role.');
+    console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Assign the User a role.');
     return false;
-  } else if (!member.roles.cache.has(config.donor_role_id)) {
-    member.roles.add(config.donor_role_id);
-    console.error('['+bot.getTime('stamp')+'] [bot.js] Assigned the User a donor role.');
+  } else if (!member.roles.cache.has(role_id)) {
+    member.roles.add(role_id);
+    console.info('['+bot.getTime('stamp')+'] [bot.js] Assigned the User a role.');
     return true;
   } else {
+    console.info('['+bot.getTime('stamp')+'] [bot.js] User already has role.');
     return false;
   }
 }
 //------------------------------------------------------------------------------
-//  REMOVE DONOR ROLE FROM A MEMBER
+//  REMOVE ROLE FROM A MEMBER
 //------------------------------------------------------------------------------
-bot.removeDonor = (user_id) => {
+bot.removeRole = (user_id, role_id) => {
   let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user_id);
-  console.log('[bot.js] [removeDonor] '+member.user.tag+' has Donor Role: '+member.roles.cache.has(config.donor_role_id));
+  console.log('[bot.js] '+member.user.tag+' Requires Role Removal: '+role_id);
   if (!member) {
-    console.error('['+bot.getTime('stamp')+'] [bot.js] Unable to Remove the donor role from the User.');
+    console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to remove the role from the User.');
     return false;
-  } else if (member.roles.cache.has(config.donor_role_id)) {
-    member.roles.remove(config.donor_role_id);
-    console.error('['+bot.getTime('stamp')+'] [bot.js] Removed the donor role from the User.');
+  } else if (member.roles.cache.has(role_id)) {
+    member.roles.remove(role_id);
+    console.info('['+bot.getTime('stamp')+'] [bot.js] Removed the role from the User.');
     return true;
   } else {
+    console.info('['+bot.getTime('stamp')+'] [bot.js] User does not have role.');
     return false;
   }
 }

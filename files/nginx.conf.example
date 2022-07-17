@@ -26,6 +26,10 @@ server {
         proxy_pass http://localhost:7777/manage;
     }
 
+    location /manual {
+        proxy_pass http://localhost:7777/manual;
+    }
+
     location /unsubscribe {
         proxy_pass http://localhost:7777/manage;
     }
@@ -36,6 +40,10 @@ server {
 
     location /blocked {
         proxy_pass http://localhost:7777/blocked;
+    }
+
+    location /error {
+        proxy_pass http://localhost:7777/error;
     }
 
     location /discord {

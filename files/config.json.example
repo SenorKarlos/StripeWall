@@ -4,10 +4,7 @@
   "map_name": "Your map name",
   "map_url": "https://yourmap.site",
   
-  "sync": {
-    "stripe": ["00:05:00", "06:05:00", "12:05:00", "18:05:00"],
-    "discord": ["00:35:00", "06:35:00", "12:35:00", "18:35:00"]
-  },
+  "sync": ["00:05:00", "06:05:00", "12:05:00", "18:05:00"],
 
   "database": {
     "host": "127.0.0.1",
@@ -24,9 +21,8 @@
     "redirect_url": "https://yourmap.site/login",
     "guild_id": "000000000000000000",
     "log_channel": "000000000000000000",
-    "donor_welcome": true,
-    "donor_welcome_channel": "000000000000000000",
-    "donor_welcome_content": "Thank You For Subscribing, %usertag%!",
+    "welcome_channel": "000000000000000000",
+    "welcome_content": "Thank You For Your Purchase, %usertag%!",
     "fetch_bans": true,
     "blacklist": []
   },
@@ -37,7 +33,7 @@
       "warning": "All services are subject to downtimes for various reasons. Please monitor the Discord Server for Updates."
     },
     "checkout": {
-      "welcome": "Choose your preferred billing price_title below to get started. Applicable taxes will be calculated and added during checkout. Thank you for your support!"
+      "welcome": "Choose your preferred billing frequency and commitment below to get started. Applicable taxes will be calculated and added during checkout. Thank you for your support!"
     },
     "expiry": {
       "time_zone": "America/Toronto",
@@ -49,6 +45,7 @@
     "live_pk": "your live keys",
     "live_sk": "your live keys",
     "wh_secret": "",
+    "radar_script": false,
     "addresses": {
       "billing": false,
       "shipping": ["2 Letter Codes","delete array and set false if not using"]
@@ -62,24 +59,63 @@
     "price_ids": [
       {
         "id": "price_",
-        "price": "5.00",
-        "donor_role_id": "000000000000000000",
-        "price_title": "Monthly Subscription",
-        "mode": "subscription"
+        "role_id": "000000000000000000",
+        "mode": "payment",
+        "expiry": 2592000,
+        "title": "$7.50 One Month Access",
+        "text": "Gain access to all services with no commitment. Great for testing it out if you're not sure!"
       },
       {
         "id": "price_",
-        "price": "50.00",
-        "donor_role_id": "000000000000000000",
-        "price_title": "Annual Subscription",
-        "mode": "subscription"
+        "role_id": "000000000000000000",
+        "mode": "subscription",
+        "title": "$6.00 Monthly Subscription",
+        "text": "Save $1.50/mth vs the One Month price! Convenient automatic billing!"
       },
       {
         "id": "price_",
-        "price": "10.00",
-        "donor_role_id": "000000000000000000",
-        "price_title": "One Month Access",
-        "mode": "payment"
+        "role_id": "000000000000000000",
+        "mode": "payment",
+        "expiry": 7862400,
+        "title": "$21.00 Three Month Access",
+        "text": "Save $0.50/mth vs One Month ($1.50 total) and play for a season!"
+      },
+      {
+        "id": "price_",
+        "role_id": "000000000000000000",
+        "mode": "subscription",
+        "title": "$17.25 Quarterly Subscription Access",
+        "text": "Save another $0.25/mth($0.75) vs Monthly Sub ($5.25 total vs One Month) and stay active with only 4 charges a year!"
+      },
+      {
+        "id": "price_",
+        "role_id": "000000000000000000",
+        "mode": "payment",
+        "expiry": 15768000,
+        "title": "$39.00 Six Month Access",
+        "text": "Save $1.00/mth vs One Month ($6.00 total) and play for half the year!"
+      },
+      {
+        "id": "price_",
+        "role_id": "000000000000000000",
+        "mode": "subscription",
+        "title": "$33.00 Semi-Annual Subscription",
+        "text": "Save another $0.50/mth($3.00) vs Monthly Sub ($12.00 total vs One Month) and play on with only 2 charges a year!"
+      },
+      {
+        "id": "price_",
+        "role_id": "000000000000000000",
+        "mode": "payment",
+        "expiry": 31536000,
+        "title": "$72.00 One Year Access",
+        "text": "Save $1.50/mth vs One Month ($18.00 total) and get a whole year with no commitment!"
+      },
+      {
+        "id": "price_",
+        "role_id": "000000000000000000",
+        "mode": "subscription",
+        "title": "$60.00 Annual Subscription Access",
+        "text": "Save another $1.00/mth($12.00) vs Monthly Sub ($30.00 total vs One Month) and never be interrupted with automatic renewals!"
       }
     ]
   }

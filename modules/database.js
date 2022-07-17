@@ -67,68 +67,303 @@ const object = {
     });
   },
   //------------------------------------------------------------------------------
-  //  DONOR CHECK
+  //  MAINTENANCE ROUTINES (DATABASE)
   //------------------------------------------------------------------------------
-  checkDonors: async function() {
-    console.info("["+bot.getTime("stamp")+"] [database.js] Starting Discord Role Maintenance.");
-    let query = `SELECT * FROM stripe_users WHERE stripe_id != ?`;
-    let data = ['Manual'];
+  checkDetails: async function() {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Starting Discord Info Sync.");
+    let unix = moment().unix();
+    let query = `SELECT * FROM stripe_users WHERE user_id != ?`;
+    let data = ['NULL'];
     await object.db.query(query, data, async function(err, records, fields) {
       if (err) {
         console.error(err);
       }
       if (records) {
+        console.info("["+bot.getTime("stamp")+"] [database.js] Checking for Discord profile updates and Stripe ID validity on "+records.length+" Database Users.");
         records.forEach((user, index) => {
+          let indexcounter = index + 1;
+          setTimeout(async function() {
+            let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.user_id);
+            let customer;
+            let db_updated = false;
+            if (user.stripe_id) {
+              try {
+                customer = await stripe.customer.fetch(user.stripe_id); // fetch customer because stripe list only returns active users
+              } catch (e) {
+                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to fetch Stripe record.", e);
+              }
+              if (!customer || customer.deleted == true) {
+                query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL, temp_plan_expiration = NULL WHERE user_id = ?`;
+                data = [user.id];
+                object.runQuery(query, data);
+                db_updated = true;
+              }
+            }
+            if (!member) {
+              if (user.access_token != "Left Guild") {
+                member = user;
+                member.nickname = user.user_name;
+                member.user = [];
+                member['user']['id'] = user.user_id;
+                if (user.stripe_id) { customer = await stripe.customer.fetch(user.stripe_id); }
+                if (customer && customer.subscriptions.data[0]) { // they have some sub data
+                  for (let x = 0; x < customer.subscriptions.data.length; x++) { //for each sub
+                    await stripe.subscription.cancel(member, customer.subscriptions.data[x].id); //cancel each sub
+                  }
+                }
+                let query = `UPDATE stripe_users SET price_id = NULL, temp_plan_expiration = NULL, access_token = 'Left Guild', refresh_token = NULL WHERE user_id = ?`;
+                let data = [user.user_id];
+                await object.runQuery(query, data);
+                if (!user.stripe_id) { user.stripe_id = "Not Found"; }
+                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Deleted Tokens.");
+                bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Tokens.', config.discord.log_channel);
+                if (indexcounter === records.length) { return object.doneDetails(); } else { return; }
+              } else {
+                if (!user.stripe_id) { user.stripe_id = "Not Found"; }
+                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Not a Guild member.");
+                if (indexcounter === records.length) { return object.doneDetails(); } else { return; }
+              }
+            }
+            let data = {};
+            if (user.access_token && user.access_token != 'Left Guild' || user.refresh_token) {
+              if (!user.token_expiration) { user.token_expiration = unix -1 }
+              if (!user.access_token || unix > user.token_expiration) {
+                try {
+                  data = await oauth2.refreshAccessToken(user.refresh_token, user);
+                  if (data.response) {
+                    throw data.response;
+                  }
+                } catch (e) {
+                  if (e.status === 400) {
+                    let query = `UPDATE stripe_users SET access_token = NULL, refresh_token = NULL, token_expiration = NULL WHERE user_id = ?`;
+                    let data = [member.id];
+                    await object.runQuery(query, data);
+                    if (!user.stripe_id) { user.stripe_id = "Not Found"; }
+                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to refresh Discord token, cleared Tokens.");
+                    if (indexcounter === records.length) { return object.doneDetails(); } else { return; }
+                  } else {
+                    if (!user.stripe_id) { user.stripe_id = "Not Found"; }
+                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to refresh Discord token.", e);
+                    if (indexcounter === records.length) { return object.doneDetails(); } else { return; }
+                  }
+                }
+              } else { data.access_token = user.access_token; }
+              let discord;
+              try {
+                discord = await oauth2.fetchUser(data.access_token);
+                if (discord.response) {
+                  throw discord.response;
+                }
+              } catch (e) {
+                if (e.status === 401) {
+                  let query = `UPDATE stripe_users SET access_token = NULL, refresh_token = NULL, token_expiration = NULL WHERE user_id = ?`;
+                  let data = [member.id];
+                  await object.runQuery(query, data);
+                  if (!user.stripe_id) { user.stripe_id = "Not Found"; }
+                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to fetch Discord information, cleared Tokens.");
+                  if (indexcounter === records.length) { return object.doneDetails(); } else { return; }
+                } else {
+                  if (!user.stripe_id) { user.stripe_id = "Not Found"; }
+                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to fetch Discord information.", e);
+                  if (indexcounter === records.length) { return object.doneDetails(); } else { return; }
+                }
+              }
+              if (discord.id != user.user_id) { // check if token pulled right ID result, log and alert if not
+                if (!user.stripe_id) { user.stripe_id = "Not Found"; }
+                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") User Fetch resulted in ID mismatch, Administration should investigate (Discord Check).");
+                let member;
+                try {
+                  member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.user_id);
+                } catch (e) {
+                  console.log(e);
+                  member = user;
+                  member.nickname = user.user_name;
+                  member.user = [];
+                  member['user']['id'] = user.user_id;
+                }
+                bot.sendEmbed(member, 'FF0000', 'User Fetch resulted in ID mismatch ⚠', 'Administration should investigate (Discord Check)', config.discord.log_channel);
+                if (indexcounter === records.length) { return object.doneDetails(); }
+              } else { // end ID/Token result mismatch
+                if (discord.username != user.user_name || discord.email != user.email) {
+                  query = `UPDATE stripe_users SET user_name = ?, email = ? WHERE user_id = ?`;
+                  data = [discord.username, discord.email, user.user_id]
+                  object.runQuery(query, data);
+                  db_updated = true;
+                } // end detail mismatch
+                if (!user.stripe_id) { user.stripe_id = "Not Found"; }
+                if (db_updated) {
+                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Updated Database details.");
+                  if (indexcounter === records.length) { return object.doneDetails(); }
+                } else {
+                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Verified Database details.");
+                  if (indexcounter === records.length) { return object.doneDetails(); }
+                }
+              } // end ID/Token result match
+            } else { // end access and refresh token found
+              console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") User has no Tokens, unable to fetch updates from Discord.");
+              if (indexcounter === records.length) { return object.doneDetails(); }
+            }
+          }, 2500 * index);
+        }); //end for each user record
+      } else { //end if records returned
+        console.info("["+bot.getTime("stamp")+"] [database.js] Database Empty, nothing to sync.");
+        return object.doneDetails();
+      } // move to next stage if no records
+    }); //end query all db users
+  },
+  doneDetails: async function() {
+    console.info("["+bot.getTime("stamp")+"] [database.js] Discord Info Sync complete.");
+    return stripe.customer.list();
+  },
+  checkDatabase: async function() {
+    console.info("["+bot.getTime("stamp")+"] [database.js] Starting Database Checks.");
+    let unix = moment().unix();
+    let query = `SELECT * FROM stripe_users WHERE manual != ?`;
+    let data = ['true'];
+    await object.db.query(query, data, async function(err, records, fields) {
+      if (err) {
+        console.error(err);
+      }
+      if (records) {
+        console.info("["+bot.getTime("stamp")+"] [database.js] Checking "+records.length+" Database Users.");
+        records.forEach((user, index) => {
+          let indexcounter = index + 1;
           setTimeout(async function() {
             let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.user_id);
             let customer = '';
-            if (member) {
-              for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                if (member.roles.cache.has(config.stripe.price_ids[i]role_id)) {
-                  if (!user.stripe_id || user.price_id != config.stripe.price_ids[i].id) {
-                    bot.removeDonor(member.id);
-                    console.info("["+bot.getTime("stamp")+"] [database.js] ");
-                    return bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Internal Check)', config.discord.log_channel);
-                  } else { // end if no stripe ID or plan not matched to role
-                    customer = await stripe.customer.fetch(user.stripe_id);
-                    if (!customer || customer.deleted == true) {
-                      bot.removeDonor(member.id);
-                      bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Donor Role. (Stripe Check)', config.discord.log_channel);
-                      query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL WHERE user_id = ?`;
-                      data = [member.id];
-                      return object.runQuery(query, data);
-                    } //end if customer doesn't exist or is deleted (if they exist, they are in stripe sync and id & plan are verified)
-                  } // end if they have an id and the plan matched role
-                } else if (user.stripe_id) { // end if member role matches config role
-                  customer = await stripe.customer.fetch(user.stripe_id);
-                  if (!customer || customer.deleted == true) {
-                    query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL WHERE user_id = ?`;
-                    data = [member.id];
-                    await object.runQuery(query, data);
-                    return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Updated '+user.user_name+' Record to Reflect no Stripe information.', config.discord.log_channel);
-                  } else if (customer.subscriptions.data[0] && customer.subscriptions.data[0].status == 'active' && user.price_id == config.stripe.price_id) {
-                    bot.assignDonor(member.id);
-                    return bot.sendEmbed(member, 'FF0000', 'User found without Donor Role ⚠', 'Assigned Donor Role. (Stripe Check)', config.discord.log_channel);
+            if (member) {                                                // if in the guild
+              for (let i = 0; i < config.stripe.price_ids.length; i++) { // check each config price id
+                if (member.roles.cache.has(config.stripe.price_ids[i].role_id)) { // they have a role matching the price being checked
+                  if (!user.stripe_id || user.price_id != config.stripe.price_ids[i].id || user.temp_plan_expiration && user.temp_plan_expiration < unix) { // they don't have a stripe id or the registered price isn't correct or expired
+                    bot.removeRole(member.id, config.stripe.price_ids[i].role_id);
+                    if (!user.stripe_id) { user.stripe_id = "Not Found"; }
+                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") found without a Subscription. Removed Role."); // remove and log
+                    bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Role. (Internal Check)', config.discord.log_channel);
+                    if (indexcounter === records.length) { return object.doneDatabase(); } else { return; }
                   } else {
-                    return;
+                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") is Verified in Discord Role.");
+                    if (indexcounter === records.length) { return object.doneDatabase(); } else { return; }
                   }
-                } // end if user has stripe id
-              } // end for each plan in config
+                } else if (user.stripe_id && user.price_id) { // end if member role matches config role (no role but they have a stripe & price ID)
+                  if (config.stripe.price_ids[i].mode == 'subscription' && user.price_id == config.stripe.price_ids[i].id) { // stripe-checked db subscription price matches price being checked
+                    bot.assignRole(member.id, config.stripe.price_ids[i].role_id);
+                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") User found without Role, Assigned.");
+                    bot.sendEmbed(member, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
+                    if (indexcounter === records.length) { return object.doneDatabase(); } else { return; }
+                  } else if (config.stripe.price_ids[i].mode == 'payment' && user.price_id == config.stripe.price_ids[i].id) { // check for one-time purch roles
+                    if (user.temp_plan_expiration > unix) { //check if expired
+                      bot.assignRole(member.id, config.stripe.price_ids[i].role_id); // add & log
+                      console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  One-Time User found without Role, Assigned.");
+                      bot.sendEmbed(member, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
+                      if (indexcounter === records.length) { return object.doneDatabase(); } else { return; }
+                    } else { // give role if clear, remove price and expiry if not
+                      query = `UPDATE stripe_users SET price_id = NULL, temp_plan_expiration = NULL WHERE user_id = ?`;
+                      data = [member.id];
+                      await object.runQuery(query, data);
+                      console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  One-Time User expired, cleared price and expiry.");
+                      bot.sendEmbed(member, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
+                      if (indexcounter === records.length) { return object.doneDatabase(); } else { return; }
+                    } // end expiry check
+                  } // end check one-time purch record
+                } // end if user has stripe & price id
+              } // end for each price in config
+              console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") doesn't need and has no Discord Role.");
+              if (indexcounter === records.length) { return object.doneDatabase(); }
             } else { //end if guild member
-              member = user;
-              member.nickname = user.user_name;
-              member.user = [];
-              member['user']['id'] = user.user_id;
-              customer = await stripe.customer.fetch(user.stripe_id);
-              await stripe.subscription.cancelNow(member, customer.subscriptions.data[0].id);
-              return bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Tokens and Guild Association for '+user.user_name+' ('+member.user_id+').', config.discord.log_channel);
+              if (user.access_token != "Left Guild") {
+                member = user;
+                member.nickname = user.user_name;
+                member.user = [];
+                member['user']['id'] = user.user_id;
+                if (user.stripe_id) { customer = await stripe.customer.fetch(user.stripe_id); }
+                if (customer && customer.subscriptions.data[0]) { // they have some sub data
+                  for (let x = 0; x < customer.subscriptions.data.length; x++) { //for each sub
+                    await stripe.subscription.cancel(member, customer.subscriptions.data[x].id); //cancel each sub
+                  }
+                }
+                query = `UPDATE stripe_users SET price_id = NULL, temp_plan_expiration = NULL, access_token = 'Left Guild', refresh_token = NULL WHERE user_id = ?`;
+                data = [user.user_id];
+                await object.runQuery(query, data);
+                if (!user.stripe_id) { user.stripe_id = "Not Found"; }
+                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Deleted Tokens and Guild Association.");
+                bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Tokens and Guild Association.', config.discord.log_channel);
+                if (indexcounter === records.length) { return object.doneDatabase(); }
+              } else {
+                if (!user.stripe_id) { user.stripe_id = "Not Found"; }
+                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Not a Guild member.");
+                if (indexcounter === records.length) { return object.doneDatabase(); }
+              }
             } // end not guild member
-          }, 5000 * index);
+          }, 2500 * index);
         }); //end for each user record
-        return;
       } //end if records returned
     }); //end query all db users except Manual
-    // Removed member block
+  },
+  doneDatabase: async function() {
+    console.info("["+bot.getTime("stamp")+"] [database.js] Database checks complete, proceeding to role checks.");
+    return object.checkRoles();
+  },
+  checkRoles: async function() {
+    console.info("["+bot.getTime("stamp")+"] [database.js] Starting Discord Role Maintenance.");
+    let unix = moment().unix();
+    console.info("["+bot.getTime("stamp")+"] [database.js] Checking "+config.stripe.price_ids.length+" Roles.");
+    let delay;
+    for (let i = 0; i < config.stripe.price_ids.length; i++) { //for each price
+      delay = 2500;
+      let guild = bot.guilds.cache.get(config.discord.guild_id); // pull guild info
+      let members = guild.roles.cache.find(role => role.id === config.stripe.price_ids[i].role_id).members.map(m => m); // map role members from price
+      delay *= members.length;
+      if (delay === 0) { delay = 500; }
+      setTimeout(function() {
+        if (members.length > 0) {
+          console.info("["+bot.getTime("stamp")+"] [database.js] Checking "+members.length+" Users in Role "+config.stripe.price_ids[i].role_id+".");
+          members.forEach((member, index) => { //for each member in role
+            let indexcounter = index + 1;
+            setTimeout(function() {
+              let query = `SELECT * FROM stripe_users WHERE user_id = ?`;
+              let data = [member.id];
+              object.db.query(query, data, async function(err, record, fields) { // pull DB record
+                if (err) {
+                  return console.error(err);
+                }
+                if (record) { //record found
+                  if (record[0].manual == 'true') { // skip life/manual
+                    if (!record[0].stripe_id) { record[0].stripe_id = "Not Found"; }
+                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") Manually tracked or Lifetime User, Skipping.");
+                    if (i === config.stripe.price_ids.length - 1 && indexcounter === records.length) { return object.doneRoles(); }
+                  } else if (!record[0].stripe_id) { // no stripe id remove
+                    bot.removeDonor(member.id);
+                    record[0].stripe_id = "Not Found";
+                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User found without a Stripe ID, Removed Role.");
+                    bot.sendEmbed(member, 'FF0000', 'User found without a Stripe ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                    if (i === config.stripe.price_ids.length - 1 && indexcounter === records.length) { return object.doneRoles(); }
+                  } else if (!record[0].price_id || config.stripe.price_ids[i].mode == 'payment' && record[0].temp_plan_expiration < unix) { //no price or temp plan expired remove
+                    bot.removeDonor(member.id);
+                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User found expired or without a Price ID, Removed Role.");
+                    bot.sendEmbed(member, 'FF0000', 'User found expired or without a Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                    if (i === config.stripe.price_ids.length - 1 && indexcounter === records.length) { return object.doneRoles(); }
+                  }
+                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User is verified in Role "+config.stripe.price_ids[i].role_id+".");
+                if (i === config.stripe.price_ids.length - 1) { return object.doneRoles(); }
+                } else { // not in db
+                  bot.removeRole(member.id);
+                  bot.sendEmbed(member, 'FF0000', 'User found without a DB Record ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
+                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | Not Found) Not in Database, removed Role.");
+                  if (i === config.stripe.price_ids.length - 1 && indexcounter === records.length) { return object.doneRoles(); }
+                }
+              });
+            }, 2500 * index);
+          });
+        } else { 
+        console.info("["+bot.getTime("stamp")+"] [database.js] "+config.stripe.price_ids[i].role_id+" Has no Members in Role.");
+        if (i === config.stripe.price_ids.length - 1) { return object.doneRoles(); }
+        }
+      }, delay * i);
+    }
+  },
+  doneRoles: async function() {
+    console.info("["+bot.getTime("stamp")+"] [database.js] Role checks complete");
+    return console.info("["+bot.getTime("stamp")+"] [database.js] Maintenance routines complete.");
   }
 }
 

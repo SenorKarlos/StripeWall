@@ -1,22 +1,102 @@
-<!Doctype>
+<!DOCTYPE html>
 <html>
 <head>
-	<style>
-		.img {
-			width: 480px;
-			height: 200px;
-			border:2px solid #fff;
-			background: url(https://gfycat.com/marriedwastefulcub);
-			box-shadow: 10px 10px 5px #ccc;
-			-moz-box-shadow: 10px 10px 5px #ccc;
-			-webkit-box-shadow: 10px 10px 5px #ccc;
-			-khtml-box-shadow: 10px 10px 5px #ccc;
-			}
-	</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    .rcorners1 {
+        border-radius: 30px;
+        border: 5px solid #F93318;
+        padding: 30px;
+        min-width:50px!important;
+        max-width:99.99%!important;
+        margin: 50px;
+        transition: width 0.25s;
+        min-height:50px!important;
+        max-height:99.99%!important;
+        box-shadow:  0 0 20px  rga(0,0,0,0.6);
+        -moz-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        -webkit-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        -o-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+    }
+    .top {
+      background: url("/static/banner_top.png");
+      background-size: 100% 440px;
+      background-repeat: no-repeat;
+      margin: -8px;
+    }
+    .bottom {
+      background: url("/static/banner_bottom.png");
+      background-size: 100% 196px;
+      background-repeat: no-repeat;
+      margin: -10px;
+    }
+    .content {
+      max-width: 480px;
+      margin: auto;
+      text-align: center;
+    }
+    .left {
+      text-align: left;
+      display: inline-block
+    }
+    .unsubscribe {
+      font-size: 10pt;
+    }
+    .fineprint {
+      font-size: 8pt;
+    }
+    .details {
+      font-size: 10pt;
+    }
+    img {
+      width: 100%;
+    }
+    form article label {
+      display: block;
+      margin: 5px;
+    }
+    form .submit {
+      margin: 15px 0;
+    }
+    body {
+        margin: 50px auto;
+        background-color: #F6F6F6;
+        text-align: center;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+  </style>
 </head>
 <body>
-	<center>
-		<div class="img"></div>
+  <div class="rcorners1">
+    <center>
+      <div>
+        <div>
+          <h1>You are Banned from <%= map_name %></h1>
+        </div>
+        <div>
+        <br>
+        <hr>
+        <button onclick="location.href='https://lmgtfy.app/?q=a+map+you+didn%27t+piss+off'" type="button">
+          Good Luck!</button>
+        </form>
+        <br>
+        <hr>
+        </div>
+      <div>
+        <div class="content">
+          <div class="fineprint">
+            <p>We NEVER receive, store, or view any sensitive customer credit card information.  All of our credit card processing is managed directly and solely by Stripe, a PCI Level 1 Compliant Service Provider.</p>
+            <a href=https://stripe.com/docs/security/stripe>https://stripe.com/docs/security/stripe</a>
+            <p><%= terms %></p>
+            <p>We are not associated with Niantic, ThePokemonCompany, or any of its subsidiaries.</p>
+            <p><strong><%= warning %></strong></p>
+            <a href=<%= map_url %>/discord><%= map_url %>/discord</a>
+            <br>
+          </div>
+        </div>
+      </div>
     </center>
+  </div>
+  <%- radar_script %>
 </body>
 </html>
