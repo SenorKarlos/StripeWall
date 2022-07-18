@@ -203,7 +203,7 @@ const object = {
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") User has no Tokens, unable to fetch updates from Discord.");
               if (indexcounter === records.length) { return object.doneDetails(); }
             }
-          }, 2500 * index);
+          }, 1000 * index);
         }); //end for each user record
       } else { //end if records returned
         console.info("["+bot.getTime("stamp")+"] [database.js] Database Empty, nothing to sync.");
@@ -294,72 +294,82 @@ const object = {
                 if (indexcounter === records.length) { return object.doneDatabase(); }
               }
             } // end not guild member
-          }, 2500 * index);
+          }, 1000 * index);
         }); //end for each user record
       } //end if records returned
     }); //end query all db users except Manual
   },
   doneDatabase: async function() {
     console.info("["+bot.getTime("stamp")+"] [database.js] Database checks complete, proceeding to role checks.");
-    return object.checkRoles();
+    return object.getRoleMembers();
   },
-  checkRoles: async function() {
+  getRoleMembers: async function() {
     console.info("["+bot.getTime("stamp")+"] [database.js] Starting Discord Role Maintenance.");
-    let unix = moment().unix();
     console.info("["+bot.getTime("stamp")+"] [database.js] Checking "+config.stripe.price_ids.length+" Roles.");
-    let delay;
+    let roleArray = [];
+    let delayArray = [0];
     for (let i = 0; i < config.stripe.price_ids.length; i++) { //for each price
-      delay = 2500;
-      let guild = bot.guilds.cache.get(config.discord.guild_id); // pull guild info
-      let members = guild.roles.cache.find(role => role.id === config.stripe.price_ids[i].role_id).members.map(m => m); // map role members from price
-      delay *= members.length;
-      if (delay === 0) { delay = 500; }
       setTimeout(function() {
-        if (members.length > 0) {
-          console.info("["+bot.getTime("stamp")+"] [database.js] Checking "+members.length+" Users in Role "+config.stripe.price_ids[i].role_id+".");
-          members.forEach((member, index) => { //for each member in role
-            let indexcounter = index + 1;
-            setTimeout(function() {
-              let query = `SELECT * FROM stripe_users WHERE user_id = ?`;
-              let data = [member.id];
-              object.db.query(query, data, async function(err, record, fields) { // pull DB record
-                if (err) {
-                  return console.error(err);
-                }
-                if (record) { //record found
-                  if (record[0].manual == 'true') { // skip life/manual
-                    if (!record[0].stripe_id) { record[0].stripe_id = "Not Found"; }
-                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") Manually tracked or Lifetime User, Skipping.");
-                    if (i === config.stripe.price_ids.length - 1 && indexcounter === records.length) { return object.doneRoles(); }
-                  } else if (!record[0].stripe_id) { // no stripe id remove
-                    bot.removeDonor(member.id);
-                    record[0].stripe_id = "Not Found";
-                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User found without a Stripe ID, Removed Role.");
-                    bot.sendEmbed(member, 'FF0000', 'User found without a Stripe ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
-                    if (i === config.stripe.price_ids.length - 1 && indexcounter === records.length) { return object.doneRoles(); }
-                  } else if (!record[0].price_id || config.stripe.price_ids[i].mode == 'payment' && record[0].temp_plan_expiration < unix) { //no price or temp plan expired remove
-                    bot.removeDonor(member.id);
-                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User found expired or without a Price ID, Removed Role.");
-                    bot.sendEmbed(member, 'FF0000', 'User found expired or without a Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
-                    if (i === config.stripe.price_ids.length - 1 && indexcounter === records.length) { return object.doneRoles(); }
-                  }
-                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User is verified in Role "+config.stripe.price_ids[i].role_id+".");
-                if (i === config.stripe.price_ids.length - 1) { return object.doneRoles(); }
-                } else { // not in db
-                  bot.removeRole(member.id);
-                  bot.sendEmbed(member, 'FF0000', 'User found without a DB Record ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
-                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | Not Found) Not in Database, removed Role.");
-                  if (i === config.stripe.price_ids.length - 1 && indexcounter === records.length) { return object.doneRoles(); }
-                }
-              });
-            }, 2500 * index);
-          });
-        } else { 
-        console.info("["+bot.getTime("stamp")+"] [database.js] "+config.stripe.price_ids[i].role_id+" Has no Members in Role.");
-        if (i === config.stripe.price_ids.length - 1) { return object.doneRoles(); }
-        }
-      }, delay * i);
+        let guild = bot.guilds.cache.get(config.discord.guild_id); // pull guild info
+        let members = guild.roles.cache.find(role => role.id === config.stripe.price_ids[i].role_id).members.map(m => m); // map role members from price
+        roleArray.push(members);
+        let timer = members.length * 1000;
+        if (timer == 0) { timer = 1000; }
+        timer = timer + delayArray[i];
+        delayArray.push(timer);
+        console.info("["+bot.getTime("stamp")+"] [database.js] "+members.length+" Users in Role "+config.stripe.price_ids[i].role_id+".");
+        if (i === config.stripe.price_ids.length - 1) { return object.checkRoles(roleArray, delayArray); }
+      }, 500 * i);
     }
+  },
+  checkRoles: async function(roleArray, delayArray) {
+    let unix = moment().unix();
+    roleArray.forEach((members, i) => {
+      setTimeout(function() {
+        if (members.length == 0) {
+          console.info("["+bot.getTime("stamp")+"] [database.js] "+members.length+" Users in Role "+config.stripe.price_ids[i].role_id+".");
+        } else {
+          console.info("["+bot.getTime("stamp")+"] [database.js] Checking "+members.length+" Users in Role "+config.stripe.price_ids[i].role_id+".");
+        }
+        members.forEach((member, index) => { //for each member in role
+          let indexcounter = index + 1;
+          setTimeout(function() {
+            let query = `SELECT * FROM stripe_users WHERE user_id = ?`;
+            let data = [member.id];
+            object.db.query(query, data, async function(err, record, fields) { // pull DB record
+              if (err) {
+                return console.error(err);
+              }
+              if (record) { //record found
+                if (record[0].manual == 'true') { // skip life/manual
+                  if (!record[0].stripe_id) { record[0].stripe_id = "Not Found"; }
+                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") Manually tracked or Lifetime User, Skipping.");
+                  if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.doneRoles(); }
+                } else if (!record[0].stripe_id) { // no stripe id remove
+                  bot.removeDonor(member.id);
+                  record[0].stripe_id = "Not Found";
+                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User found without a Stripe ID, Removed Role.");
+                  bot.sendEmbed(member, 'FF0000', 'User found without a Stripe ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                  if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.doneRoles(); }
+                } else if (!record[0].price_id || config.stripe.price_ids[i].mode == 'payment' && record[0].temp_plan_expiration < unix) { //no price or temp plan expired remove
+                  bot.removeDonor(member.id);
+                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User found expired or without a Price ID, Removed Role.");
+                  bot.sendEmbed(member, 'FF0000', 'User found expired or without a Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                  if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.doneRoles(); }
+                }
+              console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User is verified in Role "+config.stripe.price_ids[i].role_id+".");
+              if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.doneRoles(); }
+              } else { // not in db
+                bot.removeRole(member.id);
+                bot.sendEmbed(member, 'FF0000', 'User found without a DB Record ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
+                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | Not Found) Not in Database, removed Role.");
+                if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.doneRoles(); }
+              }
+            });
+          }, 1000 * index);
+        });
+      }, delayArray[i]);
+    });
   },
   doneRoles: async function() {
     console.info("["+bot.getTime("stamp")+"] [database.js] Role checks complete");

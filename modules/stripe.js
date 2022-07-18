@@ -175,7 +175,7 @@ const stripe = {
                 if (indexcounter === parse.length) { return stripe.customer.doneParse(); }
             } // end if updated or verified
           }); // dead end after database fetch
-        }, 2500 * index);
+        }, 1000 * index);
       }); //end for each customer
     },
     doneParse: async function() {
