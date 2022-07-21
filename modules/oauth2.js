@@ -42,7 +42,7 @@ const oauth2 = {
       axios.post("https://discord.com/api/oauth2/token", data, {
         headers: headers
       }).then(async function(response) {
-        console.log("[oauth2.js] Successfully Refreshed a Token", response.data);
+        console.info("[oauth2.js] Successfully Refreshed a Token", response.data);
         let token_expiration = (unix+response.data.expires_in);
         database.runQuery(`UPDATE IGNORE stripe_users SET access_token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?`, [response.data.access_token, response.data.refresh_token, token_expiration, user.user_id]);
         console.info('['+bot.getTime('stamp')+'] [oauth2.js] '+user.user_name+' ('+user.user_id+') Updated Discord OAuth2 info in Database.');

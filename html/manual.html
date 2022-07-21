@@ -73,8 +73,8 @@
         <div>
           <h1><%= map_name %> Lifetime and Manually Tracked Users</h1>
           <p><strong><font color="red">Welcome, <%= user_name %>! (<%= email %>)</font></strong></p>
-          <p><strong><font color="red">You are currently a Lifetime Member or being handled manually by administration.</font></strong></p>
-          <p><strong><font color="red">Please consult recent conversations for your expiry date if applicable. Checkout is only available for non-active users.</font></strong></p>
+          <p><strong><font color="red"><%= intro %></font></strong></p>
+          <p><strong><font color="red">Checkout is only available for inactive users. <%= exp_text %> <%= expiry %> (<%= tz_text %>).</font></strong></p>
           <p><strong><font color="red">Thank you for your business!</font></strong></p>
         </div>
         <div>

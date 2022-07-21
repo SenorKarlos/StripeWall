@@ -30,14 +30,13 @@
   "pages": {
     "general":{
       "terms": "Do not redistribute scanned data. The sole exception being Raids you plan to attend ONLY. Doing so will result in immediate revokation of all access.",
-      "warning": "All services are subject to downtimes for various reasons. Please monitor the Discord Server for Updates."
+      "warning": "All services are subject to downtimes for various reasons. Please monitor the Discord Server for Updates.",
+	  "time_zone": "America/Toronto",
+      "tz_text": "Eastern Time",
+      "tz_locale": "en-US"
     },
     "checkout": {
       "welcome": "Choose your preferred billing frequency and commitment below to get started. Applicable taxes will be calculated and added during checkout. Thank you for your support!"
-    },
-    "expiry": {
-      "time_zone": "America/Toronto",
-      "tz_text": "Eastern Time"
     }
   },
 
@@ -51,7 +50,7 @@
       "shipping": ["2 Letter Codes","delete array and set false if not using"]
     },
     "taxes": {
-      "active": false,,
+      "active": false,
       "automatic": false,
       "dynamic": false,
       "rate_ids": ["txr_","empty if not using"]
@@ -63,7 +62,7 @@
         "mode": "payment",
         "expiry": 2592000,
         "title": "$7.50 One Month Access",
-        "text": "Gain access to all services with no commitment. Great for testing it out if you're not sure!"
+        "text": "Gain access to all services with no subscription. Great for testing it out if you're not sure!"
       },
       {
         "id": "price_",
@@ -116,6 +115,11 @@
         "mode": "subscription",
         "title": "$60.00 Annual Subscription Access",
         "text": "Save another $1.00/mth($12.00) vs Monthly Sub ($30.00 total vs One Month) and never be interrupted with automatic renewals!"
+      },
+      {
+        "id": "price_",
+        "role_id": "000000000000000000",
+        "mode": "legacy"
       }
     ]
   }

@@ -38,7 +38,7 @@ bot.sendEmbed = (member, color, title, body, channel_id) => {
     .setDescription(body)
     .setFooter(config.map_name+' | '+bot.getTime('full'));
   return bot.channels.cache.get(channel_id).send(embed).catch(err => {
-    console.error('['+bot.getTime('stamp')+'] [bot.js] Unable to Send Channel Message.', err);
+    console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Send Channel Message.', err);
   });
 }
 //------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ bot.sendDM = (member, title, body, color) => {
   bot.guilds.cache.get(config.discord.guild_id).members.fetch(member.id).then(TARGET => {
     return TARGET.send(embed).catch(error => {
       if (error) {
-        console.error('[Send_DM]', error);
+        console.info('[Send_DM]', error);
       }
     });
   });
@@ -63,7 +63,7 @@ bot.sendDM = (member, title, body, color) => {
 //------------------------------------------------------------------------------
 bot.assignRole = (user_id, role_id) => {
   let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user_id);
-  console.log('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' Requires Role: '+role_id);
+  console.info('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' Requires Role: '+role_id);
   if (!member) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Assign the User a role.');
     return false;
@@ -81,7 +81,7 @@ bot.assignRole = (user_id, role_id) => {
 //------------------------------------------------------------------------------
 bot.removeRole = (user_id, role_id) => {
   let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user_id);
-  console.log('[bot.js] '+member.user.tag+' Requires Role Removal: '+role_id);
+  console.info('[bot.js] '+member.user.tag+' Requires Role Removal: '+role_id);
   if (!member) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to remove the role from the User.');
     return false;
@@ -102,7 +102,7 @@ bot.on('ready', () => {
   console.info('['+bot.getTime('stamp')+'] [bot.js] The bot ('+bot.user.tag+') has initialized.');
   bot.blacklisted = config.discord.blacklist;
   if (bot.blacklisted.length > 0) {
-    console.log('['+bot.getTime('stamp')+'] [bot.js] Loaded '+bot.blacklisted.length+' blacklisted user(s) from the config.');
+    console.info('['+bot.getTime('stamp')+'] [bot.js] Loaded '+bot.blacklisted.length+' blacklisted user(s) from the config.');
   }
   if (config.discord.fetch_bans == true) {
     bot.guilds.cache.get(config.discord.guild_id).fetchBans()
@@ -111,7 +111,7 @@ bot.on('ready', () => {
         bans.map(u => u.user.id).forEach(id => {
           bot.blacklisted.push(id);
         });
-      }).catch(console.error);
+      }).catch(console.info);
     }
   return bot.user.setActivity('for subscribers', {
     type: 'WATCHING'

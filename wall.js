@@ -14,7 +14,7 @@ const stripe_js = require('stripe')(config.stripe.live_sk);
 //------------------------------------------------------------------------------
 //  SERVER CONFIGURATIONS
 //------------------------------------------------------------------------------
-var sessionAge = 518400000;
+var sessionAge = 86400000;
 const server = express();
 server.engine("html", require("ejs").renderFile);
 server.use(cookieSession({
@@ -40,6 +40,16 @@ server.use(
 server.get("/login", async (req, res) => {
   let time_now = moment().valueOf();
   let unix = moment().unix();
+  req.session.now = unix;
+  req.session.discord_id = null;
+  req.session.email = null;
+  req.session.access_token = null;
+  req.session.refresh_token = null;
+  req.session.token_expiration = null;
+  req.session.user_name = null;
+  req.session.expiry = null;
+  req.session.stripe_id = null;
+  req.session.price_id = null;
   if (!req.query.code) {
   //------------------------------------------------------------------------------
   //  SEND TO DISCORD OAUTH2
@@ -57,7 +67,7 @@ server.get("/login", async (req, res) => {
       }
     } catch (e) {
       req.session = null;
-      console.log("["+bot.getTime("stamp")+"] [wall.js] Failed to fetch Tokens", e);
+      console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to fetch Tokens", e);
       return res.redirect(`/error`);
     }
     try {
@@ -86,7 +96,7 @@ server.get("/login", async (req, res) => {
         return res.redirect(`/blocked`);
       }
     } else {
-      console.log("["+bot.getTime("stamp")+"] [wall.js] User Passed Blacklist");
+      console.info("["+bot.getTime("stamp")+"] [wall.js] User Passed Blacklist");
     }
     try {
       member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.id);
@@ -160,7 +170,9 @@ server.get("/login", async (req, res) => {
         console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Create Stripe Customer", e);
         return res.redirect(`/error`);
       }
-    } else if (dbuser.manual == 'true') { 
+    } else if (dbuser.manual == 'true' && dbuser.temp_plan_expiration-86400 > unix) {
+      req.session.expiry = dbuser.temp_plan_expiration;
+      req.session.manual = true;
       return res.redirect(`/manual`); 
     } else {
       try {
@@ -198,9 +210,11 @@ server.get("/login", async (req, res) => {
           }
           console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.user_name+ ","+req.session.email+"(Invalid/Missing Plan Updated)");
           dbuser.price_id = customer.subscriptions.data[0].items.data[0].price.id;
+          req.session.price_id = dbuser.price_id;
         }
       }
       if (dbuser.price_id) {
+        req.session.price_id = dbuser.price_id;
         if (customer.subscriptions.total_count == 0 && dbuser.temp_plan_expiration < unix) {
           try {
             await database.runQuery(`UPDATE stripe_users SET price_id = NULL WHERE user_id = ?`, [dbuser.user_id]);
@@ -211,6 +225,7 @@ server.get("/login", async (req, res) => {
           }
           console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.user_name+ ","+req.session.email+"(Invalid Plan Deleted)");
           dbuser.price_id = null;
+          req.session.price_id = null;
         }
       }
       stripeChecked = true;
@@ -222,10 +237,10 @@ server.get("/login", async (req, res) => {
     } else {
       req.session.login = true;
       req.session.stripe_id = dbuser.stripe_id;
+      if (dbuser.temp_plan_expiration) { req.session.expiry = dbuser.temp_plan_expiration; }
       if (dbuser.price_id && dbuser.temp_plan_expiration == null) {
         return res.redirect(`/manage`);
-      } else if(dbuser.price_id && dbuser.temp_plan_expiration != null && dbuser.temp_plan_expiration > unix) {
-        req.session.expiry = dbuser.temp_plan_expiration;
+      } else if(dbuser.price_id && dbuser.temp_plan_expiration != null && dbuser.temp_plan_expiration-86400 > unix) {
         return res.redirect(`/expiry`);
       } else {
       return res.redirect(`/checkout`);
@@ -237,15 +252,23 @@ server.get("/login", async (req, res) => {
 //  PRODUCTS CHECKOUT PAGE
 //------------------------------------------------------------------------------
 server.get("/checkout", async function(req, res) {
-  if (!req.session.login) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix) {
+    return res.redirect(`/manual`);
+  } else if (req.session.price_id && req.session.expiry-86400 > unix) {
+    return res.redirect(`/expiry`);
+  } else if (req.session.price_id && !req.session.expiry) {
+    return res.redirect(`/manage`);
   } else {
     let checkoutbody = '';
     for (let i = 0; i < config.stripe.price_ids.length; i++) {
-console.log(config.stripe.price_ids[i].mode);
-      let pricehtml = '<div><h2>'+config.stripe.price_ids[i].title+'</h2><p><strong>'+config.stripe.price_ids[i].text+'</strong></p><form action="/create-checkout-session" method="post"><input type="hidden" name="priceID" value="'+config.stripe.price_ids[i].id+'" /><input type="hidden" name="mode" value="'+config.stripe.price_ids[i].mode+'" /><input type="hidden" name="customerID" value="'+req.session.stripe_id+'" /><button type="submit">Continue</button></form></div><br><hr>';
-      checkoutbody = checkoutbody+pricehtml;
+      if (config.stripe.price_ids[i].mode != 'legacy') {
+        let pricehtml = '<div><h2>'+config.stripe.price_ids[i].title+'</h2><p><strong>'+config.stripe.price_ids[i].text+'</strong></p><form action="/create-checkout-session" method="post"><input type="hidden" name="priceID" value="'+config.stripe.price_ids[i].id+'" /><input type="hidden" name="mode" value="'+config.stripe.price_ids[i].mode+'" /><input type="hidden" name="customerID" value="'+req.session.stripe_id+'" /><button type="submit">Continue</button></form></div><br><hr>';
+        checkoutbody = checkoutbody+pricehtml;
+      }
     }
     let radar_script = '';
     if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
@@ -272,9 +295,16 @@ server.post("/create-checkout-session", async (req, res) => {
 //  CUSTOMER PORTAL PAGE
 //------------------------------------------------------------------------------
 server.get("/manage", async function(req, res) {
-  if (!req.session.login) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix) {
+    return res.redirect(`/manual`);
+  } else if (req.session.price_id && req.session.expiry && req.session.expiry-86400 > unix) {
+    return res.redirect(`/expiry`);
+  } else if (!req.session.price_id) {
+    return res.redirect(`/checkout`);
   } else {
     let radar_script = '';
     if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
@@ -300,11 +330,18 @@ server.post("/create-customer-portal-session", async (req, res) => {
 //  ACTIVE ONE-TIME CUSTOMER PAGE
 //------------------------------------------------------------------------------
 server.get("/expiry", async function(req, res) {
-  if (!req.session.login) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix) {
+    return res.redirect(`/manual`);
+  } else if (req.session.price_id && !req.session.expiry) {
+    return res.redirect(`/manage`);
+  } else if (!req.session.price_id) {
+    return res.redirect(`/checkout`);
   } else {
-    let expiry = new Date(req.session.expiry * 1000).toLocaleString(config.pages.expiry.tz_locale, { timeZone: config.pages.expiry.time_zone });
+    let expiry = new Date(req.session.expiry * 1000).toLocaleString(config.pages.general.tz_locale, { timeZone: config.pages.general.time_zone });
     let radar_script = '';
     if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
     return res.render(__dirname+"/html/expiry.html", {
@@ -312,7 +349,7 @@ server.get("/expiry", async function(req, res) {
       warning: config.pages.general.warning,
       customerID: req.session.stripe_id,
       expiry: expiry,
-      tz_text: config.pages.expiry.tz_text,
+      tz_text: config.pages.general.tz_text,
       map_name: config.map_name,
       map_url: config.map_url,
       radar_script: radar_script,
@@ -325,15 +362,36 @@ server.get("/expiry", async function(req, res) {
 //  MANUAL/LIFETIME USER PAGE
 //------------------------------------------------------------------------------
 server.get("/manual", async function(req, res) {
-    if (!req.session.login) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.price_id && req.session.expiry-86400 > unix) {
+    return res.redirect(`/expiry`);
+  } else if (req.session.price_id && !req.session.expiry) {
+    return res.redirect(`/manage`);
+  } else if (!req.session.manual || req.session.manual && req.session.expiry-86400 < unix) {
+    return res.redirect(`/checkout`);
   } else {
+    let intro = '';
+    let exp_text = '';
+    if (req.session.expiry == 9999999999) {
+      intro = 'You are currently a Lifetime Member.';
+      exp_text = 'Your service ends when Unix time currently ends (LOL) on';
+    } else {
+      intro = 'Your plan is currently being handled manually by Administration.';
+      exp_text = 'You may purchase a new plan up to 24 hours before, or after:';
+    }
+    let expiry = new Date(req.session.expiry * 1000).toLocaleString(config.pages.general.tz_locale, { timeZone: config.pages.general.time_zone });
     let radar_script = '';
     if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
     return res.render(__dirname+"/html/manual.html", {
       terms: config.pages.general.terms,
       warning: config.pages.general.warning,
+      expiry: expiry,
+      tz_text: config.pages.general.tz_text,
+      intro: intro,
+      exp_text: exp_text,
       map_name: config.map_name,
       map_url: config.map_url,
       radar_script: radar_script,
@@ -396,9 +454,7 @@ server.post("/webhook", async (req, res) => {
     eventType = req.body.type;
   }
   res.sendStatus(200);
-  console.log(eventType);
-  return console.log(data);
-  //return stripe.webhookParse(data, eventType);
+  return stripe.webhookParse(data, eventType);
 });
 //------------------------------------------------------------------------------
 //  STRIPE, DATABASE, ROLE & DISCORD INFO MAINTENANCE
