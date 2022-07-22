@@ -283,31 +283,64 @@ const stripe = {
           }
         });
       }
+    },
+    fetchCkeckout: function(checkout_id) {
+      return new Promise(function(resolve) {
+        stripe_js.checkout.sessions.retrieve(
+          checkout_id, { expand: ['line_items.data','subscription','payment_intent'], },
+          function(err, checkout) {
+            if(err) {
+              console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Fetching Checkout.', err.message);
+              return resolve('ERROR');
+            } else {
+              return resolve(checkout);
+            }
+          }
+        );
+      });
     }
   },
 //------------------------------------------------------------------------------
 //  STRIPE WEBHOOK FUNCTIONS
 //------------------------------------------------------------------------------
   webhookParse: async function(data, eventType) {
-    let customer = '', user = ''; member = '';
+    let customer = '', user = '', member = '', checkout = '', tax_info = ' ';
     switch(eventType){
 //------------------------------------------------------------------------------
 //   CHECKOUT SESSION COMPLETED
 //------------------------------------------------------------------------------
       case 'checkout.session.completed':
-        customer = await stripe.customer.fetch(webhook.data.object.customer);
+        if (data.object.mode == 'setup') {
+          console.info('['+bot.getTime('stamp')+'] [stripe.js] StripeWall is not configured for setup type checkouts. If you get this message, please make a GitHub Report. Logging request.');
+          return console.info(data);
+        }
+        customer = await stripe.customer.fetch(data.object.customer);
         user = await database.fetchStripeUser(customer.description, customer.id);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
-        switch(true){
-          case !user: return;
-          case !member: return;
-          default:
-            
+        checkout = await stripe.sessions.fetchCkeckout(data.object.id);
+        if (config.stripe.taxes.active) { tax_info = '**(Fee: $'+parseFloat(data.object.amount_subtotal/100).toFixed(2)+', Tax: $'+parseFloat(data.object.total_details.amount_tax/100).toFixed(2)+')**'; }
+        for (let i = 0; i < config.stripe.price_ids.length; i++) {
+          if (checkout.line_items.data[0].price.id == config.stripe.price_ids[i].id) {
+            bot.assignRole(user.user_id, config.stripe.price_ids[i].role_id);
+            bot.channels.cache.get(config.discord.welcome_channel)
+              .send(config.discord.welcome_content.replace('%usertag%','<@'+member.id+'>'))
+              .catch(console.info);
+            if (data.object.mode == 'subscription') {
+              bot.sendDM(member,'📋 Subscription Creation Payment Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
+              bot.sendEmbed(member, '00FF00', '📋 Subscription Creation Payment Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
+              return database.runQuery('UPDATE stripe_users SET price_id = ? WHERE user_id = ?', [checkout.line_items.data[0].price.id, member.user.id]);
+            } else if (data.object.mode == 'payment') {
+              bot.sendDM(member,'📋 One-Time Access Payment Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
+              bot.sendEmbed(member, '00FF00', '📋 One-Time Access Payment Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
+              let expiry = checkout.payment_intent.charges.data[0].created + config.stripe.price_ids[i].expiry;
+              return database.runQuery('UPDATE stripe_users SET manual = false, price_id = ?, temp_plan_expiration = ?, charge_id = ? WHERE user_id = ?', [checkout.line_items.data[0].price.id, expiry, checkout.payment_intent.charges.data[0].id, member.user.id]);
+            }
+          }
         }
 //------------------------------------------------------------------------------
 //   CHARGE REFUNDED
 //------------------------------------------------------------------------------
-      case 'charge.refunded':
+    /*  case 'charge.refunded':
         customer = await stripe.customer.fetch(webhook.data.object.customer);
         user = await database.fetchStripeUser(customer.description, customer.id);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
@@ -385,7 +418,7 @@ const stripe = {
               return database.runQuery('UPDATE stripe_users SET price_id = ? WHERE user_id = ?', [customer.subscriptions.data[0].items.data[0].price.id, member.user.id]);
             } else { return;
             } return;
-          } return;
+          } return; */
     } return;
   }
 };
