@@ -11,9 +11,9 @@ const oauth2 = {
   "base_url": `https://discord.com/api/`,
   "oauth_url": `https://discord.com/oauth2/authorize`,
   "scope": "identify%20guilds%20guilds.join%20email",
-  //------------------------------------------------------------------------------
-  //  FETCH ACCESS TOKEN
-  //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//  FETCH ACCESS TOKEN
+//------------------------------------------------------------------------------
   fetchAccessToken: function(code) {
     return new Promise(async function(resolve) {
       let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=authorization_code&code=${code}&redirect_uri=${config.discord.redirect_url}&scope=${oauth2.scope}`;
@@ -29,9 +29,9 @@ const oauth2 = {
       });
     });
   },
-  //------------------------------------------------------------------------------
-  //  FETCH ACCESS TOKEN
-  //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//  REFRESH ACCESS TOKEN
+//------------------------------------------------------------------------------
   refreshAccessToken: function(refresh_token, user) {
     return new Promise(async function(resolve) {
       let unix = moment().unix();
@@ -42,9 +42,9 @@ const oauth2 = {
       axios.post("https://discord.com/api/oauth2/token", data, {
         headers: headers
       }).then(async function(response) {
-        console.info("[oauth2.js] Successfully Refreshed a Token", response.data);
+        console.info('['+bot.getTime('stamp')+'] [oauth2.js] Successfully Refreshed a Token', response.data);
         let token_expiration = (unix+response.data.expires_in);
-        database.runQuery(`UPDATE IGNORE stripe_users SET access_token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?`, [response.data.access_token, response.data.refresh_token, token_expiration, user.user_id]);
+        database.runQuery(`UPDATE stripe_users SET access_token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?`, [response.data.access_token, response.data.refresh_token, token_expiration, user.user_id]);
         console.info('['+bot.getTime('stamp')+'] [oauth2.js] '+user.user_name+' ('+user.user_id+') Updated Discord OAuth2 info in Database.');
         return resolve(response.data);
       }).catch(error => {
@@ -52,9 +52,9 @@ const oauth2 = {
       });
     });
   },
-  //------------------------------------------------------------------------------
-  //  FETCH DISCORD USER
-  //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//  FETCH DISCORD USER
+//------------------------------------------------------------------------------
   fetchUser: function(access_token) {
     return new Promise(async function(resolve) {
       axios.get(oauth2.base_url+`v6/users/@me`, {
@@ -69,9 +69,9 @@ const oauth2 = {
       });
     });
   },
-  //------------------------------------------------------------------------------
-  //  JOIN THE USER TO YOUR GUILD
-  //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//  JOIN THE USER TO YOUR GUILD
+//------------------------------------------------------------------------------
   joinGuild: function(access_token, guild_id, user_id) {
     bot.users.fetch(user_id).then(async (user) => {
       let options = {

@@ -36,7 +36,7 @@ bot.sendEmbed = (member, color, title, body, channel_id) => {
     .setAuthor(nickname+' ('+member.user.id+')')
     .setTitle(title)
     .setDescription(body)
-    .setFooter(config.map_name+' | '+bot.getTime('full'));
+    .setFooter(config.server.site_name+' | '+bot.getTime('full'));
   return bot.channels.cache.get(channel_id).send(embed).catch(err => {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Send Channel Message.', err);
   });
@@ -49,11 +49,11 @@ bot.sendDM = (member, title, body, color) => {
     .setColor(color)
     .setTitle(title)
     .setDescription(body)
-    .setFooter(config.map_name+' | '+bot.getTime('full'));
+    .setFooter(config.server.site_name+' | '+bot.getTime('full'));
   bot.guilds.cache.get(config.discord.guild_id).members.fetch(member.id).then(TARGET => {
-    return TARGET.send(embed).catch(error => {
-      if (error) {
-        console.info('[Send_DM]', error);
+    return TARGET.send(embed).catch(err => {
+      if (err) {
+        console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Send Direct Message.', err);
       }
     });
   });
@@ -81,7 +81,7 @@ bot.assignRole = (user_id, role_id) => {
 //------------------------------------------------------------------------------
 bot.removeRole = (user_id, role_id) => {
   let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user_id);
-  console.info('[bot.js] '+member.user.tag+' Requires Role Removal: '+role_id);
+  console.info('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' Requires Role Removal: '+role_id);
   if (!member) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to remove the role from the User.');
     return false;
@@ -105,16 +105,19 @@ bot.on('ready', () => {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Loaded '+bot.blacklisted.length+' blacklisted user(s) from the config.');
   }
   if (config.discord.fetch_bans == true) {
-    bot.guilds.cache.get(config.discord.guild_id).fetchBans()
-      .then(bans => {
-        console.info('['+bot.getTime('stamp')+'] [bot.js] Fetched '+bans.size+' ban(s) for the blacklist.');
-        bans.map(u => u.user.id).forEach(id => {
-          bot.blacklisted.push(id);
-        });
-      }).catch(console.info);
-    }
-  return bot.user.setActivity('for subscribers', {
-    type: 'WATCHING'
+    bot.guilds.cache.get(config.discord.guild_id).fetchBans().then(bans => {
+      console.info('['+bot.getTime('stamp')+'] [bot.js] Fetched '+bans.size+' ban(s) for the blacklist.');
+      bans.map(u => u.user.id).forEach(id => {
+        bot.blacklisted.push(id);
+      });
+    }).catch(console.info);
+  }
+  if (config.sync.on_startup) {
+    console.info("["+bot.getTime("stamp")+"] [bot.js] Starting Maintenance Routines.");
+    database.checkDetails();
+  }
+  return bot.user.setActivity(config.discord.status_text, {
+    type: config.discord.status_type
   });
 });
 //------------------------------------------------------------------------------

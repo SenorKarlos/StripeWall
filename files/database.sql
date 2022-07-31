@@ -9,8 +9,8 @@ CREATE TABLE stripe_users (
   `stripe_id` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
   `price_id` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
   `temp_plan_expiration` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
-  `fee_amount` SMALLINT(5) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
-  `tax_amount` SMALLINT(5) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
+  `tax_rate` FLOAT NULL DEFAULT NULL,
   `charge_id` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
-  PRIMARY KEY (`user_id`)
+  PRIMARY KEY (`user_id`),
+  UNIQUE INDEX `user_id` (`user_id`) USING BTREE
 );

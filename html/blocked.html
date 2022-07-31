@@ -5,62 +5,25 @@
   <style>
     .rcorners1 {
         border-radius: 30px;
-        border: 5px solid #F93318;
+        border: 5px solid #<%= border_color %>;
         padding: 30px;
         min-width:50px!important;
-        max-width:99.99%!important;
+        max-width:1024px!important;
         margin: 50px;
         transition: width 0.25s;
-        min-height:50px!important;
+        min-height:768px!important;
         max-height:99.99%!important;
         box-shadow:  0 0 20px  rga(0,0,0,0.6);
         -moz-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
         -webkit-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
         -o-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
-    }
-    .top {
-      background: url("/static/banner_top.png");
-      background-size: 100% 440px;
-      background-repeat: no-repeat;
-      margin: -8px;
-    }
-    .bottom {
-      background: url("/static/banner_bottom.png");
-      background-size: 100% 196px;
-      background-repeat: no-repeat;
-      margin: -10px;
-    }
-    .content {
-      max-width: 480px;
-      margin: auto;
-      text-align: center;
-    }
-    .left {
-      text-align: left;
-      display: inline-block
-    }
-    .unsubscribe {
-      font-size: 10pt;
-    }
-    .fineprint {
-      font-size: 8pt;
-    }
-    .details {
-      font-size: 10pt;
-    }
-    img {
-      width: 100%;
-    }
-    form article label {
-      display: block;
-      margin: 5px;
-    }
-    form .submit {
-      margin: 15px 0;
+        background: url("<%= background %>");
+        background-repeat: no-repeat;
+        background-position: center;
     }
     body {
         margin: 50px auto;
-        background-color: #F6F6F6;
+        background-color: <%= outer_background %>;
         text-align: center;
         font-family: Arial, Helvetica, sans-serif;
     }
@@ -71,30 +34,13 @@
     <center>
       <div>
         <div>
-          <h1>You are Banned from <%= map_name %></h1>
+          <h1><font color="<%= title_color %>">You are Banned from <%= site_name %></font></h1>
         </div>
         <div>
-        <br>
-        <hr>
-        <button onclick="location.href='https://lmgtfy.app/?q=a+map+you+didn%27t+piss+off'" type="button">
-          Good Luck!</button>
+        <button onclick="location.href='<%= button_link %>'" type="button">
+          <%= button_text %></button>
         </form>
-        <br>
-        <hr>
         </div>
-      <div>
-        <div class="content">
-          <div class="fineprint">
-            <p>We NEVER receive, store, or view any sensitive customer credit card information.  All of our credit card processing is managed directly and solely by Stripe, a PCI Level 1 Compliant Service Provider.</p>
-            <a href=https://stripe.com/docs/security/stripe>https://stripe.com/docs/security/stripe</a>
-            <p><%= terms %></p>
-            <p>We are not associated with Niantic, ThePokemonCompany, or any of its subsidiaries.</p>
-            <p><strong><%= warning %></strong></p>
-            <a href=<%= map_url %>/discord><%= map_url %>/discord</a>
-            <br>
-          </div>
-        </div>
-      </div>
     </center>
   </div>
   <%- radar_script %>

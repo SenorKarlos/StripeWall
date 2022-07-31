@@ -3,7 +3,9 @@ const mysql = require('mysql');
 const moment = require('moment');
 const config = require("../files/config.json");
 const object = {
-  // DATABASE CONNECTION
+//------------------------------------------------------------------------------
+//  DATABASE CONNECTION
+//------------------------------------------------------------------------------
   db: mysql.createPool({
     connectionLimit: 100,
     host: config.database.host,
@@ -12,9 +14,9 @@ const object = {
     port: config.database.port,
     database: config.database.name
   }),
-  //------------------------------------------------------------------------------
-  //  RUN QUERY FUNCTION
-  //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//  RUN QUERY FUNCTION
+//------------------------------------------------------------------------------
   runQuery: function(query, data, success) {
     return new Promise(function(resolve) {
       object.db.query(query, data, function(err, user, fields) {
@@ -30,9 +32,9 @@ const object = {
       });
     });
   },
-  //------------------------------------------------------------------------------
-  //  USER TABLE FETCH
-  //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//  USER TABLE FETCH
+//------------------------------------------------------------------------------
   fetchUser: function(user_id) {
     return new Promise(function(resolve) {
       let query = `SELECT * FROM stripe_users WHERE user_id = ?`;
@@ -48,9 +50,9 @@ const object = {
       });
     });
   },
-  //------------------------------------------------------------------------------
-  //  STRIPE USER TABLE FETCH
-  //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//  STRIPE USER TABLE FETCH
+//------------------------------------------------------------------------------
   fetchStripeUser: function(user_id, stripe_id) {
     return new Promise(function(resolve) {
       let query = `SELECT * FROM stripe_users WHERE user_id = ? AND stripe_id = ?`;
@@ -66,9 +68,9 @@ const object = {
       });
     });
   },
-  //------------------------------------------------------------------------------
-  //  MAINTENANCE ROUTINES (DATABASE)
-  //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//  MAINTENANCE ROUTINES (DATABASE)
+//------------------------------------------------------------------------------
   checkDetails: async function() {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Starting Discord Info Sync.");
     let unix = moment().unix();
@@ -239,7 +241,7 @@ const object = {
                     if (!user.stripe_id) { user.stripe_id = "Not Found"; }
                     console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") found without a Subscription. Removed Role."); // remove and log
                     bot.sendEmbed(member, 'FF0000', 'User found without a Subscription ⚠', 'Removed Role. (Internal Check)', config.discord.log_channel);
-                    if (indexcounter === records.length) { return object.doneDatabase(); } else { return; }
+                    if (indexcounter === records.length) { return object.doneDatabase(); }
                   } else {
                     console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") is Verified in Discord Role.");
                     if (indexcounter === records.length) { return object.doneDatabase(); } else { return; }
@@ -281,11 +283,11 @@ const object = {
                     await stripe.subscription.cancel(member, customer.subscriptions.data[x].id); //cancel each sub
                   }
                 }
-                let query = `UPDATE stripe_users SET price_id = NULL, temp_plan_expiration = NULL, access_token = 'Left Guild', refresh_token = NULL WHERE user_id = ?`;
+                let query = `UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, price_id = NULL, tax_rate = NULL, charge_id = NULL WHERE user_id = ?`;
                 let data = [user.user_id];
                 await object.runQuery(query, data);
                 if (!user.stripe_id) { user.stripe_id = "Not Found"; }
-                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Deleted Tokens and Guild Association.");
+                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild, Deleted Tokens.");
                 bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Tokens and Guild Association.', config.discord.log_channel);
                 if (indexcounter === records.length) { return object.doneDatabase(); }
               } else {
@@ -328,7 +330,7 @@ const object = {
       setTimeout(function() {
         if (members.length == 0) {
           console.info("["+bot.getTime("stamp")+"] [database.js] "+members.length+" Users in Role "+config.stripe.price_ids[i].role_id+".");
-          if (i === config.stripe.price_ids.length - 1) { return object.doneRoles(); }
+          if (i === config.stripe.price_ids.length - 1) { return object.checkLifetime(); } else { return; }
         } else {
           console.info("["+bot.getTime("stamp")+"] [database.js] Checking "+members.length+" Users in Role "+config.stripe.price_ids[i].role_id+".");
         }
@@ -345,32 +347,83 @@ const object = {
                 if (record[0].manual == 'true') { // skip life/manual
                   if (!record[0].stripe_id) { record[0].stripe_id = "Not Found"; }
                   console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") Manually tracked or Lifetime User, Skipping.");
-                  if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.doneRoles(); }
+                  if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.checkLifetime(); } else { return; }
                 } else if (!record[0].stripe_id) { // no stripe id remove
                   bot.removeRole(member.id, config.stripe.price_ids[i].role_id);
                   record[0].stripe_id = "Not Found";
                   console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User found without a Stripe ID, Removed Role.");
                   bot.sendEmbed(member, 'FF0000', 'User found without a Stripe ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
-                  if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.doneRoles(); }
-                } else if (!record[0].price_id || config.stripe.price_ids[i].mode == 'payment' && record[0].temp_plan_expiration < unix) { //no price or temp plan expired remove
+                  if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.checkLifetime(); } else { return; }
+                } else if (!record[0].price_id || config.stripe.price_ids[i].mode == 'payment' && record[0].temp_plan_expiration < unix || record[0].price_id && record[0].price_id != config.stripe.price_ids[i].id) { //no price or temp plan expired or price doesn't belong to role remove
                   bot.removeRole(member.id, config.stripe.price_ids[i].role_id);
-                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User found expired or without a Price ID, Removed Role.");
+                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User found expired or without/wrong Price ID, Removed Role.");
                   bot.sendEmbed(member, 'FF0000', 'User found expired or without a Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
-                  if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.doneRoles(); }
+                  if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.checkLifetime(); } else { return; }
                 }
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User is verified in Role "+config.stripe.price_ids[i].role_id+".");
-              if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.doneRoles(); }
+              if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.checkLifetime(); }
               } else { // not in db
                 bot.removeRole(member.id, config.stripe.price_ids[i].role_id);
                 bot.sendEmbed(member, 'FF0000', 'User found without a DB Record ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | Not Found) Not in Database, removed Role.");
-                if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.doneRoles(); }
+                if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.checkLifetime(); }
               }
             });
           }, 1000 * index);
         });
       }, delayArray[i]);
     });
+  },
+  checkLifetime: async function() {
+    if (config.discord.lifetime_role) {
+      console.info("["+bot.getTime("stamp")+"] [database.js] Syncing Lifetime Users.");
+      let guild = bot.guilds.cache.get(config.discord.guild_id); // pull guild info
+      let members = guild.roles.cache.find(role => role.id === config.discord.lifetime_role).members.map(m => m); // map role members from price
+      let query = `SELECT * FROM stripe_users WHERE manual = ? AND temp_plan_expiration = ?`;
+      let data = ['true', 9999999999];
+      await object.db.query(query, data, function(err, records, fields) {
+        if (err) {
+          console.info(err);
+        }
+        if (records) {
+          let users = [];
+          records.forEach((user, index) => {
+            users.push(user);
+          });
+          return object.syncLifetime(members, users);
+        }
+      });
+    } else { return object.doneRoles(); }
+  },
+  syncLifetime: async function(members, users) {
+    let noDB = members.filter(o1 => !users.some(o2 => o1.user.id === o2.user_id));
+    let noRole = users.filter(o1 => !members.some(o2 => o1.user_id === o2.user.id));
+    if (noDB.length > 0) {
+      console.info("["+bot.getTime("stamp")+"] [database.js] Found "+noDB.length+" Lifetime Users without proper Database Information, updating.");
+      noDB.forEach((member, index) => {
+        let indexcounter = index + 1;
+        setTimeout(function() {
+          let query = `INSERT INTO stripe_users (user_id, user_name, manual, temp_plan_expiration) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), manual=VALUES(manual), price_id = NULL, temp_plan_expiration=VALUES(temp_plan_expiration), tax_rate = NULL, charge_id = NULL`;
+          let data = [member.user.id, member.user.username, 'true', 9999999999];
+          object.runQuery(query, data);
+          if (indexcounter === noDB.length && noRole.length === 0) { return object.doneRoles(); }
+        }, 500 * index);
+      });
+    }
+    if (noRole.length > 0) {
+      console.info("["+bot.getTime("stamp")+"] [database.js] Found "+noRole.length+" Lifetime Users in Database without their role, assigning.");
+      noRole.forEach((user, index) => {
+        let indexcounter = index + 1;
+        setTimeout(function() {
+          bot.assignRole(user.user_id, config.discord.lifetime_role);
+          if (indexcounter === noRole.length) { return object.doneRoles(); }
+        }, 500 * index);
+      });
+    }
+    if (noDB.length === 0 && noRole.length === 0) {
+      console.info("["+bot.getTime("stamp")+"] [database.js] All known Lifetime Users are in Role and Database.");
+      return object.doneRoles();
+    }
   },
   doneRoles: async function() {
     console.info("["+bot.getTime("stamp")+"] [database.js] Role checks complete");

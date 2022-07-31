@@ -55,7 +55,7 @@ const stripe = {
     fetch: function(customer_id) {
       return new Promise(function(resolve) {
         stripe_js.customers.retrieve(
-          customer_id, { expand: ['subscriptions.data'], },
+          customer_id, { expand: ['subscriptions.data', 'subscriptions.data.latest_invoice'], },
           function(err, customer) {
             if(err) {
               console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Fetching Customer.', err.message);
@@ -133,7 +133,7 @@ const stripe = {
                   database.runQuery('UPDATE stripe_users SET stripe_id = ? WHERE user_id = ?', [customer.id, customer.description]);
                   db_updated = true;
                 } //check and fix ID
-                if (record[0].price_id != null) {
+                if (record[0].price_id) {
                   for (let i = 0; i < config.stripe.price_ids.length; i++) {
                     if (record[0].price_id == config.stripe.price_ids[i].id) {
                       if (config.stripe.price_ids[i].mode == "subscription" || record[0].temp_plan_expiration < unix) {
@@ -228,8 +228,8 @@ const stripe = {
             quantity: 1,
           },
         ],
-        success_url: config.map_url,
-        cancel_url: config.map_url,
+        success_url: config.pages.checkout.success_url,
+        cancel_url: config.pages.checkout.cancel_url,
       };
       if (config.stripe.taxes.active == true) {
         if (config.stripe.taxes.automatic == true) {
@@ -272,7 +272,7 @@ const stripe = {
         const customerID = req.body.customerID;
         const session = await stripe_js.billingPortal.sessions.create({
           customer: customerID,
-          return_url: config.map_url,
+          return_url: config.server.site_url,
         });
         return res.redirect(session.url);
       } catch (e) {
@@ -287,7 +287,7 @@ const stripe = {
     fetchCkeckout: function(checkout_id) {
       return new Promise(function(resolve) {
         stripe_js.checkout.sessions.retrieve(
-          checkout_id, { expand: ['line_items.data','subscription','payment_intent'], },
+          checkout_id, { expand: ['line_items.data','payment_intent'], },
           function(err, checkout) {
             if(err) {
               console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Fetching Checkout.', err.message);
@@ -303,13 +303,71 @@ const stripe = {
 //------------------------------------------------------------------------------
 //  STRIPE WEBHOOK FUNCTIONS
 //------------------------------------------------------------------------------
+  webhookVerify: async function(req, res) {
+    let data;
+    let eventType;
+    if (config.stripe.wh_secret) {
+      let event;
+      let signature = req.headers["stripe-signature"];
+      try {
+        event = stripe_js.webhooks.constructEvent(
+          req.rawBody,
+          signature,
+          config.stripe.wh_secret
+        );
+      } catch (e) {
+        console.info("["+bot.getTime('stamp')+"] ⚠️  Webhook signature verification failed.", e);
+        return res.sendStatus(400);
+      }
+      data = event.data;
+      eventType = event.type;
+    } else {
+      data = req.body.data;
+      eventType = req.body.type;
+    }
+    res.sendStatus(200);
+    return stripe.webhookParse(data, eventType);
+  },
   webhookParse: async function(data, eventType) {
-    let customer = '', user = '', member = '', checkout = '', tax_info = ' ';
+    let customer = '', user = '', member = '', checkout = '', tax_info = ' ', tax_rate, expiry;
     switch(eventType){
+//------------------------------------------------------------------------------
+//   CUSTOMER CREATED
+//------------------------------------------------------------------------------
+      case 'customer.created':
+        console.info('['+bot.getTime('stamp')+'] [stripe.js] Customer Created Webhook received for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
+        user = await database.fetchStripeUser(data.object.description, data.object.id);
+        member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(data.object.description);
+        if (user.temp_plan_expiration && user.temp_plan_expiration == 9999999999) {
+          return bot.sendEmbed(member, '00FF00', '📋 New Stripe Customer Created! 💰', 'Lifetime Member has logged in for the first time!', config.discord.log_channel);
+        } else if (user.manual == 'true') {
+          return bot.sendEmbed(member, '00FF00', '📋 New Stripe Customer Created! 💰', 'Manual Tracked User has logged in for the first time!', config.discord.log_channel);
+        } else {
+          return bot.sendEmbed(member, '00FF00', '📋 New Stripe Customer Created! 💰', 'Prospect User has entered the checkout!', config.discord.log_channel);
+        }
+//------------------------------------------------------------------------------
+//   CUSTOMER DELETED
+//------------------------------------------------------------------------------
+      case 'customer.deleted':
+        console.info('['+bot.getTime('stamp')+'] [stripe.js] Customer Deleted Webhook received for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
+        user = await database.fetchStripeUser(data.object.description, data.object.id);
+        member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(data.object.description);
+        switch(true){
+          case !user: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+          case !member:
+            member = user;
+            member.nickname = user.user_name;
+            member.user = [];
+            member['user']['id'] = user.user_id;
+          default:
+            database.runQuery('UPDATE stripe_users SET stripe_id = NULL, price_id = NULL, tax_rate = NULL, charge_id = NULL WHERE user_id = ?', [user.user_id]);
+            return bot.sendEmbed(member, 'FF0000', '📋 Stripe Customer Deleted.', 'Deleted Stripe information.', config.discord.log_channel);
+        }
 //------------------------------------------------------------------------------
 //   CHECKOUT SESSION COMPLETED
 //------------------------------------------------------------------------------
       case 'checkout.session.completed':
+        console.info('['+bot.getTime('stamp')+'] [stripe.js] Checkout Session Completed Webhook received for '+data.object.customer);
         if (data.object.mode == 'setup') {
           console.info('['+bot.getTime('stamp')+'] [stripe.js] StripeWall is not configured for setup type checkouts. If you get this message, please make a GitHub Report. Logging request.');
           return console.info(data);
@@ -318,107 +376,166 @@ const stripe = {
         user = await database.fetchStripeUser(customer.description, customer.id);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
         checkout = await stripe.sessions.fetchCkeckout(data.object.id);
-        if (config.stripe.taxes.active) { tax_info = '**(Fee: $'+parseFloat(data.object.amount_subtotal/100).toFixed(2)+', Tax: $'+parseFloat(data.object.total_details.amount_tax/100).toFixed(2)+')**'; }
-        for (let i = 0; i < config.stripe.price_ids.length; i++) {
-          if (checkout.line_items.data[0].price.id == config.stripe.price_ids[i].id) {
-            bot.assignRole(user.user_id, config.stripe.price_ids[i].role_id);
-            bot.channels.cache.get(config.discord.welcome_channel)
-              .send(config.discord.welcome_content.replace('%usertag%','<@'+member.id+'>'))
-              .catch(console.info);
-            if (data.object.mode == 'subscription') {
-              bot.sendDM(member,'📋 Subscription Creation Payment Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
-              bot.sendEmbed(member, '00FF00', '📋 Subscription Creation Payment Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
-              return database.runQuery('UPDATE stripe_users SET price_id = ? WHERE user_id = ?', [checkout.line_items.data[0].price.id, member.user.id]);
-            } else if (data.object.mode == 'payment') {
-              bot.sendDM(member,'📋 One-Time Access Payment Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
-              bot.sendEmbed(member, '00FF00', '📋 One-Time Access Payment Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
-              let expiry = checkout.payment_intent.charges.data[0].created + config.stripe.price_ids[i].expiry;
-              return database.runQuery('UPDATE stripe_users SET manual = false, price_id = ?, temp_plan_expiration = ?, charge_id = ? WHERE user_id = ?', [checkout.line_items.data[0].price.id, expiry, checkout.payment_intent.charges.data[0].id, member.user.id]);
-            }
-          }
+        if (config.stripe.taxes.active) {
+          tax_info = '**(Fee: $'+parseFloat(data.object.amount_subtotal/100).toFixed(2)+', Tax: $'+parseFloat(data.object.total_details.amount_tax/100).toFixed(2)+')**';
+          tax_rate = parseFloat(data.object.total_details.amount_tax/data.object.amount_subtotal).toFixed(2);
         }
-//------------------------------------------------------------------------------
-//   CHARGE REFUNDED
-//------------------------------------------------------------------------------
-    /*  case 'charge.refunded':
-        customer = await stripe.customer.fetch(webhook.data.object.customer);
-        user = await database.fetchStripeUser(customer.description, customer.id);
-        member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
         switch(true){
-          case !user: return;
-          case !member: return;
+          case !user: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+          case !member: return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has left Guild during Checkout');
           default:
             for (let i = 0; i < config.stripe.price_ids.length; i++) {
-              if (user.price_id == config.stripe.price_ids[i].id) {
-                console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Refund webhook for '+member.user.tag+' ('+customer.id+').');
-                bot.sendDM(member,'Payment Refunded! 🏧', 'Amount: **$'+webhook.data.object.amount_refunded/100+'**, Access Revoked, Update Payment Information if Continuing','0000FF');
-                bot.removeRole(customer.description, config.stripe.price_ids[i].role_id);
-                if(webhook.data.object.amount_refunded){
-                  return bot.sendEmbed(member, '0000FF', 'Payment Refunded! 🏧', 'Amount: **$'+webhook.data.object.amount_refunded/100+'**', config.discord.log_channel);
-                } else { return; }
+              if (checkout.line_items.data[0].price.id == config.stripe.price_ids[i].id) {
+                bot.assignRole(user.user_id, config.stripe.price_ids[i].role_id);
+                bot.channels.cache.get(config.discord.welcome_channel)
+                  .send(config.discord.welcome_content.replace('%usertag%','<@'+member.id+'>'))
+                  .catch(console.info);
+                let charge_id;
+                if (!checkout.payment_intent) {
+                  for (let x = 0; x < customer.subscriptions.data.length; x++) {
+                    if (customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
+                      charge_id = customer.subscriptions.data[x].latest_invoice.charge;
+                    }
+                  }
+                } else { charge_id = checkout.payment_intent.charges.data[0].id; }
+                if (data.object.mode == 'subscription') {
+                  bot.sendDM(member,'✅ Subscription Creation Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
+                  bot.sendEmbed(member, '00FF00', '✅ Subscription Creation Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
+                  return database.runQuery('UPDATE stripe_users SET manual = ?, price_id = ?, temp_plan_expiration = ?, tax_rate = ?, charge_id = ? WHERE user_id = ?', ['false', checkout.line_items.data[0].price.id, expiry, tax_rate, charge_id, member.user.id]);
+                } else if (data.object.mode == 'payment') {
+                  bot.sendDM(member,'✅ One-Time Access Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
+                  bot.sendEmbed(member, '00FF00', '✅ One-Time Access Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
+                  expiry = checkout.payment_intent.charges.data[0].created + config.stripe.price_ids[i].expiry;
+                  return database.runQuery('UPDATE stripe_users SET manual = ?, price_id = ?, temp_plan_expiration = ?, tax_rate = ?, charge_id = ? WHERE user_id = ?', ['false', checkout.line_items.data[0].price.id, expiry, tax_rate, charge_id, member.user.id]);
+                }
               }
             }
         } return;
 //------------------------------------------------------------------------------
-//   CHARGE SUCCESSFUL WEBHOOK
+//   CHARGE SUCCEEDED
 //------------------------------------------------------------------------------
       case 'charge.succeeded':
-        customer = await stripe.customer.fetch(webhook.data.object.customer);
+        console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Successful Charge webhook for '+data.object.customer);
+        setTimeout(async function() {
+          customer = await stripe.customer.fetch(data.object.customer);
+          user = await database.fetchStripeUser(customer.description, customer.id);
+          member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
+          switch(true){
+            case !user: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+            case !member: return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has left Guild');
+            case (!user.price_id || user.charge_id && data.object.id == user.charge_id): return console.info('['+bot.getTime('stamp')+'] [stripe.js] Initial charge handled by checkout webhook.');
+            default:
+              if (data.object.calculated_statement_descriptor == config.stripe.calculated_statement_descriptor) {
+                if (config.stripe.taxes.active && user.tax_rate) {
+                  let fee_amount = parseFloat(data.object.amount/(user.tax_rate+1));
+                  let tax_amount = parseFloat(data.object.amount-(fee_amount));
+                  tax_info = '**(Fee: $'+parseFloat(fee_amount/100).toFixed(2)+', Tax: $'+parseFloat(tax_amount/100).toFixed(2)+')**';
+                } else if (config.stripe.taxes.active) {
+                  tax_info = '**(Applicable Fees and Taxes Included)**';
+                }
+                database.runQuery('UPDATE stripe_users SET charge_id = ? WHERE user_id = ?', [data.object.id, user.user_id]);
+                bot.sendDM(member,'✅ Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'** '+tax_info,'00FF00');
+                return bot.sendEmbed(member, '00FF00', '✅ Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
+              } else {
+                bot.sendDM(member, config.stripe.alt_charge_text, 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'**','00FF00');
+                return bot.sendEmbed(member, '00FF00', config.stripe.alt_charge_text, 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'**', config.discord.log_channel);
+              }
+          }
+        }, 5000); return;
+//------------------------------------------------------------------------------
+//   CHARGE REFUNDED
+//------------------------------------------------------------------------------
+      case 'charge.refunded':
+        console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Charge Refund webhook for '+data.object.customer);
+        customer = await stripe.customer.fetch(data.object.customer);
         user = await database.fetchStripeUser(customer.description, customer.id);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
         switch(true){
-          case !user: return;
-          case !member: return;
-          case user.price_id != config.stripe.price_id: return;
+          case !user: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+          case !member: return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has left Guild');
+          case (config.stripe.rem_role_full_refund && user.charge_id && data.object.id == user.charge_id && data.amount_captured === data.object.amount_refunded):
+          case (config.stripe.rem_role_any_refund && user.charge_id && data.object.id == user.charge_id && data.amount_captured === data.object.amount_refunded):
+            for (let i = 0; i < config.stripe.price_ids.length; i++) {
+              if (user.price_id == config.stripe.price_ids[i].id) {
+                bot.removeRole(customer.description, config.stripe.price_ids[i].role_id);
+                database.runQuery('UPDATE stripe_users SET price_id = NULL, temp_plan_expiration = NULL, charge_id = NULL WHERE user_id = ?', [user.user_id]);
+              }
+            }
           default:
-            console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Successful Charge webhook for '+member.user.tag+' ('+customer.id+').');
-            bot.sendDM(member,'Payment Successful! 💰 ', 'Amount: **$'+parseFloat(webhook.data.object.amount/100).toFixed(2)+'**','00FF00');
-            bot.assignRole(customer.description);
-            bot.sendEmbed(member, '00FF00', 'Payment Successful! 💰 ', 'Amount: **$'+parseFloat(webhook.data.object.amount/100).toFixed(2)+'**', config.discord.log_channel);
-            return database.runQuery('UPDATE stripe_users SET stripe_id = ?, price_id = ? WHERE user_id = ?', [customer.id, customer.subscriptions.data[0].items.data[0].price.id, customer.description]);
+            if (data.object.calculated_statement_descriptor == config.stripe.calculated_statement_descriptor) {
+              if (config.stripe.taxes.active && user.tax_rate) {
+                let fee_amount = parseFloat(data.object.amount_refunded/(user.tax_rate+1));
+                let tax_amount = parseFloat(data.object.amount-(fee_amount));
+                tax_info = '**(Fee: $'+parseFloat(fee_amount/100).toFixed(2)+', Tax: $'+parseFloat(tax_amount/100).toFixed(2)+')**';
+              } else if (config.stripe.taxes.active) {
+                tax_info = '**(Applicable Fees and Taxes Included)**';
+              }
+              bot.sendDM(member,'Payment for '+config.site_name+' Refunded. 🏧', 'Amount: **$'+data.object.amount_refunded/100+'** '+tax_info,'0000FF');
+              return bot.sendEmbed(member, '0000FF', 'Payment for '+config.site_name+' Refunded. 🏧', 'Amount: **$'+data.object.amount_refunded/100+'** '+tax_info, config.discord.log_channel);
+            } else {
+              bot.sendDM(member, config.stripe.alt_refund_text, 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'**','00FF00');
+              return bot.sendEmbed(member, '00FF00', config.stripe.alt_refund_text, 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'**', config.discord.log_channel);
+            }
         } return;
 //------------------------------------------------------------------------------
-//   SUBSCRIPTION DELETED WEBHOOK
+//   SUBSCRIPTION DELETED
 //------------------------------------------------------------------------------
       case 'customer.subscription.deleted':
-        customer = await stripe.customer.fetch(webhook.data.object.customer);
-        if(!customer.description){ console.info("[No Customer Description]",customer); }
+        console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Deleted Subcscription webhook for '+data.object.customer);
+        customer = await stripe.customer.fetch(data.object.customer);
         user = await database.fetchStripeUser(customer.description, customer.id);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
         switch(true){
-          case !user: return;
-          case !member: return;
-          case user.price_id != config.stripe.price_id: return;
+          case !user: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+          case !member: return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has left Guild');
           default:
-            console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Deleted Subcscription webhook for '+customer.name+' ('+webhook.data.object.customer+').');
-            bot.sendDM(member,'Subscription Record Deleted! ⚰', 'Access Revoked, Please Start Over if Continuing','FF0000');
-            bot.removeRole(customer.description);
-            bot.sendEmbed(member, 'FF0000', 'Subscription Record Deleted! ⚰', '', config.discord.log_channel);
-            return database.runQuery('UPDATE stripe_users SET price_id = NULL WHERE user_id = ?', [customer.description]);
+            for (let i = 0; i < config.stripe.price_ids.length; i++) {
+              if (data.object.items.data[0].price.id == config.stripe.price_ids[i].id) {
+                bot.sendDM(member,'Subscription Record Deleted! ⚰', 'Access Revoked, Please Start Over if Continuing','FF0000');
+                bot.removeRole(customer.description, config.stripe.price_ids[i].role_id);
+                bot.sendEmbed(member, 'FF0000', 'Subscription Record Deleted! ⚰', '', config.discord.log_channel);
+                return database.runQuery('UPDATE stripe_users SET price_id = NULL, tax_rate = NULL, charge_id = NULL WHERE user_id = ?', [customer.description]);
+              }
+            }
         } return;
 //------------------------------------------------------------------------------
-//   SUBSCRIPTION UPDATED WEBHOOK
+//   SUBSCRIPTION UPDATED
 //------------------------------------------------------------------------------
       case 'customer.subscription.updated':
-        customer = await stripe.customer.fetch(webhook.data.object.customer);
+        console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Updated Subcscription webhook for '+data.object.customer);
+        customer = await stripe.customer.fetch(data.object.customer);
         user = await database.fetchStripeUser(customer.description, customer.id);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
         switch(true){
-          case !user: return;
-          case !member: return;
-          case user.price_id != config.stripe.price_id: return;
+          case !user: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+          case !member: return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has left Guild');
+          case (data.object.status == "active" && data.previous_attributes.status == "incomplete"):
+            return console.info('['+bot.getTime('stamp')+'] [stripe.js] Provisioning handled by Checkout, Skipping');
+          case (!data.previous_attributes.cancel_at_period_end && data.object.cancel_at_period_end):
+            let cancel = new Date(data.object.cancel_at * 1000).toLocaleString(config.server.tz_locale, { timeZone: config.server.time_zone });
+            bot.sendEmbed(member, 'FF0000', 'Subscription Pending Cancellation. ⚰', 'Canceles at: '+cancel+', '+config.server.tz_text+'.', config.discord.log_channel);
+            return bot.sendDM(member,'Subscription Pending Cancellation. ⚰', 'Canceles at: '+cancel+'.\nIf you change your mind, simply log back in and resume!','FF0000');
+          case (data.previous_attributes.cancel_at_period_end && !data.object.cancel_at_period_end):
+            bot.sendEmbed(member, '00FF00', 'Subscription Resumed! ✅', '', config.discord.log_channel);
+            return bot.sendDM(member,'Subscription Resumed! ✅', 'Thank you for continuing! Your business is appreciated!','00FF00');
           default:
-            console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Updated Subscription Webhook for '+member.user.tag+' ('+customer.id+').');
-            if(webhook.data.object.status == "active" && webhook.data.previous_attributes.status == "incomplete"){
-              bot.assignRole(customer.description);
-              bot.channels.cache.get(config.config.discord.welcome_channel)
-                .send(config.welcome_content.replace('%usertag%','<@'+member.id+'>'))
-                .catch(console.info);
-              bot.sendEmbed(member, '00FF00', 'Subscription Sucessfully Updated! 📋', '', config.discord.log_channel);
-              return database.runQuery('UPDATE stripe_users SET price_id = ? WHERE user_id = ?', [customer.subscriptions.data[0].items.data[0].price.id, member.user.id]);
+            if (data.object.status == "active" && data.previous_attributes.items.data[0].price.id) {
+              for (let i = 0; i < config.stripe.price_ids.length; i++) {
+                if (data.object.items.data[0].price.id == config.stripe.price_ids[i].id) {
+                  bot.assignRole(customer.description, config.stripe.price_ids[i].role_id);
+                  bot.sendDM(member,'Subscription Sucessfully Updated! ✅', 'Thank you for your continuing business!','00FF00');
+                  bot.sendEmbed(member, '00FF00', 'Subscription Sucessfully Updated! ✅', '', config.discord.log_channel);
+                  database.runQuery('UPDATE stripe_users SET price_id = ? WHERE user_id = ?', [data.object.items.data[0].price.id, member.user.id]);
+                  for (let x = 0; x < config.stripe.price_ids.length; x++) {
+                    if (data.previous_attributes.items.data[0].price.id == config.stripe.price_ids[x].id) {
+                      bot.removeRole(customer.description, config.stripe.price_ids[x].role_id);
+                    }
+                  }
+                }
+              }
             } else { return;
             } return;
-          } return; */
+          } return;
     } return;
   }
 };
