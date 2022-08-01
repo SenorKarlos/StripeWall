@@ -170,12 +170,13 @@ server.get("/login", async (req, res) => {
         console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Create Stripe Customer", e);
         return res.redirect(`/error`);
       }
-    } else if (dbuser.manual == 'true' && dbuser.temp_plan_expiration-86400 > unix) {
+    }
+    if (dbuser.manual == 'true' && dbuser.temp_plan_expiration-86400 > unix) {
       req.session.expiry = dbuser.temp_plan_expiration;
       req.session.manual = true;
       req.session.login = true;
       return res.redirect(`/manual`);
-    } else {
+    } else if (dbuser.stripe_id && !customer) {
       try {
         customer = await stripe.customer.fetch(dbuser.stripe_id);
       } catch (e) {

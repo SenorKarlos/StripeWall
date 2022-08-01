@@ -12,7 +12,8 @@ const object = {
     user: config.database.username,
     password: config.database.password,
     port: config.database.port,
-    database: config.database.name
+    database: config.database.name,
+    charset : 'utf8mb4'
   }),
 //------------------------------------------------------------------------------
 //  RUN QUERY FUNCTION
@@ -202,7 +203,7 @@ const object = {
                 }
               } // end ID/Token result match
             } else { // end access and refresh token found
-              console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") User has no Tokens, unable to fetch updates from Discord.");
+              console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") User has no Tokens, Skip.");
               if (indexcounter === records.length) { return object.doneDetails(); }
             }
           }, 1000 * index);

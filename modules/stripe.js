@@ -103,55 +103,46 @@ const stripe = {
         let indexcounter = index + 1;
         setTimeout(function() {
           database.db.query('SELECT * FROM stripe_users WHERE user_id = ?', [customer.description], async function (err, record, fields) {
-            if (err) { return console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+')', err.message); }
             let stripe_updated = false;
             let db_updated = false;
-            if (customer.name != record[0].user_name || customer.email != record[0].email) {
-              await stripe.customer.update(customer.id, record[0].email, record[0].user_name);
-              stripe_updated = true;
-            }
-            if (customer.subscriptions.data[0]) {
-              for (let x = 0; x < customer.subscriptions.data.length; x++) {
-                for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                  if (customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
-                    if (record[0]) {
+            if (err) { return console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+')', err.message); }
+            if (record.length > 0) {
+              if (customer.name != record[0].user_name || customer.email != record[0].email) {
+                await stripe.customer.update(customer.id, record[0].email, record[0].user_name);
+                stripe_updated = true;
+              }
+              if (customer.subscriptions.data[0]) {
+                for (let x = 0; x < customer.subscriptions.data.length; x++) {
+                  for (let i = 0; i < config.stripe.price_ids.length; i++) {
+                    if (customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
                       if (customer.id != record[0].stripe_id || customer.subscriptions.data[x].items.data[0].price.id != record[0].price_id && customer.subscriptions.data[x].status == 'active') {
                         database.runQuery('UPDATE stripe_users SET stripe_id = ?, price_id = ? WHERE user_id = ?', [customer.id, customer.subscriptions.data[x].items.data[0].price.id, customer.description]);
                         db_updated = true;
                       }
-                    } else { // end if in database
-                      database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, price_id, email) VALUES (?, ?, ?, ?, ?)', [customer.name, customer.description, customer.id, customer.subscriptions.data[x].items.data[0].price.id, customer.email]);
-                      console.info('['+bot.getTime('stamp')+'] [stripe.js]  ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database.');
-                      if (indexcounter === parse.length) { return stripe.customer.doneParse(); }
-                    } // end not in database
-                  } // dead end of customer price vs config price
-                } // dead end for every price in config
-              } // dead end for each sub in customer array (usually 1)
-            } else { //end customer has sub
-              if (record[0]) {
-                if (customer.id != record[0].stripe_id) {
-                  database.runQuery('UPDATE stripe_users SET stripe_id = ? WHERE user_id = ?', [customer.id, customer.description]);
-                  db_updated = true;
-                } //check and fix ID
-                if (record[0].price_id) {
-                  for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                    if (record[0].price_id == config.stripe.price_ids[i].id) {
-                      if (config.stripe.price_ids[i].mode == "subscription" || record[0].temp_plan_expiration < unix) {
-                        database.runQuery('UPDATE stripe_users SET price_id = NULL, temp_plan_expiration = NULL WHERE user_id = ?', [customer.description]);
-                        db_updated = true;
-                      /*} else {*/
-                        /* Maybe something about storing, pulling & checking invoice details & expiry calc for temp plans , but probably too much and not needed */
-                      } //end if mode is sub or temp plan expired
-                    } // end if record price matches config price
-                  } // dead end for each price in config
-                } // end if db price not null
-              } else { // end of in DB
-                database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, email) VALUES (?, ?, ?, ?)',
-                  [customer.name, customer.description, customer.id, customer.email]);
-                console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database. This user may require Manual Temp Plan updating');
-                if (indexcounter === parse.length) { return stripe.customer.doneParse(); }
-              } //end not in db
-            } // end of customer has no sub data
+                    } // dead end of customer price vs config price
+                  } // dead end for every price in config
+                } // dead end for each sub in customer array (usually 1)
+              } else if (customer.id != record[0].stripe_id) {
+                database.runQuery('UPDATE stripe_users SET stripe_id = ? WHERE user_id = ?', [customer.id, customer.description]);
+                db_updated = true;
+              } //check and fix ID
+              if (record[0].price_id) {
+                for (let i = 0; i < config.stripe.price_ids.length; i++) {
+                  if (record[0].price_id == config.stripe.price_ids[i].id) {
+                    if (config.stripe.price_ids[i].mode == "subscription" || record[0].temp_plan_expiration < unix) {
+                      database.runQuery('UPDATE stripe_users SET price_id = NULL, temp_plan_expiration = NULL WHERE user_id = ?', [customer.description]);
+                      db_updated = true;
+                    /*} else {*/
+                      /* Maybe something about storing, pulling & checking invoice details & expiry calc for temp plans , but probably too much and not needed */
+                    } //end if mode is sub or temp plan expired
+                  } // end if record price matches config price
+                } // dead end for each price in config
+              } // end if db price not null
+            } else { // end of in DB
+              database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, email) VALUES (?, ?, ?, ?)', [customer.name, customer.description, customer.id, customer.email]);
+              console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database. This user may require Manual Temp Plan updating');
+              if (indexcounter === parse.length) { return stripe.customer.doneParse(); } else { return; }
+            } //end not in db
             let log_start = '['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+')';
             let log_db_up = ' Updated Stripe IDs';
             let log_db_ver = ' Verified Stripe IDs';
