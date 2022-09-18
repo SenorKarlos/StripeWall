@@ -86,14 +86,19 @@ const object = {
         records.forEach((user, index) => {
           let indexcounter = index + 1;
           setTimeout(async function() {
-            let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.user_id);
+            let member;
+            try {
+              member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.user_id);
+            } catch (e) {
+              return console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to verify Guild Membership.", e);
+            }
             let customer;
             let db_updated = false;
             if (user.stripe_id) {
               try {
                 customer = await stripe.customer.fetch(user.stripe_id); // fetch customer because stripe list only returns active users
               } catch (e) {
-                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to fetch Stripe record.", e);
+                return console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to fetch Stripe record.", e);
               }
               if (!customer || customer.deleted == true) {
                 let query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL, temp_plan_expiration = NULL WHERE user_id = ?`;

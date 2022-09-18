@@ -111,7 +111,7 @@ const stripe = {
                 await stripe.customer.update(customer.id, record[0].email, record[0].user_name);
                 stripe_updated = true;
               }
-              if (customer.subscriptions.data[0]) {
+              if (customer.subscriptions.data.length > 0) {
                 for (let x = 0; x < customer.subscriptions.data.length; x++) {
                   for (let i = 0; i < config.stripe.price_ids.length; i++) {
                     if (customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
@@ -126,7 +126,7 @@ const stripe = {
                 database.runQuery('UPDATE stripe_users SET stripe_id = ? WHERE user_id = ?', [customer.id, customer.description]);
                 db_updated = true;
               } //check and fix ID
-              if (record[0].price_id) {
+              if (record[0].price_id && record[0].temp_plan_expiration) {
                 for (let i = 0; i < config.stripe.price_ids.length; i++) {
                   if (record[0].price_id == config.stripe.price_ids[i].id) {
                     if (config.stripe.price_ids[i].mode == "subscription" || record[0].temp_plan_expiration < unix) {
@@ -390,12 +390,12 @@ const stripe = {
                   }
                 } else { charge_id = checkout.payment_intent.charges.data[0].id; }
                 if (data.object.mode == 'subscription') {
-                  bot.sendDM(member,'✅ Subscription Creation Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
-                  bot.sendEmbed(member, '00FF00', '✅ Subscription Creation Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
+                  bot.sendDM(member,'✅ Subscription Creation Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
+                  bot.sendEmbed(member, '00FF00', '✅ Subscription Creation Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
                   return database.runQuery('UPDATE stripe_users SET manual = ?, price_id = ?, temp_plan_expiration = ?, tax_rate = ?, charge_id = ? WHERE user_id = ?', ['false', checkout.line_items.data[0].price.id, expiry, tax_rate, charge_id, member.user.id]);
                 } else if (data.object.mode == 'payment') {
-                  bot.sendDM(member,'✅ One-Time Access Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
-                  bot.sendEmbed(member, '00FF00', '✅ One-Time Access Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
+                  bot.sendDM(member,'✅ One-Time Access Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
+                  bot.sendEmbed(member, '00FF00', '✅ One-Time Access Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
                   expiry = checkout.payment_intent.charges.data[0].created + config.stripe.price_ids[i].expiry;
                   return database.runQuery('UPDATE stripe_users SET manual = ?, price_id = ?, temp_plan_expiration = ?, tax_rate = ?, charge_id = ? WHERE user_id = ?', ['false', checkout.line_items.data[0].price.id, expiry, tax_rate, charge_id, member.user.id]);
                 }
@@ -425,8 +425,8 @@ const stripe = {
                   tax_info = '**(Applicable Fees and Taxes Included)**';
                 }
                 database.runQuery('UPDATE stripe_users SET charge_id = ? WHERE user_id = ?', [data.object.id, user.user_id]);
-                bot.sendDM(member,'✅ Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'** '+tax_info,'00FF00');
-                return bot.sendEmbed(member, '00FF00', '✅ Payment to '+config.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
+                bot.sendDM(member,'✅ Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'** '+tax_info,'00FF00');
+                return bot.sendEmbed(member, '00FF00', '✅ Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
               } else {
                 bot.sendDM(member, config.stripe.alt_charge_text, 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'**','00FF00');
                 return bot.sendEmbed(member, '00FF00', config.stripe.alt_charge_text, 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'**', config.discord.log_channel);
@@ -461,8 +461,8 @@ const stripe = {
               } else if (config.stripe.taxes.active) {
                 tax_info = '**(Applicable Fees and Taxes Included)**';
               }
-              bot.sendDM(member,'Payment for '+config.site_name+' Refunded. 🏧', 'Amount: **$'+data.object.amount_refunded/100+'** '+tax_info,'0000FF');
-              return bot.sendEmbed(member, '0000FF', 'Payment for '+config.site_name+' Refunded. 🏧', 'Amount: **$'+data.object.amount_refunded/100+'** '+tax_info, config.discord.log_channel);
+              bot.sendDM(member,'Payment for '+config.server.site_name+' Refunded. 🏧', 'Amount: **$'+data.object.amount_refunded/100+'** '+tax_info,'0000FF');
+              return bot.sendEmbed(member, '0000FF', 'Payment for '+config.server.site_name+' Refunded. 🏧', 'Amount: **$'+data.object.amount_refunded/100+'** '+tax_info, config.discord.log_channel);
             } else {
               bot.sendDM(member, config.stripe.alt_refund_text, 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'**','00FF00');
               return bot.sendEmbed(member, '00FF00', config.stripe.alt_refund_text, 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'**', config.discord.log_channel);
