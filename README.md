@@ -16,31 +16,22 @@ note: I can't reccomend enough a CDN like cloudflare with authenticated origin p
 
 - Start the bot with PM2 `pm2 start wall.js`. Read the PM2 docs to have the bot automatically start as a service in the event of a power failure, restart, or other issue.
 
-# FAQ:
+# General Information:
 
-What does this bot do?
+- This bot gatekeeps discord roles and manages discord users with stripe subscriptions, Lifetime Roles & manually tracked (ie. cash payments).
 
-- This bot gatekeeps a discord role and manages discord users with stripe subscriptions.
+- All account management is done via /login and Stripe Customer Checkout/Portal. One-Time, Manually Tracked and Lifetime users will see a static page with expiry dates, Stripe customers will be presented with the Management Portal, and new customers or those within a day of expiry are shown your configured checkout options.
 
-Does this bot take one-time payments?
+- The bot does not deal directly with any payment information. All information is entered and updated on Stripe hosted pages. The bot receives tokens sent by Stripe to track current plans or the last one-time purchase made.
 
-- Not currently. I may add it in the future.
-
-How does a user unsubscribe?
-
-- Direct the user to your /subscribe URL, and they click "Unsubscribe". I may add a dedicated Unsubscribe page in the future.
-
-Is payment information safe?
-
-- The bot does not deal directly with any payment information. The payment html page uses the Stripe.js Checkout directly on their service platform. The bot receives a token sent by stripe to assign payment information to a Customer the bot creates. We do not need to worry about payment information security for this as is it all in the hands of Stripe.
-
-How do I manually assign people a donor role so that the bot wont remove?
-
-- Simply use a different role from your controlled role and configure your services accordingly, or have the user visit the subscribe link once to make an entry and change thier plan_id in the Database to 'Lifetime'.
+- User Identification in the database is as follows:
+ - "Lifetime" manual = true, temp_plan_expiration = 9999999999
+ - "Manually Tracked" manual = true, temp_plan_expiration = <insert unix timestamp of expiry>
+ - "One Time" (set by bot) manual = false, temp_plan_expiration = unix expiry calced by bot
 
 How do I get the subscription plan_id?
 
-- In Stripe Dashboard, go to Products > Click on the Product > Click on the Pricing Plan > Copy the ID from the Details section. Should look like plan_If7w44wkjh479Sdf or price_If7w44wkjh479Sdf depending on when the product was created and your API version.
+- In Stripe Dashboard, go to Products > Click on the Product > Click on the Price > Copy the ID from the Details section. Should look like plan_If7w44wkjh479Sdf or price_If7w44wkjh479Sdf depending on when the product was created and your API version.
 
 How do I make a webhook?
 
