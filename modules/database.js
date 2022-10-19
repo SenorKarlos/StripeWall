@@ -350,10 +350,22 @@ const object = {
                 return console.info(err);
               }
               if (record) { //record found
-                if (record[0].manual == 'true') { // skip life/manual
-                  if (!record[0].stripe_id) { record[0].stripe_id = "Not Found"; }
-                  console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") Manually tracked or Lifetime User, Skipping.");
-                  if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.checkLifetime(); } else { return; }
+                if (record[0].manual == 'true') { // skip life/check manual
+                  if (record[0].temp_plan_expiration == 9999999999 || record[0].temp_plan_expiration > unix) {
+                    if (!record[0].stripe_id) { record[0].stripe_id = "Not Found"; }
+                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") Lifetime or Validated Manually Tracked User, Skipping.");
+                    if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.checkLifetime(); } else { return; }
+                  } else {
+                    if (!record[0].stripe_id) { record[0].stripe_id = "Not Found"; }
+                    console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") Manually Tracked User Expired, Removing Role & Flags.");
+                    bot.removeRole(member.id, config.stripe.price_ids[i].role_id);
+                    let query = `UPDATE stripe_users SET manual = 'false', temp_plan_expiration = NULL WHERE user_id = ?`;
+                    let data = [record[0].user_id];
+                    await object.runQuery(query, data);
+                    bot.sendDM(member,'Subscription Ended', 'Your subscription has expired. Please sign up again to continue.','FFFF00');
+                    bot.sendEmbed(member, 'FF0000', 'Manually Tracked User Expired ⚠', 'Removed Role & Flags. (Role Check)', config.discord.log_channel);
+                    if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.checkLifetime(); } else { return; }
+                  }
                 } else if (!record[0].stripe_id) { // no stripe id remove
                   bot.removeRole(member.id, config.stripe.price_ids[i].role_id);
                   record[0].stripe_id = "Not Found";
