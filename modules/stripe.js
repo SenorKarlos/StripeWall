@@ -445,7 +445,7 @@ const stripe = {
           case !user: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
           case !member: return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has left Guild');
           case (config.stripe.rem_role_full_refund && user.charge_id && data.object.id == user.charge_id && data.amount_captured === data.object.amount_refunded):
-          case (config.stripe.rem_role_any_refund && user.charge_id && data.object.id == user.charge_id && data.amount_captured === data.object.amount_refunded):
+          case (config.stripe.rem_role_any_refund && user.charge_id && data.object.id == user.charge_id):
             for (let i = 0; i < config.stripe.price_ids.length; i++) {
               if (user.price_id == config.stripe.price_ids[i].id) {
                 bot.removeRole(customer.description, config.stripe.price_ids[i].role_id);
@@ -510,7 +510,7 @@ const stripe = {
             bot.sendEmbed(member, '00FF00', 'Subscription Resumed! ✅', '', config.discord.log_channel);
             return bot.sendDM(member,'Subscription Resumed! ✅', 'Thank you for continuing! Your business is appreciated!','00FF00');
           default:
-            if (data.object.status == "active" && data.previous_attributes.items.data[0].price.id) {
+            if (data.object.status == "active" && data.previous_attributes.items) {
               for (let i = 0; i < config.stripe.price_ids.length; i++) {
                 if (data.object.items.data[0].price.id == config.stripe.price_ids[i].id) {
                   bot.assignRole(customer.description, config.stripe.price_ids[i].role_id);
@@ -524,7 +524,7 @@ const stripe = {
                   }
                 }
               }
-            } else { return;
+            } else { return console.info('['+bot.getTime('stamp')+'] [stripe.js] Webhook for '+data.object.customer+' likely requires no action, logging.\n', data);
             } return;
           } return;
     } return;

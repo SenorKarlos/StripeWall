@@ -349,7 +349,7 @@ const object = {
               if (err) {
                 return console.info(err);
               }
-              if (record) { //record found
+              if (record[0]) { //record found
                 if (record[0].manual == 'true') { // skip life/check manual
                   if (record[0].temp_plan_expiration == 9999999999 || record[0].temp_plan_expiration > unix) {
                     if (!record[0].stripe_id) { record[0].stripe_id = "Not Found"; }
