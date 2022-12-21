@@ -97,12 +97,18 @@ server.get("/login", async (req, res) => {
       }
     } else { console.info("["+bot.getTime("stamp")+"] [wall.js] User Passed Blacklist"); }
     try {
-      member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.id);
+      guild = bot.guilds.cache.get(config.discord.guild_id);
+      try {
+        member = await guild.members.fetch(user.user_id);
+      } catch {
+        member = false;
+      }
     } catch (e) {
       req.session = null;
       console.info("["+bot.getTime("stamp")+"] [wall.js] Guild Member Fetch Failure", e);
       return res.redirect(`/error`)
     }
+    console.log(member);
     if (!member) {
       try {
         console.info("["+bot.getTime("stamp")+"] [wall.js] "+user.username+" not a Guild Member, adding.");
@@ -145,18 +151,18 @@ server.get("/login", async (req, res) => {
       return res.redirect(`/error`);
     }
     let dbChecked = false;
-    if (req.session.email != dbuser.email || req.session.user_name != dbuser.user_name) {
-      try {
+    try {
+      if (req.session.email != dbuser.email || req.session.user_name != dbuser.user_name) {
         await database.runQuery(`UPDATE stripe_users SET email = ?, user_name = ? WHERE user_id = ?`, [req.session.email, req.session.user_name, dbuser.user_id]);
-      } catch (e) {
-        req.session = null;
-        console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to update Database User", e);
-        return res.redirect(`/error`);
+        console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.user_name+ ","+req.session.email+" Formerly: "+dbuser.user_name+","+dbuser.email);
+        dbChecked = true;
+      } else {
+        dbChecked = true;
       }
-      console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.user_name+ ","+req.session.email+" Formerly: "+dbuser.user_name+","+dbuser.email);
-      dbChecked = true;
-    } else {
-      dbChecked = true;
+    } catch (e) {
+      req.session = null;
+      console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to update Database User", e);
+      return res.redirect(`/error`);
     }
     let stripeChecked = false;
     let customer;
@@ -172,10 +178,16 @@ server.get("/login", async (req, res) => {
       }
     }
     if (dbuser.manual == 'true' && dbuser.temp_plan_expiration-86400 > unix) {
-      req.session.expiry = dbuser.temp_plan_expiration;
+      req.session.expiry = parseFloat(dbuser.temp_plan_expiration);
       req.session.manual = true;
       req.session.login = true;
-      return res.redirect(`/manual`);
+      if (req.session.expiry === 9999999999) {
+        return res.redirect(`/lifetime-active`);
+      } else if (req.session.expiry === 9999999998) {
+        return res.redirect(`/lifetime-inactive`);
+      } else {
+        return res.redirect(`/manual`);
+      }
     } else if (dbuser.stripe_id && !customer) {
       try {
         customer = await stripe.customer.fetch(dbuser.stripe_id);
@@ -263,8 +275,12 @@ server.get("/checkout", async function(req, res) {
   if (!req.session.login || unix > req.session.now+600) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix) {
+  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
     return res.redirect(`/manual`);
+  } else if (req.session.manual == 'true' && req.session.expiry === 9999999999) {
+    return res.redirect(`/lifetime-active`);
+  } else if (req.session.manual == 'true' && req.session.expiry === 9999999998) {
+    return res.redirect(`/lifetime-inactive`);
   } else if (req.session.price_id && req.session.expiry-86400 > unix) {
     return res.redirect(`/expiry`);
   } else if (req.session.price_id && !req.session.expiry) {
@@ -312,8 +328,12 @@ server.get("/manage", async function(req, res) {
   if (!req.session.login || unix > req.session.now+600) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' -  Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix) {
+  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
     return res.redirect(`/manual`);
+  } else if (req.session.manual == 'true' && req.session.expiry === 9999999999) {
+    return res.redirect(`/lifetime-active`);
+  } else if (req.session.manual == 'true' && req.session.expiry === 9999999998) {
+    return res.redirect(`/lifetime-inactive`);
   } else if (req.session.price_id && req.session.expiry && req.session.expiry-86400 > unix) {
     return res.redirect(`/expiry`);
   } else if (!req.session.price_id) {
@@ -353,8 +373,12 @@ server.get("/expiry", async function(req, res) {
   if (!req.session.login || unix > req.session.now+600) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' -   Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix) {
+  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
     return res.redirect(`/manual`);
+  } else if (req.session.manual == 'true' && req.session.expiry === 9999999999) {
+    return res.redirect(`/lifetime-active`);
+  } else if (req.session.manual == 'true' && req.session.expiry === 9999999998) {
+    return res.redirect(`/lifetime-inactive`);
   } else if (req.session.price_id && !req.session.expiry) {
     return res.redirect(`/manage`);
   } else if (!req.session.price_id) {
@@ -384,7 +408,7 @@ server.get("/expiry", async function(req, res) {
   }
 });
 //------------------------------------------------------------------------------
-//  MANUAL/LIFETIME USER PAGE
+//  MANUAL USER PAGE
 //------------------------------------------------------------------------------
 server.get("/manual", async function(req, res) {
   let unix = moment().unix();
@@ -393,20 +417,19 @@ server.get("/manual", async function(req, res) {
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   } else if (req.session.price_id && req.session.expiry-86400 > unix) {
     return res.redirect(`/expiry`);
+  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
+    return res.redirect(`/manual`);
+  } else if (req.session.manual == 'true' && req.session.expiry === 9999999999) {
+    return res.redirect(`/lifetime-active`);
+  } else if (req.session.manual == 'true' && req.session.expiry === 9999999998) {
+    return res.redirect(`/lifetime-inactive`);
   } else if (req.session.price_id && !req.session.expiry) {
     return res.redirect(`/manage`);
   } else if (!req.session.manual || req.session.manual && req.session.expiry-86400 < unix) {
     return res.redirect(`/checkout`);
   } else {
-    let intro = '';
-    let exp_text = '';
-    if (req.session.expiry == 9999999999) {
-      intro = config.pages.manual.life_intro;
-      exp_text = config.pages.manual.life_text;
-    } else {
-      intro = config.pages.manual.manual_intro;
-      exp_text = config.pages.manual.manual_text;
-    }
+    let intro = config.pages.manual.manual_intro;
+    let exp_text = config.pages.manual.manual_text;
     let expiry = new Date(req.session.expiry * 1000).toLocaleString(config.server.tz_locale, { timeZone: config.server.time_zone });
     let radar_script = '';
     if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
@@ -429,6 +452,110 @@ server.get("/manual", async function(req, res) {
       user_name: req.session.user_name,
       email: req.session.email
     });
+  }
+});
+//------------------------------------------------------------------------------
+//  ACTIVE LIFETIME USER PAGE
+//------------------------------------------------------------------------------
+server.get("/lifetime-active", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' - Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.price_id && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
+    return res.redirect(`/expiry`);
+  } else if (req.session.manual == 'true' && req.session.expiry === 9999999998) {
+    return res.redirect(`/lifetime-inactive`);
+  } else if (req.session.price_id && !req.session.expiry) {
+    return res.redirect(`/manage`);
+  } else if (!req.session.manual || req.session.manual && req.session.expiry-86400 < unix) {
+    return res.redirect(`/checkout`);
+  } else {
+    let intro = config.pages.lifetime.active_life_intro;
+    let radar_script = '';
+    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+    return res.render(__dirname+"/html/lifetime-active.html", {
+      terms: config.pages.general.terms,
+      disclaimer: config.pages.general.disclaimer,
+      warning: config.pages.general.warning,
+      background: config.pages.general.background,
+      outer_background: config.pages.general.outer_background,
+      border_color: config.pages.general.border_color,
+      title_color: config.pages.general.title_color,
+      text_color: config.pages.general.text_color,
+      intro: intro,
+      site_name: config.server.site_name,
+      site_url: config.server.site_url,
+      radar_script: radar_script,
+      user_name: req.session.user_name,
+      user_id: req.session.discord_id,
+      email: req.session.email
+    });
+  }
+});
+//------------------------------------------------------------------------------
+//  INACTIVE LIFETIME USER PAGE
+//------------------------------------------------------------------------------
+server.get("/lifetime-inactive", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' - Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.price_id && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
+    return res.redirect(`/expiry`);
+  } else if (req.session.manual == 'true' && req.session.expiry === 9999999999) {
+    return res.redirect(`/lifetime-active`);
+  } else if (req.session.price_id && !req.session.expiry) {
+    return res.redirect(`/manage`);
+  } else if (!req.session.manual || req.session.manual && req.session.expiry-86400 < unix) {
+    return res.redirect(`/checkout`);
+  } else {
+    let intro = config.pages.lifetime.inactive_life_intro;
+    let radar_script = '';
+    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+    return res.render(__dirname+"/html/lifetime-inactive.html", {
+      terms: config.pages.general.terms,
+      disclaimer: config.pages.general.disclaimer,
+      warning: config.pages.general.warning,
+      background: config.pages.general.background,
+      outer_background: config.pages.general.outer_background,
+      border_color: config.pages.general.border_color,
+      title_color: config.pages.general.title_color,
+      text_color: config.pages.general.text_color,
+      intro: intro,
+      site_name: config.server.site_name,
+      site_url: config.server.site_url,
+      radar_script: radar_script,
+      user_name: req.session.user_name,
+      user_id: req.session.discord_id,
+      email: req.session.email
+    });
+  }
+});
+//------------------------------------------------------------------------------
+//  LIFETIME ACTIVE TOGGLE
+//------------------------------------------------------------------------------
+server.post("/lifetime-toggle", async (req, res) => {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600 || !req.body) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' - Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else {
+    if (req.body.action == "activate") {
+      bot.assignRole(req.session.discord_id, config.discord.lifetime_role);
+      bot.removeRole(req.session.discord_id, config.discord.inactive_lifetime_role);
+      database.runQuery('UPDATE stripe_users SET temp_plan_expiration = ? WHERE user_id = ?', [9999999999, req.session.discord_id]);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+    } else if (req.body.action == "deactivate") {
+      bot.assignRole(req.session.discord_id, config.discord.inactive_lifetime_role);
+      bot.removeRole(req.session.discord_id, config.discord.lifetime_role);
+      database.runQuery('UPDATE stripe_users SET temp_plan_expiration = ? WHERE user_id = ?', [9999999998, req.session.discord_id]);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+    } else {
+      return res.redirect(`/error`);
+    }
   }
 });
 //------------------------------------------------------------------------------

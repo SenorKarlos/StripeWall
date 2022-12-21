@@ -1,12 +1,10 @@
 const moment = require('moment');
 const Discord = require('discord.js');
-const eventsToDisable = ["PRESENCE_UPDATE", "VOICE_STATE_UPDATE", "TYPING_START", "VOICE_SERVER_UPDATE"];
-const bot = new Discord.Client({
-  disabledEvents: eventsToDisable,
-  messageCacheMaxSize: 1,
-  messageCacheLifetime: 1,
-  messageSweepInterval: 1
-});
+const myIntents = new Discord.Intents();
+myIntents.add(Discord.Intents.FLAGS.GUILDS,
+              Discord.Intents.FLAGS.GUILD_MEMBERS,
+              Discord.Intents.FLAGS.GUILD_MESSAGES);
+const bot = new Discord.Client({ intents: myIntents });
 const config = require("../files/config.json");
 //------------------------------------------------------------------------------
 //  TIME FUNCTION
@@ -33,11 +31,11 @@ bot.sendEmbed = (member, color, title, body, channel_id) => {
 
   let embed = new Discord.MessageEmbed()
     .setColor(color)
-    .setAuthor(nickname+' ('+member.user.id+')')
+    .setAuthor({name: `${nickname+' ('+member.user.id+')'}`})
     .setTitle(title)
     .setDescription(body)
-    .setFooter(config.server.site_name+' | '+bot.getTime('full'));
-  return bot.channels.cache.get(channel_id).send(embed).catch(err => {
+    .setFooter({text: `${config.server.site_name+' | '+bot.getTime('full')}`});
+  return bot.channels.cache.get(channel_id).send({embeds: [embed]}).catch(err => {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Send Channel Message.', err);
   });
 }
@@ -49,21 +47,26 @@ bot.sendDM = (member, title, body, color) => {
     .setColor(color)
     .setTitle(title)
     .setDescription(body)
-    .setFooter(config.server.site_name+' | '+bot.getTime('full'));
+    .setFooter({ text: `${config.server.site_name+' | '+bot.getTime('full')}`});
   bot.guilds.cache.get(config.discord.guild_id).members.fetch(member.id).then(TARGET => {
-    return TARGET.send(embed).catch(err => {
+    return TARGET.send({embeds: [embed]}).catch(err => {
       if (err) {
         console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Send Direct Message.', err);
       }
     });
-  });
+  }).catch(err => {
+      if (err) {
+        console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Send Direct Message.', err);
+      }
+    });
 }
 //------------------------------------------------------------------------------
 //  ASSIGN ROLE TO A MEMBER
 //------------------------------------------------------------------------------
-bot.assignRole = (user_id, role_id) => {
-  let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user_id);
-  console.info('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' Requires Role: '+role_id);
+bot.assignRole = async (user_id, role_id) => {
+  let guild = bot.guilds.cache.get(config.discord.guild_id);
+  let member = await guild.members.fetch(user_id);
+  console.info('['+bot.getTime('stamp')+'] [bot.js] '+member.user.username+' Requires Role: '+role_id);
   if (!member) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Assign the User a role.');
     return false;
@@ -79,9 +82,10 @@ bot.assignRole = (user_id, role_id) => {
 //------------------------------------------------------------------------------
 //  REMOVE ROLE FROM A MEMBER
 //------------------------------------------------------------------------------
-bot.removeRole = (user_id, role_id) => {
-  let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user_id);
-  console.info('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' Requires Role Removal: '+role_id);
+bot.removeRole = async (user_id, role_id) => {
+  let guild = bot.guilds.cache.get(config.discord.guild_id);
+  let member = await guild.members.fetch(user_id);
+  console.info('['+bot.getTime('stamp')+'] [bot.js] '+member.user.username+' Requires Role Removal: '+role_id);
   if (!member) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to remove the role from the User.');
     return false;
@@ -99,13 +103,13 @@ bot.removeRole = (user_id, role_id) => {
 //------------------------------------------------------------------------------
 bot.blacklisted = [];
 bot.on('ready', () => {
-  console.info('['+bot.getTime('stamp')+'] [bot.js] The bot ('+bot.user.tag+') has initialized.');
+  console.info('['+bot.getTime('stamp')+'] [bot.js] The bot ('+bot.user.username+') has initialized.');
   bot.blacklisted = config.discord.blacklist;
   if (bot.blacklisted.length > 0) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Loaded '+bot.blacklisted.length+' blacklisted user(s) from the config.');
   }
   if (config.discord.fetch_bans == true) {
-    bot.guilds.cache.get(config.discord.guild_id).fetchBans().then(bans => {
+    bot.guilds.cache.get(config.discord.guild_id).bans.fetch().then(bans => {
       console.info('['+bot.getTime('stamp')+'] [bot.js] Fetched '+bans.size+' ban(s) for the blacklist.');
       bans.map(u => u.user.id).forEach(id => {
         bot.blacklisted.push(id);

@@ -12,7 +12,7 @@ note: I can't reccomend enough a CDN like cloudflare with authenticated origin p
 
 - Create a webhook in Stripe, add the following events to the stripe webhook, point to `https://<yourmap.com>/webhook`
 
-`charge.refunded, customer.deleted, charge.succeeded, customer.subscription.created, customer.subscription.deleted, customer.subscription.updated, customer.updated, invoice.payment_failed`
+`charge.refunded, charge.succeeded, checkout.session.completed, customer.created, customer.deleted, customer.updated, customer.subscription.deleted, customer.subscription.updated`
 
 - Start the bot with PM2 `pm2 start wall.js`. Read the PM2 docs to have the bot automatically start as a service in the event of a power failure, restart, or other issue.
 

@@ -81,14 +81,22 @@ const object = {
       if (err) {
         console.info(err);
       }
-      if (records) {
+      if (records[0]) {
+/*         records.forEach((user, index) => {
+          let filter = [];
+          if (user.access_token == "Left Guild" || !user.access_token && !user.refresh_token) {
+            filter.push(user);
+          }
+        });
+        records = records.filter(o1 => !filter.some(o2 => o1.user_id === o2.user_id)); */
         console.info("["+bot.getTime("stamp")+"] [database.js] Checking for Discord profile updates and Stripe ID validity on "+records.length+" Database Users.");
         records.forEach((user, index) => {
           let indexcounter = index + 1;
           setTimeout(async function() {
             let member;
             try {
-              member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.user_id);
+              let guild = bot.guilds.cache.get(config.discord.guild_id);
+              member = await guild.members.fetch(user.id);
             } catch (e) {
               return console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to verify Guild Membership.", e);
             }
@@ -181,7 +189,8 @@ const object = {
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") User Fetch resulted in ID mismatch, Administration should investigate (Discord Check).");
                 let member;
                 try {
-                  member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.user_id);
+                  let guild = bot.guilds.cache.get(config.discord.guild_id);
+                  member = await guild.members.fetch(user.user_id);
                 } catch (e) {
                   console.info(e);
                   member = user;
@@ -237,7 +246,13 @@ const object = {
         records.forEach((user, index) => {
           let indexcounter = index + 1;
           setTimeout(async function() {
-            let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.user_id);
+            let guild = bot.guilds.cache.get(config.discord.guild_id);
+            let member;
+            try {
+              member = await guild.members.fetch(user.user_id);
+            } catch {
+              member = false;
+            }
             let customer = '';
             if (member) {                                                // if in the guild
               for (let i = 0; i < config.stripe.price_ids.length; i++) { // check each config price id
@@ -316,9 +331,11 @@ const object = {
     console.info("["+bot.getTime("stamp")+"] [database.js] Checking "+config.stripe.price_ids.length+" Roles.");
     let roleArray = [];
     let delayArray = [0];
+    let guild = bot.guilds.cache.get(config.discord.guild_id); // pull guild info
+    await guild.members.fetch();
+    await guild.members.cache.get();
     for (let i = 0; i < config.stripe.price_ids.length; i++) { //for each price
       setTimeout(function() {
-        let guild = bot.guilds.cache.get(config.discord.guild_id); // pull guild info
         let members = guild.roles.cache.find(role => role.id === config.stripe.price_ids[i].role_id).members.map(m => m); // map role members from price
         roleArray.push(members);
         let timer = members.length * 1000;
@@ -395,51 +412,103 @@ const object = {
   checkLifetime: async function() {
     if (config.discord.lifetime_role) {
       console.info("["+bot.getTime("stamp")+"] [database.js] Syncing Lifetime Users.");
-      let guild = bot.guilds.cache.get(config.discord.guild_id); // pull guild info
-      let members = guild.roles.cache.find(role => role.id === config.discord.lifetime_role).members.map(m => m); // map role members from price
-      let query = `SELECT * FROM stripe_users WHERE manual = ? AND temp_plan_expiration = ?`;
-      let data = ['true', 9999999999];
+      let guild = bot.guilds.cache.get(config.discord.guild_id);
+      await guild.members.fetch();
+      await guild.members.cache.get();
+      let active = guild.roles.cache.find(role => role.id === config.discord.lifetime_role).members.map(m => m);
+      let inactive;
+      if (config.discord.inactive_lifetime_role) {
+        inactive = guild.roles.cache.find(role => role.id === config.discord.inactive_lifetime_role).members.map(m => m);
+      } else {
+        inactive = [];
+      }
+      let query = `SELECT * FROM stripe_users WHERE manual = ? AND temp_plan_expiration > ?`;
+      let data = ['true', 9999999997];
       await object.db.query(query, data, function(err, records, fields) {
         if (err) {
           console.info(err);
         }
         if (records) {
-          let users = [];
+          let activeUsers = [];
+          let inactiveUsers = [];
           records.forEach((user, index) => {
-            users.push(user);
+            if (user.temp_plan_expiration == 9999999999) {
+              activeUsers.push(user);
+            } else if (user.temp_plan_expiration == 9999999998) {
+              inactiveUsers.push(user);
+            }
           });
-          return object.syncLifetime(members, users);
+          return object.syncLifetime(active, inactive, activeUsers, inactiveUsers);
         }
       });
     } else { return object.doneRoles(); }
   },
-  syncLifetime: async function(members, users) {
-    let noDB = members.filter(o1 => !users.some(o2 => o1.user.id === o2.user_id));
-    let noRole = users.filter(o1 => !members.some(o2 => o1.user_id === o2.user.id));
-    if (noDB.length > 0) {
-      console.info("["+bot.getTime("stamp")+"] [database.js] Found "+noDB.length+" Lifetime Users without proper Database Information, updating.");
-      noDB.forEach((member, index) => {
+  syncLifetime: async function(active, inactive, activeUsers, inactiveUsers) {
+    let activeNoDB = active.filter(o1 => !activeUsers.some(o2 => o1.user.id === o2.user_id));
+    activeNoDB = activeNoDB.filter(o1 => !inactiveUsers.some(o2 => o1.user.id === o2.user_id));
+    activeNoDB = activeNoDB.filter(o1 => !inactive.some(o2 => o1.user.id === o2.user.id));
+    let activeNoRole = activeUsers.filter(o1 => !active.some(o2 => o1.user_id === o2.user.id));
+    activeNoRole = activeNoRole.filter(o1 => !inactive.some(o2 => o1.user_id === o2.user.id));
+    activeNoRole = activeNoRole.filter(o1 => !inactiveUsers.some(o2 => o1.user_id === o2.user_id));
+    let inactiveNoDB = inactive.filter(o1 => !inactiveUsers.some(o2 => o1.user.id === o2.user_id));
+    let inactiveNoRole = inactiveUsers.filter(o1 => !inactive.some(o2 => o1.user_id === o2.user.id));
+    let removeActiveRole = inactive.filter(o1 => active.some(o2 => o1.user.id === o2.user.id));
+    if (activeNoDB.length > 0) {
+      console.info("["+bot.getTime("stamp")+"] [database.js] Found "+activeNoDB.length+" Active Lifetime Users without proper Database Information, updating.");
+      activeNoDB.forEach((member, index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
           let query = `INSERT INTO stripe_users (user_id, user_name, manual, temp_plan_expiration) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), manual=VALUES(manual), price_id = NULL, temp_plan_expiration=VALUES(temp_plan_expiration), tax_rate = NULL, charge_id = NULL`;
           let data = [member.user.id, member.user.username, 'true', 9999999999];
           object.runQuery(query, data);
-          if (indexcounter === noDB.length && noRole.length === 0) { return object.doneRoles(); }
+          if (indexcounter === activeNoDB.length && activeNoRole.length === 0 && inactiveNoDB === 0 && inactiveNoRole.length === 0 && removeActiveRole.length === 0) { return object.doneRoles(); }
         }, 500 * index);
       });
     }
-    if (noRole.length > 0) {
-      console.info("["+bot.getTime("stamp")+"] [database.js] Found "+noRole.length+" Lifetime Users in Database without their role, assigning.");
-      noRole.forEach((user, index) => {
+    if (activeNoRole.length > 0) {
+      console.info("["+bot.getTime("stamp")+"] [database.js] Found "+activeNoRole.length+" Active Lifetime Users in Database without their role, assigning.");
+      activeNoRole.forEach((user, index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
           bot.assignRole(user.user_id, config.discord.lifetime_role);
-          if (indexcounter === noRole.length) { return object.doneRoles(); }
+          if (indexcounter === activeNoRole.length && inactiveNoDB === 0 && inactiveNoRole.length === 0 && removeActiveRole.length === 0) { return object.doneRoles(); }
         }, 500 * index);
       });
     }
-    if (noDB.length === 0 && noRole.length === 0) {
-      console.info("["+bot.getTime("stamp")+"] [database.js] All known Lifetime Users are in Role and Database.");
+    if (inactiveNoDB.length > 0) {
+      console.info("["+bot.getTime("stamp")+"] [database.js] Found "+inactiveNoDB.length+" Inactive Lifetime Users without proper Database Information, updating.");
+      inactiveNoDB.forEach((member, index) => {
+        let indexcounter = index + 1;
+        setTimeout(function() {
+          let query = `INSERT INTO stripe_users (user_id, user_name, manual, temp_plan_expiration) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), manual=VALUES(manual), price_id = NULL, temp_plan_expiration=VALUES(temp_plan_expiration), tax_rate = NULL, charge_id = NULL`;
+          let data = [member.user.id, member.user.username, 'true', 9999999998];
+          object.runQuery(query, data);
+          if (indexcounter === inactiveNoDB.length && inactiveNoRole.length === 0 && removeActiveRole.length === 0) { return object.doneRoles(); }
+        }, 500 * index);
+      });
+    }
+    if (inactiveNoRole.length > 0) {
+      console.info("["+bot.getTime("stamp")+"] [database.js] Found "+inactiveNoRole.length+" Inactive Lifetime Users in Database without their role, assigning.");
+      inactiveNoRole.forEach((user, index) => {
+        let indexcounter = index + 1;
+        setTimeout(function() {
+          bot.assignRole(user.user_id, config.discord.inactive_lifetime_role);
+          if (indexcounter === inactiveNoRole.length && removeActiveRole.length === 0) { return object.doneRoles(); }
+        }, 500 * index);
+      });
+    }
+    if (removeActiveRole.length > 0) {
+      console.info("["+bot.getTime("stamp")+"] [database.js] Found "+removeActiveRole.length+" Inactive Lifetime Users in Database still have active role, removing.");
+      removeActiveRole.forEach((user, index) => {
+        let indexcounter = index + 1;
+        setTimeout(function() {
+          bot.removeRole(user.user.id, config.discord.lifetime_role);
+          if (indexcounter === removeActiveRole.length) { return object.doneRoles(); }
+        }, 500 * index);
+      });
+    }
+    if (activeNoDB.length === 0 && activeNoRole.length === 0 && inactiveNoDB.length === 0 && inactiveNoRole.length === 0 && removeActiveRole.length === 0) {
+      console.info("["+bot.getTime("stamp")+"] [database.js] All known Lifetime Users are in Roles and Database.");
       return object.doneRoles();
     }
   },
