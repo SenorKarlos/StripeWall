@@ -72,7 +72,7 @@ const stripe = {
 //------------------------------------------------------------------------------
 //  DELETE A CUSTOMER
 //------------------------------------------------------------------------------
-    delete: function(customer_id) {
+    delete: function(customer_id, name, discord_id) {
       return new Promise(function(resolve) {
         stripe_js.customers.del(
           customer_id,
@@ -81,7 +81,7 @@ const stripe = {
               console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Deleting Customer.', err.message);
               return resolve('ERROR');
             } else {
-              console.info('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.name+' ('+customer.description+' | '+customer.id+') has been Deleted.');
+              console.info('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+name+' ('+discord_id+' | '+customer_id+') has been Deleted.');
               return resolve(confirmation);
             }
           }

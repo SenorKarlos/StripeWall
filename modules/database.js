@@ -133,11 +133,11 @@ const object = {
                   let query = `DELETE FROM stripe_users WHERE user_id = ?`;
                   let data = [user.user_id];
                   await object.runQuery(query, data);
-                  if (user.stripe_id) { await stripe.customer.delete(user.stripe_id); }
+                  if (user.stripe_id) { await stripe.customer.delete(user.stripe_id, user.user_name, user.user_id); }
                 }
                 if (!user.stripe_id) { user.stripe_id = "Not Found"; }
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Deleted "+deleted+".");
-                bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted ${deleted}.', config.discord.log_channel);
+                bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Token or Record.', config.discord.log_channel);
                 if (indexcounter === records.length) { return object.doneDetails(); }
               } else {
                 if (!user.stripe_id) { user.stripe_id = "Not Found"; }
@@ -315,11 +315,11 @@ const object = {
                   let query = `DELETE FROM stripe_users WHERE user_id = ?`;
                   let data = [user.user_id];
                   await object.runQuery(query, data);
-                  if (user.stripe_id) { await stripe.customer.delete(user.stripe_id); }
+                  if (user.stripe_id) { await stripe.customer.delete(user.stripe_id, user.user_name, user.user_id); }
                 }
                 if (!user.stripe_id) { user.stripe_id = "Not Found"; }
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Deleted "+deleted+".");
-                bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted ${deleted}.', config.discord.log_channel);
+                bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Token or Record.', config.discord.log_channel);
                 if (indexcounter === records.length) { return object.doneDatabase(); }
               } else {
                 if (!user.stripe_id) { user.stripe_id = "Not Found"; }
