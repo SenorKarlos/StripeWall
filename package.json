@@ -13,7 +13,7 @@
     "moment": "^2.29.4",
     "mysql": "^2.18.1",
     "ontime": "^0.0.6",
-    "stripe": "^9.11.0"
+    "stripe": "^11.4.0"
   },
   "devDependencies": {},
   "scripts": {

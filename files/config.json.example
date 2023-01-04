@@ -29,9 +29,10 @@
     "redirect_url": "https://yourdomain.site/login",
     "guild_id": "000000000000000000",
     "lifetime_role": false,
+    "inactive_lifetime_role": false,
     "log_channel": "000000000000000000",
     "welcome_channel": "000000000000000000",
-    "welcome_content": "Thank You For Your Purchase, %usertag%!",
+    "welcome_content": "Thank You For Your Purchase, %usertag%! Please visit the <#000000000000000000> channel to activate your services!",
     "status_type": "WATCHING",
     "status_text": "for subscribers",
     "fetch_bans": true,
@@ -54,9 +55,11 @@
       "success_url": "https://yourdomain.site/success",
       "cancel_url": "https://yourdomain.site/cancel"
     },
+    "lifetime": {
+      "active_life_intro": "Your services are currently activated. Please visit the #setup-instructions channel in Discord to ensure all required steps have been completed.",
+      "inactive_life_intro": "Your services are currently deactivated."
+    },
     "manual": {
-      "life_intro": "You are currently a Lifetime Member.",
-      "life_text": "Your service ends when Unix time currently ends (LOL) on",
       "manual_intro": "Your plan is currently being handled manually by Administration.",
       "manual_text": "You may purchase a new plan up to 24 hours before, or after:"
     },
@@ -88,7 +91,21 @@
       "active": false,
       "automatic": false,
       "dynamic": false,
-      "rate_ids": ["txr_","empty if not using"]
+      "rate_ids": ["txr_","empty if not using"],
+      "rate_maps": [
+        {
+          "jurisdiction": ["NB","NL","NS","PE"],
+          "tax_rate": 0.15
+        },
+        {
+          "jurisdiction": ["ON"],
+          "tax_rate": 0.13
+        },
+        {
+          "jurisdiction": ["AB","BC","MB","NT","NU","QC","SK","YT"],
+          "tax_rate": 0.05
+        }
+      ]
     },
     "price_ids": [
       {

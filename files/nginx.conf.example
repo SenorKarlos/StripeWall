@@ -30,6 +30,18 @@ server {
         proxy_pass http://localhost:7777/manual;
     }
 
+    location /lifetime-active {
+        proxy_pass http://localhost:7777/lifetime-active;
+    }
+
+    location /lifetime-inactive {
+        proxy_pass http://localhost:7777/lifetime-inactive;
+    }
+
+    location /lifetime-toggle {
+        proxy_pass http://localhost:7777/lifetime-toggle;
+    }
+
     location /unsubscribe {
         proxy_pass http://localhost:7777/manage;
     }
