@@ -122,10 +122,10 @@ const object = {
                   }
                 }
                 let expiry = null;
-                let deleted = 'Record';
+                let deleted = 'Member Left Guild. Deleted Record';
                 if (user.charges || user.temp_plan_expiration > 9999999997) {
                   if (user.temp_plan_expiration > 9999999997) { expiry = 9999999998; }
-                  deleted = 'Tokens';
+                  deleted = 'Member Left Guild. Deleted Tokens';
                   let query = `UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, price_id = NULL, temp_plan_expiration = ?, tax_rate = NULL, charge_id = NULL WHERE user_id = ?`;
                   let data = [expiry, user.user_id];
                   await object.runQuery(query, data);
@@ -136,8 +136,8 @@ const object = {
                   if (user.stripe_id) { await stripe.customer.delete(user.stripe_id, user.user_name, user.user_id); }
                 }
                 if (!user.stripe_id) { user.stripe_id = "Not Found"; }
-                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Deleted "+deleted+".");
-                bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Token or Record.', config.discord.log_channel);
+                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") "+deleted+".");
+                bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', deleted, config.discord.log_channel);
                 if (indexcounter === records.length) { return object.doneDetails(); }
               } else {
                 if (!user.stripe_id) { user.stripe_id = "Not Found"; }
@@ -304,10 +304,10 @@ const object = {
                   }
                 }
                 let expiry = null;
-                let deleted = 'Record';
+                let deleted = 'Member Left Guild. Deleted Record';
                 if (user.charges || user.temp_plan_expiration > 9999999997) {
                   expiry = 9999999998;
-                  deleted = 'Tokens';
+                  deleted = 'Member Left Guild. Deleted Tokens';
                   let query = `UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, price_id = NULL, temp_plan_expiration = ?, tax_rate = NULL, charge_id = NULL WHERE user_id = ?`;
                   let data = [expiry, user.user_id];
                   await object.runQuery(query, data);
@@ -318,8 +318,8 @@ const object = {
                   if (user.stripe_id) { await stripe.customer.delete(user.stripe_id, user.user_name, user.user_id); }
                 }
                 if (!user.stripe_id) { user.stripe_id = "Not Found"; }
-                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Deleted "+deleted+".");
-                bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Deleted Token or Record.', config.discord.log_channel);
+                console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") "+deleted+".");
+                bot.sendEmbed(member, 'FF0000', 'Found Database Discrepency ⚠', deleted, config.discord.log_channel);
                 if (indexcounter === records.length) { return object.doneDatabase(); }
               } else {
                 if (!user.stripe_id) { user.stripe_id = "Not Found"; }
