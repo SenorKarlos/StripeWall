@@ -171,9 +171,9 @@ server.get("/login", async (req, res) => {
         return res.redirect(`/error`);
       }
     }
-    if (dbuser.manual == 'true' && dbuser.temp_plan_expiration-86400 > unix) {
-      req.session.expiry = parseFloat(dbuser.temp_plan_expiration);
-      req.session.manual = true;
+    if (dbuser.customer_type == 'true' && dbuser.expiration-86400 > unix) {
+      req.session.expiry = parseFloat(dbuser.expiration);
+      req.session.customer_type = true;
       req.session.login = true;
       if (req.session.expiry === 9999999999) {
         return res.redirect(`/lifetime-active`);
@@ -228,9 +228,9 @@ server.get("/login", async (req, res) => {
       }
       if (dbuser.price_id) {
         req.session.price_id = dbuser.price_id;
-        if (dbuser.temp_plan_expiration && dbuser.temp_plan_expiration < unix) {
+        if (dbuser.expiration && dbuser.expiration < unix) {
           try {
-            await database.runQuery(`UPDATE stripe_users SET price_id = NULL, temp_plan_expiration = NULL WHERE user_id = ?`, [dbuser.user_id]);
+            await database.runQuery(`UPDATE stripe_users SET price_id = NULL, expiration = NULL WHERE user_id = ?`, [dbuser.user_id]);
           } catch (e) {
             req.session = null;
             console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Temp Access Price Record", e);
@@ -250,10 +250,10 @@ server.get("/login", async (req, res) => {
     } else {
       req.session.login = true;
       req.session.stripe_id = dbuser.stripe_id;
-      if (dbuser.temp_plan_expiration) { req.session.expiry = dbuser.temp_plan_expiration; }
-      if (dbuser.price_id && dbuser.temp_plan_expiration == null) {
+      if (dbuser.expiration) { req.session.expiry = dbuser.expiration; }
+      if (dbuser.price_id && dbuser.expiration == null) {
         return res.redirect(`/manage`);
-      } else if(dbuser.price_id && dbuser.temp_plan_expiration != null && dbuser.temp_plan_expiration-86400 > unix) {
+      } else if(dbuser.price_id && dbuser.expiration != null && dbuser.expiration-86400 > unix) {
         return res.redirect(`/expiry`);
       } else {
       return res.redirect(`/checkout`);
@@ -269,11 +269,11 @@ server.get("/checkout", async function(req, res) {
   if (!req.session.login || unix > req.session.now+600) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
     return res.redirect(`/manual`);
-  } else if (req.session.manual == 'true' && req.session.expiry === 9999999999) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999999) {
     return res.redirect(`/lifetime-active`);
-  } else if (req.session.manual == 'true' && req.session.expiry === 9999999998) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999998) {
     return res.redirect(`/lifetime-inactive`);
   } else if (req.session.price_id && req.session.expiry-86400 > unix) {
     return res.redirect(`/expiry`);
@@ -322,11 +322,11 @@ server.get("/manage", async function(req, res) {
   if (!req.session.login || unix > req.session.now+600) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' -  Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
     return res.redirect(`/manual`);
-  } else if (req.session.manual == 'true' && req.session.expiry === 9999999999) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999999) {
     return res.redirect(`/lifetime-active`);
-  } else if (req.session.manual == 'true' && req.session.expiry === 9999999998) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999998) {
     return res.redirect(`/lifetime-inactive`);
   } else if (req.session.price_id && req.session.expiry && req.session.expiry-86400 > unix) {
     return res.redirect(`/expiry`);
@@ -367,11 +367,11 @@ server.get("/expiry", async function(req, res) {
   if (!req.session.login || unix > req.session.now+600) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' -   Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.manual == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
     return res.redirect(`/manual`);
-  } else if (req.session.manual == 'true' && req.session.expiry === 9999999999) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999999) {
     return res.redirect(`/lifetime-active`);
-  } else if (req.session.manual == 'true' && req.session.expiry === 9999999998) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999998) {
     return res.redirect(`/lifetime-inactive`);
   } else if (req.session.price_id && !req.session.expiry) {
     return res.redirect(`/manage`);
@@ -411,13 +411,13 @@ server.get("/manual", async function(req, res) {
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   } else if (req.session.price_id && req.session.expiry-86400 > unix) {
     return res.redirect(`/expiry`);
-  } else if (req.session.manual == 'true' && req.session.expiry === 9999999999) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999999) {
     return res.redirect(`/lifetime-active`);
-  } else if (req.session.manual == 'true' && req.session.expiry === 9999999998) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999998) {
     return res.redirect(`/lifetime-inactive`);
   } else if (req.session.price_id && !req.session.expiry) {
     return res.redirect(`/manage`);
-  } else if (!req.session.manual || req.session.manual && req.session.expiry-86400 < unix) {
+  } else if (!req.session.customer_type || req.session.customer_type && req.session.expiry-86400 < unix) {
     return res.redirect(`/checkout`);
   } else {
     let intro = config.pages.manual.manual_intro;
@@ -456,11 +456,11 @@ server.get("/lifetime-active", async function(req, res) {
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   } else if (req.session.price_id && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
     return res.redirect(`/expiry`);
-  } else if (req.session.manual == 'true' && req.session.expiry === 9999999998) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999998) {
     return res.redirect(`/lifetime-inactive`);
   } else if (req.session.price_id && !req.session.expiry) {
     return res.redirect(`/manage`);
-  } else if (!req.session.manual || req.session.manual && req.session.expiry-86400 < unix) {
+  } else if (!req.session.customer_type || req.session.customer_type && req.session.expiry-86400 < unix) {
     return res.redirect(`/checkout`);
   } else {
     let intro = config.pages.lifetime.active_life_intro;
@@ -495,11 +495,11 @@ server.get("/lifetime-inactive", async function(req, res) {
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   } else if (req.session.price_id && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
     return res.redirect(`/expiry`);
-  } else if (req.session.manual == 'true' && req.session.expiry === 9999999999) {
+  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999999) {
     return res.redirect(`/lifetime-active`);
   } else if (req.session.price_id && !req.session.expiry) {
     return res.redirect(`/manage`);
-  } else if (!req.session.manual || req.session.manual && req.session.expiry-86400 < unix) {
+  } else if (!req.session.customer_type || req.session.customer_type && req.session.expiry-86400 < unix) {
     return res.redirect(`/checkout`);
   } else {
     let intro = config.pages.lifetime.inactive_life_intro;
@@ -536,13 +536,13 @@ server.post("/lifetime-toggle", async (req, res) => {
     if (req.body.action == "activate") {
       bot.assignRole(req.session.discord_id, config.discord.lifetime_role);
       bot.removeRole(req.session.discord_id, config.discord.inactive_lifetime_role);
-      database.runQuery('UPDATE stripe_users SET temp_plan_expiration = ? WHERE user_id = ?', [9999999999, req.session.discord_id]);
+      database.runQuery('UPDATE stripe_users SET expiration = ? WHERE user_id = ?', [9999999999, req.session.discord_id]);
       await new Promise(resolve => setTimeout(resolve, 500));
       return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
     } else if (req.body.action == "deactivate") {
       bot.assignRole(req.session.discord_id, config.discord.inactive_lifetime_role);
       bot.removeRole(req.session.discord_id, config.discord.lifetime_role);
-      database.runQuery('UPDATE stripe_users SET temp_plan_expiration = ? WHERE user_id = ?', [9999999998, req.session.discord_id]);
+      database.runQuery('UPDATE stripe_users SET expiration = ? WHERE user_id = ?', [9999999998, req.session.discord_id]);
       await new Promise(resolve => setTimeout(resolve, 500));
       return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
     } else {

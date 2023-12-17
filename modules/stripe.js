@@ -138,11 +138,11 @@ const stripe = {
                 database.runQuery('UPDATE stripe_users SET stripe_id = ? WHERE user_id = ?', [customer.id, customer.description]);
                 db_updated = true;
               } //check and fix ID
-              if (record[0].price_id && record[0].temp_plan_expiration) {
+              if (record[0].price_id && record[0].expiration) {
                 for (let i = 0; i < config.stripe.price_ids.length; i++) {
                   if (record[0].price_id == config.stripe.price_ids[i].id) {
-                    if (config.stripe.price_ids[i].mode == "subscription" || record[0].temp_plan_expiration < unix) {
-                      database.runQuery('UPDATE stripe_users SET price_id = NULL, temp_plan_expiration = NULL WHERE user_id = ?', [customer.description]);
+                    if (config.stripe.price_ids[i].mode == "subscription" || record[0].expiration < unix) {
+                      database.runQuery('UPDATE stripe_users SET price_id = NULL, expiration = NULL WHERE user_id = ?', [customer.description]);
                       db_updated = true;
                     /*} else {*/
                       /* Maybe something about storing, pulling & checking invoice details & expiry calc for temp plans , but probably too much and not needed */
@@ -341,9 +341,9 @@ const stripe = {
         console.info('['+bot.getTime('stamp')+'] [stripe.js] Customer Created Webhook received for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
         user = await database.fetchStripeUser(data.object.description, data.object.id);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(data.object.description);
-        if (user.temp_plan_expiration && user.temp_plan_expiration > 9999999997) {
+        if (user.expiration && user.expiration > 9999999997) {
           return bot.sendEmbed(member, '00FF00', '📋 New Stripe Customer Created! 💰', 'Lifetime Member has logged in for the first time!', config.discord.log_channel);
-        } else if (user.manual == 'true') {
+        } else if (user.customer_type == 'true') {
           return bot.sendEmbed(member, '00FF00', '📋 New Stripe Customer Created! 💰', 'Manual Tracked User has logged in for the first time!', config.discord.log_channel);
         } else {
           return bot.sendEmbed(member, '00FF00', '📋 New Stripe Customer Created! 💰', 'Prospect User has entered the checkout!', config.discord.log_channel);
@@ -431,12 +431,12 @@ const stripe = {
                 if (data.object.mode == 'subscription') {
                   bot.sendDM(member,'✅ Subscription Creation Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
                   bot.sendEmbed(member, '00FF00', '✅ Subscription Creation Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
-                  return database.runQuery('UPDATE stripe_users SET manual = ?, price_id = ?, temp_plan_expiration = ?, tax_rate = ?, charge_id = ?, charges = ? WHERE user_id = ?', ['false', checkout.line_items.data[0].price.id, expiry, tax_rate, charge_id, chargecounter, member.user.id]);
+                  return database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ?, tax_rate = ?, charge_id = ?, charges = ? WHERE user_id = ?', ['false', checkout.line_items.data[0].price.id, expiry, tax_rate, charge_id, chargecounter, member.user.id]);
                 } else if (data.object.mode == 'payment') {
                   bot.sendDM(member,'✅ One-Time Access Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
                   bot.sendEmbed(member, '00FF00', '✅ One-Time Access Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
                   expiry = checkout.payment_intent.latest_charge.created + config.stripe.price_ids[i].expiry;
-                  return database.runQuery('UPDATE stripe_users SET manual = ?, price_id = ?, temp_plan_expiration = ?, tax_rate = ?, charge_id = ?, charges = ? WHERE user_id = ?', ['false', checkout.line_items.data[0].price.id, expiry, tax_rate, charge_id, chargecounter, member.user.id]);
+                  return database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ?, tax_rate = ?, charge_id = ?, charges = ? WHERE user_id = ?', ['false', checkout.line_items.data[0].price.id, expiry, tax_rate, charge_id, chargecounter, member.user.id]);
                 }
               }
             }
@@ -492,7 +492,7 @@ const stripe = {
             for (let i = 0; i < config.stripe.price_ids.length; i++) {
               if (user.price_id == config.stripe.price_ids[i].id) {
                 bot.removeRole(customer.description, config.stripe.price_ids[i].role_id);
-                database.runQuery('UPDATE stripe_users SET price_id = NULL, temp_plan_expiration = NULL, charge_id = NULL WHERE user_id = ?', [user.user_id]);
+                database.runQuery('UPDATE stripe_users SET price_id = NULL, expiration = NULL, charge_id = NULL WHERE user_id = ?', [user.user_id]);
               }
             }
           default:

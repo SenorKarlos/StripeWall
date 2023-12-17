@@ -101,7 +101,7 @@ const object = {
                 return console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to fetch Stripe record.", e);
               }
               if (!customer || customer.deleted == true) {
-                let query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL, temp_plan_expiration = NULL WHERE user_id = ?`;
+                let query = `UPDATE stripe_users SET stripe_id = NULL, price_id = NULL, expiration = NULL WHERE user_id = ?`;
                 let data = [user.user_id];
                 object.runQuery(query, data);
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Stripe Customer ID Invalid/Deleted, removed from Database Record.");
@@ -123,10 +123,10 @@ const object = {
                 }
                 let expiry = null;
                 let deleted = 'Member Left Guild. Deleted Record';
-                if (user.charges || user.temp_plan_expiration > 9999999997) {
-                  if (user.temp_plan_expiration > 9999999997) { expiry = 9999999998; }
+                if (user.charges || user.expiration > 9999999997) {
+                  if (user.expiration > 9999999997) { expiry = 9999999998; }
                   deleted = 'Member Left Guild. Deleted Tokens';
-                  let query = `UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, price_id = NULL, temp_plan_expiration = ?, tax_rate = NULL, charge_id = NULL WHERE user_id = ?`;
+                  let query = `UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, price_id = NULL, expiration = ?, tax_rate = NULL, charge_id = NULL WHERE user_id = ?`;
                   let data = [expiry, user.user_id];
                   await object.runQuery(query, data);
                 } else {
@@ -240,7 +240,7 @@ const object = {
   checkDatabase: async function() {
     console.info("["+bot.getTime("stamp")+"] [database.js] Starting Database Checks.");
     let unix = moment().unix();
-    let query = `SELECT * FROM stripe_users WHERE manual != ?`;
+    let query = `SELECT * FROM stripe_users WHERE customer_type != ?`;
     let data = ['true'];
     await object.db.query(query, data, async function(err, records, fields) {
       if (err) {
@@ -256,7 +256,7 @@ const object = {
             if (member) {                                                // if in the guild
               for (let i = 0; i < config.stripe.price_ids.length; i++) { // check each config price id
                 if (member.roles.cache.has(config.stripe.price_ids[i].role_id)) { // they have a role matching the price being checked
-                  if (!user.stripe_id || user.price_id != config.stripe.price_ids[i].id || user.temp_plan_expiration && user.temp_plan_expiration < unix) { // they don't have a stripe id or the registered price isn't correct or expired
+                  if (!user.stripe_id || user.price_id != config.stripe.price_ids[i].id || user.expiration && user.expiration < unix) { // they don't have a stripe id or the registered price isn't correct or expired
                     bot.removeRole(member.id, config.stripe.price_ids[i].role_id);
                     if (!user.stripe_id) { user.stripe_id = "Not Found"; }
                     console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") found without a Subscription. Removed Role."); // remove and log
@@ -273,13 +273,13 @@ const object = {
                     bot.sendEmbed(member, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
                     if (indexcounter === records.length) { return object.doneDatabase(); }
                   } else if (config.stripe.price_ids[i].mode == 'payment' && user.price_id == config.stripe.price_ids[i].id) { // check for one-time purch roles
-                    if (user.temp_plan_expiration > unix) { //check if expired
+                    if (user.expiration > unix) { //check if expired
                       bot.assignRole(member.id, config.stripe.price_ids[i].role_id); // add & log
                       console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  One-Time User found without Role, Assigned.");
                       bot.sendEmbed(member, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
                       if (indexcounter === records.length) { return object.doneDatabase(); }
                     } else { // give role if clear, remove price and expiry if not
-                      let query = `UPDATE stripe_users SET price_id = NULL, temp_plan_expiration = NULL WHERE user_id = ?`;
+                      let query = `UPDATE stripe_users SET price_id = NULL, expiration = NULL WHERE user_id = ?`;
                       let data = [member.id];
                       await object.runQuery(query, data);
                       console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  One-Time User expired, cleared price and expiry.");
@@ -305,10 +305,10 @@ const object = {
                 }
                 let expiry = null;
                 let deleted = 'Member Left Guild. Deleted Record';
-                if (user.charges || user.temp_plan_expiration > 9999999997) {
+                if (user.charges || user.expiration > 9999999997) {
                   expiry = 9999999998;
                   deleted = 'Member Left Guild. Deleted Tokens';
-                  let query = `UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, price_id = NULL, temp_plan_expiration = ?, tax_rate = NULL, charge_id = NULL WHERE user_id = ?`;
+                  let query = `UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, price_id = NULL, expiration = ?, tax_rate = NULL, charge_id = NULL WHERE user_id = ?`;
                   let data = [expiry, user.user_id];
                   await object.runQuery(query, data);
                 } else {
@@ -374,8 +374,8 @@ const object = {
                 return console.info(err);
               }
               if (record[0]) { //record found
-                if (record[0].manual == 'true') { // skip life/check manual
-                  if (record[0].temp_plan_expiration > unix) {
+                if (record[0].customer_type == 'true') { // skip life/check manual
+                  if (record[0].expiration > unix) {
                     if (!record[0].stripe_id) { record[0].stripe_id = "Not Found"; }
                     console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") Lifetime or Validated Manually Tracked User, Skipping.");
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.checkLifetime(); }
@@ -383,7 +383,7 @@ const object = {
                     if (!record[0].stripe_id) { record[0].stripe_id = "Not Found"; }
                     console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") Manually Tracked User Expired, Removing Role & Flags.");
                     bot.removeRole(member.id, config.stripe.price_ids[i].role_id);
-                    let query = `UPDATE stripe_users SET manual = 'false', temp_plan_expiration = NULL WHERE user_id = ?`;
+                    let query = `UPDATE stripe_users SET customer_type = 'false', expiration = NULL WHERE user_id = ?`;
                     let data = [record[0].user_id];
                     await object.runQuery(query, data);
                     bot.sendDM(member,'Subscription Ended', 'Your subscription has expired. Please sign up again to continue.','FFFF00');
@@ -396,7 +396,7 @@ const object = {
                   console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User found without a Stripe ID, Removed Role.");
                   bot.sendEmbed(member, 'FF0000', 'User found without a Stripe ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                   if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.checkLifetime(); }
-                } else if (!record[0].price_id || config.stripe.price_ids[i].mode == 'payment' && record[0].temp_plan_expiration < unix || record[0].price_id && record[0].price_id != config.stripe.price_ids[i].id) { //no price or temp plan expired or price doesn't belong to role remove
+                } else if (!record[0].price_id || config.stripe.price_ids[i].mode == 'payment' && record[0].expiration < unix || record[0].price_id && record[0].price_id != config.stripe.price_ids[i].id) { //no price or temp plan expired or price doesn't belong to role remove
                   bot.removeRole(member.id, config.stripe.price_ids[i].role_id);
                   console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") User found expired or without/wrong Price ID, Removed Role.");
                   bot.sendEmbed(member, 'FF0000', 'User found expired or without a Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
@@ -429,7 +429,7 @@ const object = {
       }
       let activeUsers = [];
       let inactiveUsers = [];
-      let query = `SELECT * FROM stripe_users WHERE manual = ? AND temp_plan_expiration > ?`;
+      let query = `SELECT * FROM stripe_users WHERE customer_type = ? AND expiration > ?`;
       let data = ['true', 9999999997];
       await object.db.query(query, data, function(err, records, fields) {
         if (err) {
@@ -437,9 +437,9 @@ const object = {
         }
         if (records) {
           records.forEach((user, index) => {
-            if (user.temp_plan_expiration == 9999999999 && user.access_token != 'Left Guild') {
+            if (user.expiration == 9999999999 && user.access_token != 'Left Guild') {
               activeUsers.push(user);
-            } else if (user.temp_plan_expiration == 9999999998 && user.access_token != 'Left Guild') {
+            } else if (user.expiration == 9999999998 && user.access_token != 'Left Guild') {
               inactiveUsers.push(user);
             }
           });
@@ -462,7 +462,7 @@ const object = {
       activeNoDB.forEach((member, index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
-          let query = `INSERT INTO stripe_users (user_id, user_name, manual, temp_plan_expiration) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), manual=VALUES(manual), price_id = NULL, temp_plan_expiration=VALUES(temp_plan_expiration), tax_rate = NULL, charge_id = NULL`;
+          let query = `INSERT INTO stripe_users (user_id, user_name, customer_type, expiration) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), customer_type=VALUES(customer_type), price_id = NULL, expiration=VALUES(expiration), tax_rate = NULL, charge_id = NULL`;
           let data = [member.user.id, member.user.username, 'true', 9999999999];
           object.runQuery(query, data);
           if (indexcounter === activeNoDB.length && activeNoRole.length === 0 && inactiveNoDB.length === 0 && inactiveNoRole.length === 0 && removeActiveRole.length === 0) { return object.doneRoles(); }
@@ -484,7 +484,7 @@ const object = {
       inactiveNoDB.forEach((member, index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
-          let query = `INSERT INTO stripe_users (user_id, user_name, manual, temp_plan_expiration) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), manual=VALUES(manual), price_id = NULL, temp_plan_expiration=VALUES(temp_plan_expiration), tax_rate = NULL, charge_id = NULL`;
+          let query = `INSERT INTO stripe_users (user_id, user_name, customer_type, expiration) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), customer_type=VALUES(customer_type), price_id = NULL, expiration=VALUES(expiration), tax_rate = NULL, charge_id = NULL`;
           let data = [member.user.id, member.user.username, 'true', 9999999998];
           object.runQuery(query, data);
           if (indexcounter === inactiveNoDB.length && inactiveNoRole.length === 0 && removeActiveRole.length === 0) { return object.doneRoles(); }
