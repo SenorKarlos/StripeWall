@@ -24,16 +24,10 @@ bot.getTime = (type) => {
 //------------------------------------------------------------------------------
 //  SEND EMBED FUNCTION
 //------------------------------------------------------------------------------
-bot.sendEmbed = (member, color, title, body, channel_id) => {
-  if (!member.nickname) {
-    nickname = member.user.username;
-  } else {
-    nickname = member.nickname;
-  }
-
+bot.sendEmbed = (username, user_id, color, title, body, channel_id) => {
   let embed = new Discord.MessageEmbed()
     .setColor(color)
-    .setAuthor(nickname+' ('+member.user.id+')')
+    .setAuthor(username+' ('+user_id+')')
     .setTitle(title)
     .setDescription(body)
     .setFooter(config.server.site_name+' | '+bot.getTime('full'));

@@ -70,14 +70,14 @@ const oauth2 = {
     });
   },
 //------------------------------------------------------------------------------
-//  JOIN THE USER TO YOUR GUILD
+//  JOIN THE USER TO A GUILD
 //------------------------------------------------------------------------------
   joinGuild: function(access_token, guild_id, user_id) {
     bot.users.fetch(user_id).then(async (user) => {
       let options = {
         'accessToken': access_token
       }
-      bot.guilds.cache.get(config.discord.guild_id).addMember(user, options);
+      bot.guilds.cache.get(guild_id).addMember(user, options);
       return 'success';
     });
   }

@@ -34,22 +34,34 @@ server.use(
   })
 );
 //------------------------------------------------------------------------------
+// LANDING PAGE
+//------------------------------------------------------------------------------
+
+// Render the main page with /login link
+
+//------------------------------------------------------------------------------
 //  LOGIN/OAUTH FLOW
 //------------------------------------------------------------------------------
 server.get("/login", async (req, res) => {
   let time_now = moment().valueOf();
   let unix = moment().unix();
   req.session.now = unix;
-  req.session.login = null;
   req.session.discord_id = null;
+  req.session.username = null;
   req.session.email = null;
   req.session.access_token = null;
   req.session.refresh_token = null;
   req.session.token_expiration = null;
-  req.session.user_name = null;
-  req.session.expiry = null;
+  req.session.customer_type = null;
+  req.session.terms_reviewed = null;
+  req.session.zones_reviewed = null;
   req.session.stripe_id = null;
   req.session.price_id = null;
+  req.session.expiration = null;
+  req.session.total_spend = null;
+  req.session.total_votes = null;
+  req.session.zone_votes = null;
+  req.session.login = false;
   if (!req.query.code) {
 //------------------------------------------------------------------------------
 //  SEND TO DISCORD OAUTH2
@@ -80,22 +92,25 @@ server.get("/login", async (req, res) => {
       console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to fetch User from Oauth2", e);
       return res.redirect(`/error`);
     }
-    if (bot.blacklisted.indexOf(req.session.discord_id) >= 0) {
-      try {
-        await bot.users.fetch(user.id).then(user => {
-          member = {
-            user: user
-          };
-        });
+    req.session.discord_id = user.id;
+    req.session.username = user.username;
+    req.session.email = user.email;
+    req.session.access_token = data.access_token;
+    req.session.refresh_token = data.refresh_token;
+    req.session.token_expiration = (unix+data.expires_in);
+    try {
+      if (bot.blacklisted.indexOf(req.session.discord_id) >= 0) {
         console.info("["+bot.getTime("stamp")+"] [wall.js] Blacklist Login Attempt.");
-        bot.sendEmbed(member, "FF0000", "Blacklist Login Attempt", "", config.discord.log_channel);
+        bot.sendEmbed(req.session.username, req.session.discord_id, "FF0000", "Blacklist Login Attempt", "", config.discord.log_channel);
         return res.redirect(`/blocked`);
-      } catch (e) {
-        req.session = null;
-        console.info("["+bot.getTime("stamp")+"] [wall.js] Blacklist Login Attempt - Failed to fetch Discord User for blocklist logging", e);
-        return res.redirect(`/blocked`);
+      } else { 
+        console.info("["+bot.getTime("stamp")+"] [wall.js] User Passed Blacklist");
       }
-    } else { console.info("["+bot.getTime("stamp")+"] [wall.js] User Passed Blacklist"); }
+    } catch (e) {
+      req.session = null;
+      console.info("["+bot.getTime("stamp")+"] [wall.js] Blacklist Check Failure", e);
+      return res.redirect(`/error`)
+    }
     try {
       member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.id);
     } catch (e) {
@@ -112,26 +127,9 @@ server.get("/login", async (req, res) => {
         console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to join User to Guild", e);
         return res.redirect(`/error`);
       }
-      try {
-        await bot.users.fetch(user.id).then(user => {
-          member = {
-            user: user
-          };
-        });
-      } catch (e) {
-        req.session = null;
-        console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to fetch Discord User (after Join Guild)", e);
-        return res.redirect(`/error`);
-      }
     }
-    req.session.discord_id = user.id;
-    req.session.email = user.email;
-    req.session.access_token = data.access_token;
-    req.session.refresh_token = data.refresh_token;
-    req.session.token_expiration = (unix+data.expires_in);
-    req.session.user_name = member.user.username;
     try {
-      database.runQuery(`INSERT INTO stripe_users (user_id, user_name, email, access_token, refresh_token, token_expiration) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), email=VALUES(email), access_token=VALUES(access_token), refresh_token=VALUES(refresh_token), token_expiration=VALUES(token_expiration)`, [req.session.discord_id, member.user.username, req.session.email, data.access_token, data.refresh_token, req.session.token_expiration]);
+      database.runQuery(`INSERT INTO stripe_users (user_id, user_name, email, access_token, refresh_token, token_expiration) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), email=VALUES(email), access_token=VALUES(access_token), refresh_token=VALUES(refresh_token), token_expiration=VALUES(token_expiration)`, [req.session.discord_id, req.session.username, req.session.email, req.session.access_token, req.session.refresh_token, req.session.token_expiration]);
     } catch (e) {
       req.session = null;
       console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Insert/Update Database User", e);
@@ -144,45 +142,20 @@ server.get("/login", async (req, res) => {
       console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to fetch Database User", e);
       return res.redirect(`/error`);
     }
-    let dbChecked = false;
-    try {
-      if (req.session.email != dbuser.email || req.session.user_name != dbuser.user_name) {
-        await database.runQuery(`UPDATE stripe_users SET email = ?, user_name = ? WHERE user_id = ?`, [req.session.email, req.session.user_name, dbuser.user_id]);
-        console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.user_name+ ","+req.session.email+" Formerly: "+dbuser.user_name+","+dbuser.email);
-        dbChecked = true;
-      } else {
-        dbChecked = true;
-      }
-    } catch (e) {
-      req.session = null;
-      console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to update Database User", e);
-      return res.redirect(`/error`);
-    }
-    let stripeChecked = false;
+    req.session.customer_type = dbuser.customer_type;
+    req.session.terms_reviewed = dbuser.terms_reviewed;
+    req.session.zones_reviewed = dbuser.zones_reviewed;
     let customer;
     if (!dbuser.stripe_id) {
       try {
-        customer = await stripe.customer.create(req.session.user_name, req.session.discord_id, req.session.email);
+        customer = await stripe.customer.create(req.session.username, req.session.discord_id, req.session.email);
         dbuser.stripe_id = customer.id;
-        stripeChecked = true;
       } catch (e) {
         req.session = null;
         console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Create Stripe Customer", e);
         return res.redirect(`/error`);
       }
-    }
-    if (dbuser.customer_type == 'true' && dbuser.expiration-86400 > unix) {
-      req.session.expiry = parseFloat(dbuser.expiration);
-      req.session.customer_type = true;
-      req.session.login = true;
-      if (req.session.expiry === 9999999999) {
-        return res.redirect(`/lifetime-active`);
-      } else if (req.session.expiry === 9999999998) {
-        return res.redirect(`/lifetime-inactive`);
-      } else {
-        return res.redirect(`/manual`);
-      }
-    } else if (dbuser.stripe_id && !customer) {
+    } else {
       try {
         customer = await stripe.customer.fetch(dbuser.stripe_id);
       } catch (e) {
@@ -191,36 +164,38 @@ server.get("/login", async (req, res) => {
         return res.redirect(`/error`);
       }
     }
-    if (stripeChecked == false && customer && customer != 'ERROR') {
-      console.info("["+bot.getTime("stamp")+"] [wall.js] Found Stripe Info for User "+req.session.user_name);
+    req.session.stripe_id = dbuser.stripe_id;
+    if (dbuser.expiration) { req.session.expiration = dbuser.expiration; }
+    if (customer && customer != 'ERROR') {
+      console.info("["+bot.getTime("stamp")+"] [wall.js] Found Stripe Info for User "+req.session.username);
       if (req.session.discord_id != customer.description) {
-        bot.sendDM(member, "Error Logging In", "Please contact administration for further assistance", "FF0000");
-        bot.sendEmbed(member, "FF0000", "User ID Discrepancy Found", "User "+dbuser.user_name+"'s Discord ID ("+req.session.discord_id+") not found on matched Stripe Record ("+customer.id+","+customer.description+")", config.discord.log_channel);
+        bot.sendEmbed(req.session.username, req.session.discord_id, "FF0000", "User ID Discrepancy Found", "User "+dbuser.user_name+"'s Discord ID ("+req.session.discord_id+") not found on matched Stripe Record ("+customer.id+","+customer.description+")", config.discord.log_channel);
         return res.redirect(`/error`);
       }
-      if (req.session.email != customer.email || req.session.user_name != customer.name) {
+      if (req.session.email != customer.email || req.session.username != customer.name) {
         try {
-          await stripe.customer.update(dbuser.stripe_id, req.session.email, req.session.user_name);
+          await stripe.customer.update(dbuser.stripe_id, req.session.email, req.session.username);
         } catch (e) {
           req.session = null;
           console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Stripe Customer", e);
           return res.redirect(`/error`);
         }
       }
-      if (customer.subscriptions.total_count > 0) {
+      if (customer.subscriptions && customer.subscriptions.total_count > 0) {
         for (let i = 0; i < config.stripe.price_ids.length; i++) {
           for (let x = 0; x < customer.subscriptions.data.length; x++) {
             if (customer.subscriptions.data[x].status == 'active' && customer.subscriptions.data[x].items.data[0].price.id && customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
-              if (!dbuser.price_id || dbuser.price_id && dbuser.price_id != customer.subscriptions.data[x].items.data[0].price.id) {
+              if (!dbuser.price_id || dbuser.price_id && dbuser.price_id != customer.subscriptions.data[x].items.data[0].price.id || !dbuser.expiration || dbuser.expiration && dbuser.expiration != customer.subscriptions.data[x].current_period_end) {
                 try {
-                  await database.runQuery(`UPDATE stripe_users SET price_id = ? WHERE user_id = ?`, [customer.subscriptions.data[x].items.data[0].price.id, dbuser.user_id]);
+                  await database.runQuery(`UPDATE stripe_users SET price_id = ?, expiration = ? WHERE user_id = ?`, [customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, dbuser.user_id]);
                 } catch (e) {
                   req.session = null;
                   console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Subscription Price Record", e);
                   return res.redirect(`/error`);
                 }
-                console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.user_name+ ","+req.session.email+"(Invalid/Missing Plan Updated)");
                 dbuser.price_id = customer.subscriptions.data[x].items.data[0].price.id;
+                dbuser.expiration = customer.subscriptions.data[x].current_period_end;
+                console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.username+ ","+req.session.email+"(Invalid/Missing Plan Updated)");
               }
             }
           }
@@ -236,78 +211,38 @@ server.get("/login", async (req, res) => {
             console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Temp Access Price Record", e);
             return res.redirect(`/error`);
           }
-          console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.user_name+ ","+req.session.email+"(Invalid Plan Deleted)");
           dbuser.price_id = null;
+          dbuser.expiration = null;
           req.session.price_id = null;
+          req.session.expiration = null;
+          console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.username+ ","+req.session.email+"(Invalid Plan Deleted)");
         }
       }
-      stripeChecked = true;
     }
-    if (dbChecked == false || stripeChecked == false) {
-      bot.sendDM(member, "Error Logging In", "Please contact administration for further assistance", "FF0000");
-      bot.sendEmbed(member, "FF0000", "Login Flow Error", "User "+req.session.user_name+" DB Pass = "+dbChecked+", Stripe Pass = "+stripeChecked, config.discord.log_channel);
-      return res.redirect(`/error`);
-    } else {
-      req.session.login = true;
-      req.session.stripe_id = dbuser.stripe_id;
-      if (dbuser.expiration) { req.session.expiry = dbuser.expiration; }
-      if (dbuser.price_id && dbuser.expiration == null) {
-        return res.redirect(`/manage`);
-      } else if(dbuser.price_id && dbuser.expiration != null && dbuser.expiration-86400 > unix) {
-        return res.redirect(`/expiry`);
-      } else {
-      return res.redirect(`/checkout`);
-      }
-    }
+  if (dbuser.total_spend) { req.session.total_spend = dbuser.total_spend; }
+  if (dbuser.total_votes) { req.session.total_votes = dbuser.total_votes; }
+  if (dbuser.zone_votes) { req.session.zone_votes = dbuser.total_votes; } // Not sure if doing work here yet, or just reading and setting
+  req.session.login = true;
+  //Page selection logic here
+  
   }
 });
 //------------------------------------------------------------------------------
-//  PRODUCTS CHECKOUT PAGE
+//  NEW USER PAGE
 //------------------------------------------------------------------------------
-server.get("/checkout", async function(req, res) {
-  let unix = moment().unix();
-  if (!req.session.login || unix > req.session.now+600) {
-    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
-    return res.redirect(`/manual`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999999) {
-    return res.redirect(`/lifetime-active`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999998) {
-    return res.redirect(`/lifetime-inactive`);
-  } else if (req.session.price_id && req.session.expiry-86400 > unix) {
-    return res.redirect(`/expiry`);
-  } else if (req.session.price_id && !req.session.expiry) {
-    return res.redirect(`/manage`);
-  } else {
-    let checkoutbody = '';
-    for (let i = 0; i < config.stripe.price_ids.length; i++) {
-      if (config.stripe.price_ids[i].mode != 'legacy') {
-        let pricehtml = '<div><h2><font color="'+config.pages.general.title_color+'">'+config.stripe.price_ids[i].title+'</font></h2><p><strong><font color="'+config.pages.general.text_color+'">'+config.stripe.price_ids[i].text+'</font></strong></p><form action="/create-checkout-session" method="post"><input type="hidden" name="priceID" value="'+config.stripe.price_ids[i].id+'" /><input type="hidden" name="mode" value="'+config.stripe.price_ids[i].mode+'" /><input type="hidden" name="customerID" value="'+req.session.stripe_id+'" /><button type="submit">Continue</button></form></div><br><hr>';
-        checkoutbody = checkoutbody+pricehtml;
-      }
-    }
-    let radar_script = '';
-    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-    return res.render(__dirname+"/html/checkout.html", {
-      welcome: config.pages.checkout.welcome,
-      terms: config.pages.general.terms,
-      disclaimer: config.pages.general.disclaimer,
-      warning: config.pages.general.warning,
-      background: config.pages.general.background,
-      outer_background: config.pages.general.outer_background,
-      border_color: config.pages.general.border_color,
-      title_color: config.pages.general.title_color,
-      text_color: config.pages.general.text_color,
-      checkoutbody: checkoutbody,
-      site_name: config.server.site_name,
-      site_url: config.server.site_url,
-      radar_script: radar_script,
-      user_name: req.session.user_name,
-      email: req.session.email
-    });
-  }
-});
+
+//------------------------------------------------------------------------------
+//  EXISTING USER PAGE
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+//  ZONE MAP PAGE
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+//  WORKER RESULT PAGE
+//------------------------------------------------------------------------------
+
 //------------------------------------------------------------------------------
 //  STRIPE CHECKOUT
 //------------------------------------------------------------------------------
@@ -315,214 +250,10 @@ server.post("/create-checkout-session", async (req, res) => {
   return stripe.sessions.checkout(req, res);
 });
 //------------------------------------------------------------------------------
-//  CUSTOMER PORTAL PAGE
-//------------------------------------------------------------------------------
-server.get("/manage", async function(req, res) {
-  let unix = moment().unix();
-  if (!req.session.login || unix > req.session.now+600) {
-    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' -  Sending to Login");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
-    return res.redirect(`/manual`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999999) {
-    return res.redirect(`/lifetime-active`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999998) {
-    return res.redirect(`/lifetime-inactive`);
-  } else if (req.session.price_id && req.session.expiry && req.session.expiry-86400 > unix) {
-    return res.redirect(`/expiry`);
-  } else if (!req.session.price_id) {
-    return res.redirect(`/checkout`);
-  } else {
-    let radar_script = '';
-    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-    return res.render(__dirname+"/html/manage.html", {
-      terms: config.pages.general.terms,
-      disclaimer: config.pages.general.disclaimer,
-      warning: config.pages.general.warning,
-      background: config.pages.general.background,
-      outer_background: config.pages.general.outer_background,
-      border_color: config.pages.general.border_color,
-      title_color: config.pages.general.title_color,
-      text_color: config.pages.general.text_color,
-      customerID: req.session.stripe_id,
-      site_name: config.server.site_name,
-      site_url: config.server.site_url,
-      radar_script: radar_script,
-      user_name: req.session.user_name,
-      email: req.session.email
-    });
-  }
-});
-//------------------------------------------------------------------------------
 //  STRIPE CUSTOMER PORTAL
 //------------------------------------------------------------------------------
 server.post("/create-customer-portal-session", async (req, res) => {
   return stripe.sessions.portal(req, res);
-});
-//------------------------------------------------------------------------------
-//  ACTIVE ONE-TIME CUSTOMER PAGE
-//------------------------------------------------------------------------------
-server.get("/expiry", async function(req, res) {
-  let unix = moment().unix();
-  if (!req.session.login || unix > req.session.now+600) {
-    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' -   Sending to Login");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
-    return res.redirect(`/manual`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999999) {
-    return res.redirect(`/lifetime-active`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999998) {
-    return res.redirect(`/lifetime-inactive`);
-  } else if (req.session.price_id && !req.session.expiry) {
-    return res.redirect(`/manage`);
-  } else if (!req.session.price_id) {
-    return res.redirect(`/checkout`);
-  } else {
-    let expiry = new Date(req.session.expiry * 1000).toLocaleString(config.server.tz_locale, { timeZone: config.server.time_zone });
-    let radar_script = '';
-    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-    return res.render(__dirname+"/html/expiry.html", {
-      terms: config.pages.general.terms,
-      disclaimer: config.pages.general.disclaimer,
-      warning: config.pages.general.warning,
-      background: config.pages.general.background,
-      outer_background: config.pages.general.outer_background,
-      border_color: config.pages.general.border_color,
-      title_color: config.pages.general.title_color,
-      text_color: config.pages.general.text_color,
-      customerID: req.session.stripe_id,
-      expiry: expiry,
-      tz_text: config.server.tz_text,
-      site_name: config.server.site_name,
-      site_url: config.server.site_url,
-      radar_script: radar_script,
-      user_name: req.session.user_name,
-      email: req.session.email
-    });
-  }
-});
-//------------------------------------------------------------------------------
-//  MANUAL USER PAGE
-//------------------------------------------------------------------------------
-server.get("/manual", async function(req, res) {
-  let unix = moment().unix();
-  if (!req.session.login || unix > req.session.now+600) {
-    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' - Sending to Login");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.price_id && req.session.expiry-86400 > unix) {
-    return res.redirect(`/expiry`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999999) {
-    return res.redirect(`/lifetime-active`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999998) {
-    return res.redirect(`/lifetime-inactive`);
-  } else if (req.session.price_id && !req.session.expiry) {
-    return res.redirect(`/manage`);
-  } else if (!req.session.customer_type || req.session.customer_type && req.session.expiry-86400 < unix) {
-    return res.redirect(`/checkout`);
-  } else {
-    let intro = config.pages.manual.manual_intro;
-    let exp_text = config.pages.manual.manual_text;
-    let expiry = new Date(req.session.expiry * 1000).toLocaleString(config.server.tz_locale, { timeZone: config.server.time_zone });
-    let radar_script = '';
-    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-    return res.render(__dirname+"/html/manual.html", {
-      terms: config.pages.general.terms,
-      disclaimer: config.pages.general.disclaimer,
-      warning: config.pages.general.warning,
-      background: config.pages.general.background,
-      outer_background: config.pages.general.outer_background,
-      border_color: config.pages.general.border_color,
-      title_color: config.pages.general.title_color,
-      text_color: config.pages.general.text_color,
-      expiry: expiry,
-      tz_text: config.server.tz_text,
-      intro: intro,
-      exp_text: exp_text,
-      site_name: config.server.site_name,
-      site_url: config.server.site_url,
-      radar_script: radar_script,
-      user_name: req.session.user_name,
-      email: req.session.email
-    });
-  }
-});
-//------------------------------------------------------------------------------
-//  ACTIVE LIFETIME USER PAGE
-//------------------------------------------------------------------------------
-server.get("/lifetime-active", async function(req, res) {
-  let unix = moment().unix();
-  if (!req.session.login || unix > req.session.now+600) {
-    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' - Sending to Login");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.price_id && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
-    return res.redirect(`/expiry`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999998) {
-    return res.redirect(`/lifetime-inactive`);
-  } else if (req.session.price_id && !req.session.expiry) {
-    return res.redirect(`/manage`);
-  } else if (!req.session.customer_type || req.session.customer_type && req.session.expiry-86400 < unix) {
-    return res.redirect(`/checkout`);
-  } else {
-    let intro = config.pages.lifetime.active_life_intro;
-    let radar_script = '';
-    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-    return res.render(__dirname+"/html/lifetime-active.html", {
-      terms: config.pages.general.terms,
-      disclaimer: config.pages.general.disclaimer,
-      warning: config.pages.general.warning,
-      background: config.pages.general.background,
-      outer_background: config.pages.general.outer_background,
-      border_color: config.pages.general.border_color,
-      title_color: config.pages.general.title_color,
-      text_color: config.pages.general.text_color,
-      intro: intro,
-      site_name: config.server.site_name,
-      site_url: config.server.site_url,
-      radar_script: radar_script,
-      user_name: req.session.user_name,
-      user_id: req.session.discord_id,
-      email: req.session.email
-    });
-  }
-});
-//------------------------------------------------------------------------------
-//  INACTIVE LIFETIME USER PAGE
-//------------------------------------------------------------------------------
-server.get("/lifetime-inactive", async function(req, res) {
-  let unix = moment().unix();
-  if (!req.session.login || unix > req.session.now+600) {
-    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' - Sending to Login");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.price_id && req.session.expiry-86400 > unix && req.session.expiry < 9999999997) {
-    return res.redirect(`/expiry`);
-  } else if (req.session.customer_type == 'true' && req.session.expiry === 9999999999) {
-    return res.redirect(`/lifetime-active`);
-  } else if (req.session.price_id && !req.session.expiry) {
-    return res.redirect(`/manage`);
-  } else if (!req.session.customer_type || req.session.customer_type && req.session.expiry-86400 < unix) {
-    return res.redirect(`/checkout`);
-  } else {
-    let intro = config.pages.lifetime.inactive_life_intro;
-    let radar_script = '';
-    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-    return res.render(__dirname+"/html/lifetime-inactive.html", {
-      terms: config.pages.general.terms,
-      disclaimer: config.pages.general.disclaimer,
-      warning: config.pages.general.warning,
-      background: config.pages.general.background,
-      outer_background: config.pages.general.outer_background,
-      border_color: config.pages.general.border_color,
-      title_color: config.pages.general.title_color,
-      text_color: config.pages.general.text_color,
-      intro: intro,
-      site_name: config.server.site_name,
-      site_url: config.server.site_url,
-      radar_script: radar_script,
-      user_name: req.session.user_name,
-      user_id: req.session.discord_id,
-      email: req.session.email
-    });
-  }
 });
 //------------------------------------------------------------------------------
 //  LIFETIME ACTIVE TOGGLE
@@ -586,6 +317,257 @@ server.get("/error", async function(req, res) {
     site_url: config.server.site_url,
     radar_script: radar_script
   });
+});
+//------------------------------------------------------------------------------
+//  PRODUCTS CHECKOUT PAGE (TO BE DELETED)
+//------------------------------------------------------------------------------
+server.get("/checkout", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration-86400 > unix && req.session.expiration < 9999999997) {
+    return res.redirect(`/manual`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999999) {
+    return res.redirect(`/lifetime-active`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999998) {
+    return res.redirect(`/lifetime-inactive`);
+  } else if (req.session.price_id && req.session.expiration-86400 > unix) {
+    return res.redirect(`/expiry`);
+  } else if (req.session.price_id && !req.session.expiration) {
+    return res.redirect(`/manage`);
+  } else {
+    let checkoutbody = '';
+    for (let i = 0; i < config.stripe.price_ids.length; i++) {
+      if (config.stripe.price_ids[i].mode != 'legacy') {
+        let pricehtml = '<div><h2><font color="'+config.pages.general.title_color+'">'+config.stripe.price_ids[i].title+'</font></h2><p><strong><font color="'+config.pages.general.text_color+'">'+config.stripe.price_ids[i].text+'</font></strong></p><form action="/create-checkout-session" method="post"><input type="hidden" name="priceID" value="'+config.stripe.price_ids[i].id+'" /><input type="hidden" name="mode" value="'+config.stripe.price_ids[i].mode+'" /><input type="hidden" name="customerID" value="'+req.session.stripe_id+'" /><button type="submit">Continue</button></form></div><br><hr>';
+        checkoutbody = checkoutbody+pricehtml;
+      }
+    }
+    let radar_script = '';
+    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+    return res.render(__dirname+"/html/checkout.html", {
+      welcome: config.pages.checkout.welcome,
+      terms: config.pages.general.terms,
+      disclaimer: config.pages.general.disclaimer,
+      warning: config.pages.general.warning,
+      background: config.pages.general.background,
+      outer_background: config.pages.general.outer_background,
+      border_color: config.pages.general.border_color,
+      title_color: config.pages.general.title_color,
+      text_color: config.pages.general.text_color,
+      checkoutbody: checkoutbody,
+      site_name: config.server.site_name,
+      site_url: config.server.site_url,
+      radar_script: radar_script,
+      user_name: req.session.username,
+      email: req.session.email
+    });
+  }
+});
+//------------------------------------------------------------------------------
+//  CUSTOMER PORTAL PAGE  (TO BE DELETED)
+//------------------------------------------------------------------------------
+server.get("/manage", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' -  Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration-86400 > unix && req.session.expiration < 9999999997) {
+    return res.redirect(`/manual`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999999) {
+    return res.redirect(`/lifetime-active`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999998) {
+    return res.redirect(`/lifetime-inactive`);
+  } else if (req.session.price_id && req.session.expiration && req.session.expiration-86400 > unix) {
+    return res.redirect(`/expiry`);
+  } else if (!req.session.price_id) {
+    return res.redirect(`/checkout`);
+  } else {
+    let radar_script = '';
+    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+    return res.render(__dirname+"/html/manage.html", {
+      terms: config.pages.general.terms,
+      disclaimer: config.pages.general.disclaimer,
+      warning: config.pages.general.warning,
+      background: config.pages.general.background,
+      outer_background: config.pages.general.outer_background,
+      border_color: config.pages.general.border_color,
+      title_color: config.pages.general.title_color,
+      text_color: config.pages.general.text_color,
+      customerID: req.session.stripe_id,
+      site_name: config.server.site_name,
+      site_url: config.server.site_url,
+      radar_script: radar_script,
+      user_name: req.session.username,
+      email: req.session.email
+    });
+  }
+});
+//------------------------------------------------------------------------------
+//  ACTIVE ONE-TIME CUSTOMER PAGE  (TO BE DELETED)
+//------------------------------------------------------------------------------
+server.get("/expiry", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' -   Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration-86400 > unix && req.session.expiration < 9999999997) {
+    return res.redirect(`/manual`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999999) {
+    return res.redirect(`/lifetime-active`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999998) {
+    return res.redirect(`/lifetime-inactive`);
+  } else if (req.session.price_id && !req.session.expiration) {
+    return res.redirect(`/manage`);
+  } else if (!req.session.price_id) {
+    return res.redirect(`/checkout`);
+  } else {
+    let expiry = new Date(req.session.expiration * 1000).toLocaleString(config.server.tz_locale, { timeZone: config.server.time_zone });
+    let radar_script = '';
+    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+    return res.render(__dirname+"/html/expiry.html", {
+      terms: config.pages.general.terms,
+      disclaimer: config.pages.general.disclaimer,
+      warning: config.pages.general.warning,
+      background: config.pages.general.background,
+      outer_background: config.pages.general.outer_background,
+      border_color: config.pages.general.border_color,
+      title_color: config.pages.general.title_color,
+      text_color: config.pages.general.text_color,
+      customerID: req.session.stripe_id,
+      expiry: expiry,
+      tz_text: config.server.tz_text,
+      site_name: config.server.site_name,
+      site_url: config.server.site_url,
+      radar_script: radar_script,
+      user_name: req.session.username,
+      email: req.session.email
+    });
+  }
+});
+//------------------------------------------------------------------------------
+//  MANUAL USER PAGE (TO BE DELETED)
+//------------------------------------------------------------------------------
+server.get("/manual", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' - Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.price_id && req.session.expiration-86400 > unix) {
+    return res.redirect(`/expiry`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999999) {
+    return res.redirect(`/lifetime-active`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999998) {
+    return res.redirect(`/lifetime-inactive`);
+  } else if (req.session.price_id && !req.session.expiration) {
+    return res.redirect(`/manage`);
+  } else if (!req.session.customer_type || req.session.customer_type && req.session.expiration-86400 < unix) {
+    return res.redirect(`/checkout`);
+  } else {
+    let intro = config.pages.manual.manual_intro;
+    let exp_text = config.pages.manual.manual_text;
+    let expiry = new Date(req.session.expiration * 1000).toLocaleString(config.server.tz_locale, { timeZone: config.server.time_zone });
+    let radar_script = '';
+    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+    return res.render(__dirname+"/html/manual.html", {
+      terms: config.pages.general.terms,
+      disclaimer: config.pages.general.disclaimer,
+      warning: config.pages.general.warning,
+      background: config.pages.general.background,
+      outer_background: config.pages.general.outer_background,
+      border_color: config.pages.general.border_color,
+      title_color: config.pages.general.title_color,
+      text_color: config.pages.general.text_color,
+      expiry: expiry,
+      tz_text: config.server.tz_text,
+      intro: intro,
+      exp_text: exp_text,
+      site_name: config.server.site_name,
+      site_url: config.server.site_url,
+      radar_script: radar_script,
+      user_name: req.session.username,
+      email: req.session.email
+    });
+  }
+});
+//------------------------------------------------------------------------------
+//  ACTIVE LIFETIME USER PAGE (TO BE DELETED)
+//------------------------------------------------------------------------------
+server.get("/lifetime-active", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' - Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.price_id && req.session.expiration-86400 > unix && req.session.expiration < 9999999997) {
+    return res.redirect(`/expiry`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999998) {
+    return res.redirect(`/lifetime-inactive`);
+  } else if (req.session.price_id && !req.session.expiration) {
+    return res.redirect(`/manage`);
+  } else if (!req.session.customer_type || req.session.customer_type && req.session.expiration-86400 < unix) {
+    return res.redirect(`/checkout`);
+  } else {
+    let intro = config.pages.lifetime.active_life_intro;
+    let radar_script = '';
+    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+    return res.render(__dirname+"/html/lifetime-active.html", {
+      terms: config.pages.general.terms,
+      disclaimer: config.pages.general.disclaimer,
+      warning: config.pages.general.warning,
+      background: config.pages.general.background,
+      outer_background: config.pages.general.outer_background,
+      border_color: config.pages.general.border_color,
+      title_color: config.pages.general.title_color,
+      text_color: config.pages.general.text_color,
+      intro: intro,
+      site_name: config.server.site_name,
+      site_url: config.server.site_url,
+      radar_script: radar_script,
+      user_name: req.session.username,
+      user_id: req.session.discord_id,
+      email: req.session.email
+    });
+  }
+});
+//------------------------------------------------------------------------------
+//  INACTIVE LIFETIME USER PAGE (TO BE DELETED)
+//------------------------------------------------------------------------------
+server.get("/lifetime-inactive", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+600) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' - Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  } else if (req.session.price_id && req.session.expiration-86400 > unix && req.session.expiration < 9999999997) {
+    return res.redirect(`/expiry`);
+  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999999) {
+    return res.redirect(`/lifetime-active`);
+  } else if (req.session.price_id && !req.session.expiration) {
+    return res.redirect(`/manage`);
+  } else if (!req.session.customer_type || req.session.customer_type && req.session.expiration-86400 < unix) {
+    return res.redirect(`/checkout`);
+  } else {
+    let intro = config.pages.lifetime.inactive_life_intro;
+    let radar_script = '';
+    if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+    return res.render(__dirname+"/html/lifetime-inactive.html", {
+      terms: config.pages.general.terms,
+      disclaimer: config.pages.general.disclaimer,
+      warning: config.pages.general.warning,
+      background: config.pages.general.background,
+      outer_background: config.pages.general.outer_background,
+      border_color: config.pages.general.border_color,
+      title_color: config.pages.general.title_color,
+      text_color: config.pages.general.text_color,
+      intro: intro,
+      site_name: config.server.site_name,
+      site_url: config.server.site_url,
+      radar_script: radar_script,
+      user_name: req.session.username,
+      user_id: req.session.discord_id,
+      email: req.session.email
+    });
+  }
 });
 //------------------------------------------------------------------------------
 //  SRIPE WEBHOOKS
