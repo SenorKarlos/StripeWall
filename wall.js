@@ -46,21 +46,6 @@ server.get("/login", async (req, res) => {
   let time_now = moment().valueOf();
   let unix = moment().unix();
   req.session.now = unix;
-  req.session.discord_id = null;
-  req.session.username = null;
-  req.session.email = null;
-  req.session.access_token = null;
-  req.session.refresh_token = null;
-  req.session.token_expiration = null;
-  req.session.customer_type = null;
-  req.session.terms_reviewed = null;
-  req.session.zones_reviewed = null;
-  req.session.stripe_id = null;
-  req.session.price_id = null;
-  req.session.expiration = null;
-  req.session.total_spend = null;
-  req.session.total_votes = null;
-  req.session.zone_votes = null;
   req.session.login = false;
   if (!req.query.code) {
 //------------------------------------------------------------------------------
@@ -82,6 +67,7 @@ server.get("/login", async (req, res) => {
       console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to fetch Tokens", e);
       return res.redirect(`/error`);
     }
+    let token_expiration = (unix+data.expires_in);
     try {
       user = await oauth2.fetchUser(data.access_token);
       if (user.response) {
@@ -92,16 +78,10 @@ server.get("/login", async (req, res) => {
       console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to fetch User from Oauth2", e);
       return res.redirect(`/error`);
     }
-    req.session.discord_id = user.id;
-    req.session.username = user.username;
-    req.session.email = user.email;
-    req.session.access_token = data.access_token;
-    req.session.refresh_token = data.refresh_token;
-    req.session.token_expiration = (unix+data.expires_in);
     try {
-      if (bot.blacklisted.indexOf(req.session.discord_id) >= 0) {
+      if (bot.blacklisted.indexOf(user.id) >= 0) {
         console.info("["+bot.getTime("stamp")+"] [wall.js] Blacklist Login Attempt.");
-        bot.sendEmbed(req.session.username, req.session.discord_id, "FF0000", "Blacklist Login Attempt", "", config.discord.log_channel);
+        bot.sendEmbed(user.username, user.id, "FF0000", "Blacklist Login Attempt", "", config.discord.log_channel);
         return res.redirect(`/blocked`);
       } else { 
         console.info("["+bot.getTime("stamp")+"] [wall.js] User Passed Blacklist");
@@ -129,26 +109,24 @@ server.get("/login", async (req, res) => {
       }
     }
     try {
-      database.runQuery(`INSERT INTO stripe_users (user_id, user_name, email, access_token, refresh_token, token_expiration) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), email=VALUES(email), access_token=VALUES(access_token), refresh_token=VALUES(refresh_token), token_expiration=VALUES(token_expiration)`, [req.session.discord_id, req.session.username, req.session.email, req.session.access_token, req.session.refresh_token, req.session.token_expiration]);
+      database.runQuery(`INSERT INTO stripe_users (user_id, user_name, email, access_token, refresh_token, token_expiration) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), email=VALUES(email), access_token=VALUES(access_token), refresh_token=VALUES(refresh_token), token_expiration=VALUES(token_expiration)`, [user.id, user.username, user.email, data.access_token, data.refresh_token, token_expiration]);
     } catch (e) {
       req.session = null;
       console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Insert/Update Database User", e);
       return res.redirect(`/error`);
     }
+    await new Promise(resolve => setTimeout(resolve, 500));
     try {
-      dbuser = await database.fetchUser(req.session.discord_id);
+      dbuser = await database.fetchUser(user.id);
     } catch (e) {
       req.session = null;
       console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to fetch Database User", e);
       return res.redirect(`/error`);
     }
-    req.session.customer_type = dbuser.customer_type;
-    req.session.terms_reviewed = dbuser.terms_reviewed;
-    req.session.zones_reviewed = dbuser.zones_reviewed;
     let customer;
     if (!dbuser.stripe_id) {
       try {
-        customer = await stripe.customer.create(req.session.username, req.session.discord_id, req.session.email);
+        customer = await stripe.customer.create(dbuser.user_name, dbuser.user_id, dbuser.email);
         dbuser.stripe_id = customer.id;
       } catch (e) {
         req.session = null;
@@ -164,17 +142,16 @@ server.get("/login", async (req, res) => {
         return res.redirect(`/error`);
       }
     }
-    req.session.stripe_id = dbuser.stripe_id;
-    if (dbuser.expiration) { req.session.expiration = dbuser.expiration; }
     if (customer && customer != 'ERROR') {
-      console.info("["+bot.getTime("stamp")+"] [wall.js] Found Stripe Info for User "+req.session.username);
-      if (req.session.discord_id != customer.description) {
-        bot.sendEmbed(req.session.username, req.session.discord_id, "FF0000", "User ID Discrepancy Found", "User "+dbuser.user_name+"'s Discord ID ("+req.session.discord_id+") not found on matched Stripe Record ("+customer.id+","+customer.description+")", config.discord.log_channel);
+      console.info("["+bot.getTime("stamp")+"] [wall.js] Found Stripe Info for User "+dbuser.user_name);
+      if (dbuser.user_id != customer.description) {
+        bot.sendEmbed(dbuser.user_name, dbuser.user_id, "FF0000", "User ID Discrepancy Found", "User "+dbuser.user_name+"'s Discord ID ("+dbuser.user_id+") not found on matched Stripe Record ("+customer.id+","+customer.description+")", config.discord.log_channel);
+        req.session = null;
         return res.redirect(`/error`);
       }
-      if (req.session.email != customer.email || req.session.username != customer.name) {
+      if (dbuser.email != customer.email || dbuser.user_name != customer.name) {
         try {
-          await stripe.customer.update(dbuser.stripe_id, req.session.email, req.session.username);
+          await stripe.customer.update(dbuser.stripe_id, dbuser.email, dbuser.user_name);
         } catch (e) {
           req.session = null;
           console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Stripe Customer", e);
@@ -187,44 +164,42 @@ server.get("/login", async (req, res) => {
             if (customer.subscriptions.data[x].status == 'active' && customer.subscriptions.data[x].items.data[0].price.id && customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
               if (!dbuser.price_id || dbuser.price_id && dbuser.price_id != customer.subscriptions.data[x].items.data[0].price.id || !dbuser.expiration || dbuser.expiration && dbuser.expiration != customer.subscriptions.data[x].current_period_end) {
                 try {
-                  await database.runQuery(`UPDATE stripe_users SET price_id = ?, expiration = ? WHERE user_id = ?`, [customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, dbuser.user_id]);
+                  await database.runQuery(`UPDATE stripe_users SET customer_type = 'subscriber', price_id = ?, expiration = ? WHERE user_id = ?`, [customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, dbuser.user_id]);
                 } catch (e) {
                   req.session = null;
                   console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Subscription Price Record", e);
                   return res.redirect(`/error`);
                 }
+                dbuser.customer_type = 'subscriber'
                 dbuser.price_id = customer.subscriptions.data[x].items.data[0].price.id;
                 dbuser.expiration = customer.subscriptions.data[x].current_period_end;
-                console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.username+ ","+req.session.email+"(Invalid/Missing Plan Updated)");
+                console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+dbuser.user_name+ ","+dbuser.user_id+"(Invalid/Missing Plan Updated)");
               }
             }
           }
         }
       }
-      if (dbuser.price_id) {
-        req.session.price_id = dbuser.price_id;
+      if (dbuser.price_id || dbuser.expiration) {
         if (dbuser.expiration && dbuser.expiration < unix) {
           try {
-            await database.runQuery(`UPDATE stripe_users SET price_id = NULL, expiration = NULL WHERE user_id = ?`, [dbuser.user_id]);
+            await database.runQuery(`UPDATE stripe_users SET customer_type = 'inactive', price_id = NULL, expiration = NULL WHERE user_id = ?`, [dbuser.user_id]);
           } catch (e) {
             req.session = null;
             console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Temp Access Price Record", e);
             return res.redirect(`/error`);
           }
+          dbuser.customer_type = 'inactive';
           dbuser.price_id = null;
           dbuser.expiration = null;
-          req.session.price_id = null;
-          req.session.expiration = null;
-          console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+req.session.username+ ","+req.session.email+"(Invalid Plan Deleted)");
+          console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+dbuser.user_name+ ","+dbuser.user_id+"(Invalid Plan Deleted)");
         }
       }
     }
-  if (dbuser.total_spend) { req.session.total_spend = dbuser.total_spend; }
-  if (dbuser.total_votes) { req.session.total_votes = dbuser.total_votes; }
-  if (dbuser.zone_votes) { req.session.zone_votes = dbuser.total_votes; } // Not sure if doing work here yet, or just reading and setting
-  req.session.login = true;
-  //Page selection logic here
-  
+    req.session.login = true;
+    if (dbuser.customer_type == 'new' || dbuser.terms_reviewed == 'false' || dbuser.zones_reviewed == 'false') {
+      return res.redirect(`/new`);
+    } else {
+      return res.redirect(`/users`);
   }
 });
 //------------------------------------------------------------------------------
