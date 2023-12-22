@@ -36,9 +36,23 @@ server.use(
 //------------------------------------------------------------------------------
 // LANDING PAGE
 //------------------------------------------------------------------------------
-
-// Render the main page with /login link
-
+server.get("/", async function(req, res) {
+  let radar_script = '';
+  if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+  return res.render(__dirname+"/html/home.html", {
+    terms: config.pages.general.terms,
+    disclaimer: config.pages.general.disclaimer,
+    warning: config.pages.general.warning,
+    background: config.pages.general.background,
+    outer_background: config.pages.general.outer_background,
+    border_color: config.pages.general.border_color,
+    title_color: config.pages.general.title_color,
+    text_color: config.pages.general.text_color,
+    site_name: config.server.site_name,
+    site_url: config.server.site_url,
+    radar_script: radar_script
+  });
+});
 //------------------------------------------------------------------------------
 //  LOGIN/OAUTH FLOW
 //------------------------------------------------------------------------------
@@ -200,24 +214,109 @@ server.get("/login", async (req, res) => {
       return res.redirect(`/new`);
     } else {
       return res.redirect(`/users`);
+    }
   }
 });
 //------------------------------------------------------------------------------
 //  NEW USER PAGE
 //------------------------------------------------------------------------------
-
+server.get("/new", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+1800) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  }
+  let radar_script = '';
+  if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+  return res.render(__dirname+"/html/new.html", {
+    terms: config.pages.general.terms,
+    disclaimer: config.pages.general.disclaimer,
+    warning: config.pages.general.warning,
+    background: config.pages.general.background,
+    outer_background: config.pages.general.outer_background,
+    border_color: config.pages.general.border_color,
+    title_color: config.pages.general.title_color,
+    text_color: config.pages.general.text_color,
+    site_name: config.server.site_name,
+    site_url: config.server.site_url,
+    radar_script: radar_script
+  });
+});
 //------------------------------------------------------------------------------
 //  EXISTING USER PAGE
 //------------------------------------------------------------------------------
-
+server.get("/users", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+1800) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  }
+  let radar_script = '';
+  if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+  return res.render(__dirname+"/html/users.html", {
+    terms: config.pages.general.terms,
+    disclaimer: config.pages.general.disclaimer,
+    warning: config.pages.general.warning,
+    background: config.pages.general.background,
+    outer_background: config.pages.general.outer_background,
+    border_color: config.pages.general.border_color,
+    title_color: config.pages.general.title_color,
+    text_color: config.pages.general.text_color,
+    site_name: config.server.site_name,
+    site_url: config.server.site_url,
+    radar_script: radar_script
+  });
+});
 //------------------------------------------------------------------------------
 //  ZONE MAP PAGE
 //------------------------------------------------------------------------------
-
+server.get("/zones", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+1800) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  }
+  let radar_script = '';
+  if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+  return res.render(__dirname+"/html/zones.html", {
+    terms: config.pages.general.terms,
+    disclaimer: config.pages.general.disclaimer,
+    warning: config.pages.general.warning,
+    background: config.pages.general.background,
+    outer_background: config.pages.general.outer_background,
+    border_color: config.pages.general.border_color,
+    title_color: config.pages.general.title_color,
+    text_color: config.pages.general.text_color,
+    site_name: config.server.site_name,
+    site_url: config.server.site_url,
+    radar_script: radar_script
+  });
+});
 //------------------------------------------------------------------------------
 //  WORKER RESULT PAGE
 //------------------------------------------------------------------------------
-
+server.get("/workers", async function(req, res) {
+  let unix = moment().unix();
+  if (!req.session.login || unix > req.session.now+1800) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
+    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  }
+  let radar_script = '';
+  if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+  return res.render(__dirname+"/html/workers.html", {
+    terms: config.pages.general.terms,
+    disclaimer: config.pages.general.disclaimer,
+    warning: config.pages.general.warning,
+    background: config.pages.general.background,
+    outer_background: config.pages.general.outer_background,
+    border_color: config.pages.general.border_color,
+    title_color: config.pages.general.title_color,
+    text_color: config.pages.general.text_color,
+    site_name: config.server.site_name,
+    site_url: config.server.site_url,
+    radar_script: radar_script
+  });
+});
 //------------------------------------------------------------------------------
 //  STRIPE CHECKOUT
 //------------------------------------------------------------------------------
@@ -298,7 +397,7 @@ server.get("/error", async function(req, res) {
 //------------------------------------------------------------------------------
 server.get("/checkout", async function(req, res) {
   let unix = moment().unix();
-  if (!req.session.login || unix > req.session.now+600) {
+  if (!req.session.login || unix > req.session.now+1800) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   } else if (req.session.customer_type == 'true' && req.session.expiration-86400 > unix && req.session.expiration < 9999999997) {
