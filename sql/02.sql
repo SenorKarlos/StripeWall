@@ -9,7 +9,6 @@ ALTER TABLE `stripe_users`
 
 CREATE TABLE `service_zones` (
 	`zone_name` VARCHAR(255) NOT NULL COLLATE 'utf8mb4_unicode_ci',
-	`zone_type` VARCHAR(255) NOT NULL COLLATE 'utf8mb4_unicode_ci',
 	`parent_zone` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',
 	`total_votes` INT(10) NOT NULL DEFAULT NULL,
 	`calc_workers` INT(10) NOT NULL DEFAULT NULL,

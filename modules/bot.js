@@ -12,7 +12,7 @@ const config = require("../files/config.json");
 //  TIME FUNCTION
 //------------------------------------------------------------------------------
 bot.getTime = (type) => {
-  switch (type) {
+  switch(type){
     case 'full':
       return moment().format('dddd, MMMM Do, h:mm A');
     case 'stamp':

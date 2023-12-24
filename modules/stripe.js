@@ -108,59 +108,71 @@ const stripe = {
             let stripe_updated = false;
             let db_updated = false;
             if (err) { return console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+')', err.message); }
-            if (record.length > 0) {
-              if (!record[0].charges) {
-                let hasHistory = [];
-                for await (const charges of stripe_js.charges.list({ customer: customer.id, limit: 100 })) {
-                  hasHistory.push(charges);
-                }
-                if (hasHistory[0]) {
-                  database.runQuery('UPDATE stripe_users SET charges = ? WHERE user_id = ?', [hasHistory.length, customer.description]);
-                  stripe_updated = true;
-                }
+            if (record.length = 0) {
+              try {
+                database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, email) VALUES (?, ?, ?, ?)', [customer.name, customer.description, customer.id, customer.email]);
+                console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database. This user may require Manual Temp Plan updating');
+                bot.sendEmbed(customer.name, customer.description, "FF0000", "Stripe.JS Maintenance Log", "Inserted User into Database. This user may require Manual Data updating", config.discord.log_channel);
+                let data = {};
+                data.user_name = customer.name;
+                data.user_id = customer.description;
+                data.email = customer.email;
+                data.stripe_id = customer.id;
+                record.splice(0, 0, data);
+              } catch (e) {
+                console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Unable to insert User into Database, ', e);
+                bot.sendEmbed(customer.name, customer.description, "FF0000", "Stripe.JS Maintenance Log", "Unable to insert User into Database, "+e, config.discord.log_channel);
+                if (indexcounter === parse.length) { return stripe.customer.doneParse(); }
               }
-              if (customer.name != record[0].user_name || customer.email != record[0].email) {
-                await stripe.customer.update(customer.id, record[0].email, record[0].user_name);
-                stripe_updated = true;
+            }
+            if (!record[0].charges) {
+              let hasHistory = [];
+              for await (const charges of stripe_js.charges.list({ customer: customer.id, limit: 100 })) {
+                hasHistory.push(charges);
               }
-              if (customer.subscriptions.data.length > 0) {
-                for (let x = 0; x < customer.subscriptions.data.length; x++) {
-                  for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                    if (customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
-                      if (customer.id != record[0].stripe_id || customer.subscriptions.data[x].items.data[0].price.id != record[0].price_id && customer.subscriptions.data[x].status == 'active') {
-                        database.runQuery('UPDATE stripe_users SET stripe_id = ?, price_id = ? WHERE user_id = ?', [customer.id, customer.subscriptions.data[x].items.data[0].price.id, customer.description]);
-                        db_updated = true;
-                      }
-                    } // dead end of customer price vs config price
-                  } // dead end for every price in config
-                } // dead end for each sub in customer array (usually 1)
-              } else if (customer.id != record[0].stripe_id) {
-                database.runQuery('UPDATE stripe_users SET stripe_id = ? WHERE user_id = ?', [customer.id, customer.description]);
+              if (hasHistory[0]) {
+                database.runQuery('UPDATE stripe_users SET charges = ? WHERE user_id = ?', [hasHistory.length, customer.description]);
                 db_updated = true;
-              } //check and fix ID
-              if (record[0].price_id && record[0].expiration) {
+              }
+            }
+            if (customer.name != record[0].user_name || customer.email != record[0].email) {
+              await stripe.customer.update(customer.id, record[0].email, record[0].user_name);
+              stripe_updated = true;
+            }
+            if (customer.id != record[0].stripe_id) {
+              database.runQuery('UPDATE stripe_users SET stripe_id = ? WHERE user_id = ?', [customer.id, customer.description]);
+              db_updated = true;
+            } //check and fix ID
+            if (customer.subscriptions.data.length > 0) {
+              for (let x = 0; x < customer.subscriptions.data.length; x++) {
                 for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                  if (record[0].price_id == config.stripe.price_ids[i].id) {
-                    if (config.stripe.price_ids[i].mode == "subscription" || record[0].expiration < unix) {
-                      database.runQuery('UPDATE stripe_users SET price_id = NULL, expiration = NULL WHERE user_id = ?', [customer.description]);
+                  if (customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
+                    if (customer.subscriptions.data[x].items.data[0].price.id != record[0].price_id && customer.subscriptions.data[x].status == 'active') {
+                      database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ? WHERE user_id = ?', ['subscriber', customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, customer.description]);
                       db_updated = true;
-                    /*} else {*/
-                      /* Maybe something about storing, pulling & checking invoice details & expiry calc for temp plans , but probably too much and not needed */
-                    } //end if mode is sub or temp plan expired
-                  } // end if record price matches config price
-                } // dead end for each price in config
-              } // end if db price not null
-            } else { // end of in DB
-              database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, email) VALUES (?, ?, ?, ?)', [customer.name, customer.description, customer.id, customer.email]);
-              console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database. This user may require Manual Temp Plan updating');
-              if (indexcounter === parse.length) { return stripe.customer.doneParse(); }
-            } //end not in db
+                    }
+                  } // dead end of customer price vs config price
+                } // dead end for every price in config
+              } // dead end for each sub in customer array (usually 1)
+            }
+            if (record[0].price_id && record[0].expiration) {
+              for (let i = 0; i < config.stripe.price_ids.length; i++) {
+                if (record[0].price_id == config.stripe.price_ids[i].id) {
+                  if (config.stripe.price_ids[i].mode == "subscription" || record[0].expiration < unix) {
+                    database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = NULL, expiration = NULL WHERE user_id = ?', ['inactive', customer.description]);
+                    db_updated = true;
+                  /*} else {*/
+                    /* Maybe something about storing, pulling & checking invoice details & expiry calc for temp plans , but probably too much and not needed */
+                  } //end if mode is sub or temp plan expired
+                } // end if record price matches config price
+              } // dead end for each price in config
+            } // end if db price not null
             let log_start = '['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+')';
             let log_db_up = ' Updated Stripe IDs';
             let log_db_ver = ' Verified Stripe IDs';
             let log_str_up = ' Updated Stripe Info';
             let log_str_ver = ' Verified Stripe Info';
-            switch (true) {
+            switch(true){
               case (stripe_updated && db_updated):
                 console.info(log_start+log_db_up+' &'+log_str_up);
                 if (indexcounter === parse.length) { return stripe.customer.doneParse(); }
@@ -183,7 +195,7 @@ const stripe = {
     },
     doneParse: async function() {
       console.info("["+bot.getTime("stamp")+"] [stripe.js] Stripe Customer Sync Complete, proceeding to Database checks.");
-      return database.checkDatabase();
+      return database.checkDatabaseRoles();
     }
   },
 //------------------------------------------------------------------------------
@@ -193,7 +205,7 @@ const stripe = {
 //------------------------------------------------------------------------------
 //  CANCEL A SUSBCRIPTION
 //------------------------------------------------------------------------------
-    cancel: function(member, subscription_id){
+    cancel: function(username, user_id, subscription_id){
       return new Promise(function(resolve) {
         stripe_js.subscriptions.del(
           subscription_id,
@@ -202,9 +214,8 @@ const stripe = {
               console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Canceling Subscription.', err.message);
               return resolve(null);
             } else{
-              bot.sendEmbed(member, 'FF0000', 'Subscription Cancellation', '', config.discord.log_channel);
-              bot.sendDM(member,'Subscription Cancellation', 'Your subscription has been cancelled due to leaving the Server.','FFFF00');
-              console.info("["+bot.getTime("stamp")+"] [stripe.js] "+member.user.tag+"'s subscription has been cancelled due to leaving the Server.");
+              bot.sendEmbed(username, user_id, 'FF0000', 'Subscription Cancellation', '', config.discord.log_channel);
+              console.info("["+bot.getTime("stamp")+"] [stripe.js] "+username+"'s subscription has been cancelled due to leaving the Server.");
               return resolve(confirmation);
             }
         });
