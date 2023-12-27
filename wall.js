@@ -481,22 +481,12 @@ server.get("/checkout", async function(req, res) {
 //------------------------------------------------------------------------------
 server.get("/manage", async function(req, res) {
   let unix = moment().unix();
-  if (!req.session.login || unix > req.session.now+600) {
+  if (!req.session.login || unix > req.session.now+1800) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' -  Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else if (req.session.customer_type == 'true' && req.session.expiration-86400 > unix && req.session.expiration < 9999999997) {
-    return res.redirect(`/manual`);
-  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999999) {
-    return res.redirect(`/lifetime-active`);
-  } else if (req.session.customer_type == 'true' && req.session.expiration === 9999999998) {
-    return res.redirect(`/lifetime-inactive`);
-  } else if (req.session.price_id && req.session.expiration && req.session.expiration-86400 > unix) {
-    return res.redirect(`/expiry`);
-  } else if (!req.session.price_id) {
-    return res.redirect(`/checkout`);
   } else {
   var dbuser = await database.fetchUser(req.session.discord_id);
-  if (dbuser.customer_type == 'new' || dbuser.terms_reviewed == 'false') {
+  if (dbuser.terms_reviewed == 'false') {
     return res.redirect(`/new`);
   }
   if (dbuser.zones_reviewed == 'false') {

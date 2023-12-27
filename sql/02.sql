@@ -5,7 +5,7 @@ ALTER TABLE `stripe_users`
 	CHANGE COLUMN `temp_plan_expiration` `expiration` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci' AFTER `price_id`,
 	ADD COLUMN `total_spend` FLOAT NULL DEFAULT NULL AFTER `charges`,
 	ADD COLUMN `total_votes` INT(10) NULL DEFAULT NULL AFTER `total_spend`,
-	ADD COLUMN `zone_votes` LONGTEXT NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci' AFTER `total_votes`;
+	ADD COLUMN `zone_votes` JSON NULL DEFAULT NULL AFTER `total_votes`;
 
 CREATE TABLE `service_zones` (
 	`zone_name` VARCHAR(255) NOT NULL COLLATE 'utf8mb4_unicode_ci',

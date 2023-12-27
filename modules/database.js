@@ -107,7 +107,7 @@ checkTermsReviewed: function(user_id) {
 //------------------------------------------------------------------------------
 updateZoneSelection: function(user_id, selection, zonediff) {
   return new Promise(function(resolve) {
-    let query = `UPDATE stripe_users SET zone_selection = ? , zones_reviewed = ? WHERE user_id = ?`;
+    let query = `UPDATE stripe_users SET zone_votes = ? , zones_reviewed = ? WHERE user_id = ?`;
     let data = [selection, 'true', user_id];
     object.db.query(query, data, async function(err, record, fields) {
       if (err) {

@@ -1,6 +1,6 @@
 <%- include('./includes/head.ejs') %>
 <% var available = total = user.total_votes;
-var zones = user.zone_selection;
+var zones = user.zone_votes;
 for(var i=0; i < zones.length; i++) {
     available -= zones[i].votes;
 }
