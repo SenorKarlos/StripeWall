@@ -1,7 +1,7 @@
 var bot;
 const axios = require('axios');
 const moment = require('moment');
-const config = require("../files/config.json");
+const config = require("../config/config.json");
 //------------------------------------------------------------------------------
 //  VARIABLES
 //------------------------------------------------------------------------------

@@ -7,7 +7,7 @@ const bot = new Discord.Client({
   messageCacheLifetime: 1,
   messageSweepInterval: 1
 });
-const config = require("../files/config.json");
+const config = require("../config/config.json");
 //------------------------------------------------------------------------------
 //  TIME FUNCTION
 //------------------------------------------------------------------------------

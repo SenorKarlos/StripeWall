@@ -1,7 +1,7 @@
 var database, bot;
 const axios = require('axios');
 const moment = require('moment');
-const config = require("../files/config.json");
+const config = require("../config/config.json");
 const stripe_js = require('stripe')(config.stripe.live_sk, {
   apiVersion: '2022-11-15',
 });

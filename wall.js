@@ -8,7 +8,7 @@ const bot = require(__dirname+"/modules/bot.js");
 const oauth2 = require(__dirname+"/modules/oauth2.js");
 const stripe = require(__dirname+"/modules/stripe.js");
 const database = require(__dirname+"/modules/database.js");
-const config = require(__dirname+"/files/config.json");
+const config = require(__dirname+"/config/config.json");
 
 //------------------------------------------------------------------------------
 //  SERVER CONFIGURATIONS
@@ -22,7 +22,7 @@ server.use(cookieSession({
   maxAge: sessionAge,
 }));
 server.use(bodyParser.urlencoded({
-  extended: false
+  extended: true
 }));
 server.use(
   express.json({

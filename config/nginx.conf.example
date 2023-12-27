@@ -1,0 +1,11 @@
+server {
+
+	location / {
+        proxy_pass http://localhost:7777/;
+    }
+
+    location /discord {
+        rewrite ^/discord(.*) https://discord.gg/INVITE permanent;
+    }
+        
+}

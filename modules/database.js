@@ -1,7 +1,7 @@
 var stripe, bot, oauth2;
 const mysql = require('mysql2');
 const moment = require('moment');
-const config = require("../files/config.json");
+const config = require("../config/config.json");
 const object = {
 //------------------------------------------------------------------------------
 //  DATABASE CONNECTION
