@@ -22,7 +22,7 @@ server.use(cookieSession({
   maxAge: sessionAge,
 }));
 server.use(bodyParser.urlencoded({
-  extended: true
+  extended: false
 }));
 server.use(
   express.json({
@@ -38,8 +38,9 @@ server.use(
 //------------------------------------------------------------------------------
 server.get("/", async function(req, res) {
   let radar_script = '';
+ 
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-  return res.render(__dirname+"/html/home.html", {
+  return res.render(__dirname+"/html/main.ejs", {
     terms: config.pages.general.terms,
     disclaimer: config.pages.general.disclaimer,
     warning: config.pages.general.warning,
@@ -50,7 +51,8 @@ server.get("/", async function(req, res) {
     text_color: config.pages.general.text_color,
     site_name: config.server.site_name,
     site_url: config.server.site_url,
-    radar_script: radar_script
+    radar_script: radar_script,
+    pageTitle: 'landing'
   });
 });
 //------------------------------------------------------------------------------
@@ -213,7 +215,7 @@ server.get("/login", async (req, res) => {
     if (dbuser.customer_type == 'new' || dbuser.terms_reviewed == 'false' || dbuser.zones_reviewed == 'false') {
       return res.redirect(`/new`);
     } else {
-      return res.redirect(`/users`);
+      return res.redirect(`/manage`);
     }
   }
 });
@@ -224,11 +226,11 @@ server.get("/new", async function(req, res) {
   let unix = moment().unix();
   if (!req.session.login || unix > req.session.now+1800) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+   return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   }
   let radar_script = '';
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-  return res.render(__dirname+"/html/new.html", {
+  return res.render(__dirname+"/html/terms.ejs", {
     terms: config.pages.general.terms,
     disclaimer: config.pages.general.disclaimer,
     warning: config.pages.general.warning,
@@ -239,13 +241,22 @@ server.get("/new", async function(req, res) {
     text_color: config.pages.general.text_color,
     site_name: config.server.site_name,
     site_url: config.server.site_url,
-    radar_script: radar_script
+    radar_script: radar_script,
+    userid: req.session.discord_id,
+    username: req.session.user_name,
+    pageTitle: 'new',
+    terms_reviewed: 'true'
   });
 });
+server.post("/new", async function(req,res){
+  const userid = req.body.userid;
+  await database.termsReviewed(userid);
+  res.redirect('/zonemap');
+})
 //------------------------------------------------------------------------------
 //  EXISTING USER PAGE
 //------------------------------------------------------------------------------
-server.get("/users", async function(req, res) {
+server.get("/new", async function(req, res) {
   let unix = moment().unix();
   if (!req.session.login || unix > req.session.now+1800) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
@@ -270,15 +281,22 @@ server.get("/users", async function(req, res) {
 //------------------------------------------------------------------------------
 //  ZONE MAP PAGE
 //------------------------------------------------------------------------------
-server.get("/zones", async function(req, res) {
+server.get("/zonemap", async function(req, res) {
   let unix = moment().unix();
+
   if (!req.session.login || unix > req.session.now+1800) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   }
+  var dbuser = await database.fetchUser(req.session.discord_id);
+  if (dbuser.customer_type == 'new' || dbuser.terms_reviewed == 'false') {
+    return res.redirect(`/new`);
+  }
   let radar_script = '';
+  let zones = await database.fetchZones();
+
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-  return res.render(__dirname+"/html/zones.html", {
+  return res.render(__dirname+"/html/zonemap.ejs", {
     terms: config.pages.general.terms,
     disclaimer: config.pages.general.disclaimer,
     warning: config.pages.general.warning,
@@ -289,9 +307,23 @@ server.get("/zones", async function(req, res) {
     text_color: config.pages.general.text_color,
     site_name: config.server.site_name,
     site_url: config.server.site_url,
-    radar_script: radar_script
+    radar_script: radar_script,
+    user: dbuser,
+    zones: zones
+
   });
 });
+
+server.post("/zonemap", async function(req,res){
+  const userid = req.body.userid;
+  const selection = req.body.selection;
+  const reviewed = req.body.zonesreviewed;
+  await database.updateZoneSelection(userid, selection);
+  if(reviewed == 'true')
+    res.redirect('/zonemap');
+  else
+    res.redirect('/manage');
+})
 //------------------------------------------------------------------------------
 //  WORKER RESULT PAGE
 //------------------------------------------------------------------------------
@@ -440,7 +472,7 @@ server.get("/checkout", async function(req, res) {
   }
 });
 //------------------------------------------------------------------------------
-//  CUSTOMER PORTAL PAGE  (TO BE DELETED)
+//  CUSTOMER PORTAL PAGE
 //------------------------------------------------------------------------------
 server.get("/manage", async function(req, res) {
   let unix = moment().unix();
@@ -458,9 +490,16 @@ server.get("/manage", async function(req, res) {
   } else if (!req.session.price_id) {
     return res.redirect(`/checkout`);
   } else {
+  var dbuser = await database.fetchUser(req.session.discord_id);
+  if (dbuser.customer_type == 'new' || dbuser.terms_reviewed == 'false') {
+    return res.redirect(`/new`);
+  }
+  if (dbuser.zones_reviewed == 'false') {
+    return res.redirect(`/zonemap`);
+  }
     let radar_script = '';
     if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-    return res.render(__dirname+"/html/manage.html", {
+    return res.render(__dirname+"/html/manage.ejs", {
       terms: config.pages.general.terms,
       disclaimer: config.pages.general.disclaimer,
       warning: config.pages.general.warning,
@@ -473,11 +512,24 @@ server.get("/manage", async function(req, res) {
       site_name: config.server.site_name,
       site_url: config.server.site_url,
       radar_script: radar_script,
-      user_name: req.session.username,
-      email: req.session.email
+      user: dbuser
     });
-  }
+  //}
 });
+
+server.post("/manage", async function(req,res){
+  const userid = req.body.userid;
+  const selection = req.body.selection;
+  var zonediff = req.body.zonedifferences;
+  zonediff = zonediff.split('|')
+  await database.updateZoneSelection(userid, selection);
+  for(var i = 0 ; i < zonediff.length ; i++)
+  {
+    await database.updateTotalVotes(zonediff[i]);
+    await database.updateParentVotes(zonediff[i]);
+  }
+  res.redirect('/manage');
+})
 //------------------------------------------------------------------------------
 //  ACTIVE ONE-TIME CUSTOMER PAGE  (TO BE DELETED)
 //------------------------------------------------------------------------------

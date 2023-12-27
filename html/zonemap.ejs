@@ -1,0 +1,142 @@
+<%- include('./includes/head.ejs') %>
+<% var zoneSelection = user.zone_selection;
+var userzones = []; 
+for(var i = 0 ; i < zoneSelection.length ; i++){
+    userzones.push(zoneSelection[i].zone_name);
+} 
+ %>
+
+<style>
+    .column-4 {
+        float: left;
+        display: inline;
+        width: 21%;
+        height: 100px;
+        padding: 10px;
+        margin:5px;
+        border-color: black;
+        border-style: solid;
+        background-color: grey;
+        word-wrap: break-word;
+        overflow:auto;
+        cursor: pointer;
+        }
+    .rcorners1 {
+        border-radius: 30px;
+        border: 5px solid grey;
+        padding: 30px;
+        min-width:50px!important;
+        max-width:99.99%!important;
+        margin: 50px;
+        transition: width 0.25s;
+        min-height:50px!important;
+        max-height:99.99%!important;
+        box-shadow:  0 0 20px  rga(0,0,0,0.6);
+        -moz-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        -webkit-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        -o-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        background: linear-gradient(to bottom right, #00c9db, #28a745);
+    }
+    .content {
+      max-width: 480px;
+      margin: auto;
+      text-align: center;
+    }
+    .fineprint {
+      font-size: 8pt;
+    }
+    body {
+        margin: 50px auto;
+        background-color: black;
+        text-align: center;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .cornerbutton {
+        position:absolute;
+        bottom:0;
+        right:0;
+    }
+  </style>
+<div class="rcorners1 background">
+    <center>
+      <div>
+        <div>
+            <br>
+          <h1><font color="black">Service Zone Information </font></h1>
+          <% if(user.zones_reviewed == 'false') { %>
+            <h3><font color="black">You must select at least one zone before proceeding</font></h3>
+        <% } %>
+          <p><strong><font color="black">Select District to see Zones</font></strong></p>
+        </div>
+        <div>
+            <% var parentids = [];
+            for(var i=0; i<zones.length; i++) {
+                if(zones[i].parent_zone === null) { 
+                   parentids.push(zones[i].zone_name);
+                    %>
+            <div class="column-4" onclick="showZones('<%= zones[i].zone_name %>')">
+                <h4><%= zones[i].zone_name %></h4>
+            </div>
+            <% } 
+            } %>
+        </div>
+        <div style="clear: both;"></div>
+        <br>
+        <br>
+        <hr>
+        <form id="zoneForm" method="POST">
+            <input type="hidden" name='selection' id='selection' value="">          
+            <input type="hidden" name='userid' id='userid' value="<%= user.user_id %>">
+            <input type="hidden" name='zonesreviewed' value="<%= user.zones_reviewed %>">
+            <% for(var i=0; i < parentids.length; i++) { %>
+            <div class="zones" id="zone<%= parentids[i] %>" style="display:none;">
+            <% for(var j=0; j<zones.length; j++) { 
+                if(zones[j].parent_zone == parentids[i] ) { 
+                %>
+                <div style="float:left; width: 100%">
+                    <div style="display:inline-block;position:relative;" class="column-4">
+                        <h4><%= zones[j].zone_name %></h4>
+                        <% if(userzones.includes(zones[j].zone_name) == false)
+                        { %>
+                        <input type="button" class="cornerbutton" value="Add Zone" onclick="addZone('<%= zones[j].zone_name %>', '<%= zones[j].parent_name %>')"/>
+                        <% } %>
+                    </div>
+                    <span style="float: left; margin-top:15px;">Active Users: 3<br>
+                        Zone Votes: <%= zones[j].total_votes %><br>
+                        Assigned Workers: <%= zones[j].assigned_workers %>
+                    </span>
+                </div>
+                <% } 
+            } %>
+            </div>
+        <% } %>
+        </form>
+       <div style="clear: both;"></div>
+    </div>     
+    </center>
+</div>
+<script>
+    function showZones(id)
+    {
+        var divsToHide = document.getElementsByClassName("zones"); //divsToHide is an array
+        for(var i = 0; i < divsToHide.length; i++){
+            divsToHide[i].style.display = "none"; // depending on what you're doing
+        }
+        document.getElementById('zone'+id).style.display="block";
+    }
+    function addZone(zoneName, parentName)
+    {
+        if (confirm("Are you sure you want to add this zone to your profile?") == true) 
+        {
+            jsonValue = '[';
+            <% for( var i=0; i < zoneSelection.length; i++) { %>
+                jsonValue += '{"zone_name":"<%= zoneSelection[i].zone_name %>","parent_name":"<%= zoneSelection[i].parent_name %>","votes":"<%= zoneSelection[i].votes %>"},';      
+            <% } %>
+            jsonValue += '{"zone_name":"'+zoneName+'","parent_name":"'+parentName+'","votes":"0"}]';
+            document.getElementById('selection').value = jsonValue;
+            //console.log(jsonValue)
+            document.getElementById('zoneForm').submit();
+        }
+    }
+</script>
+<%- include('./includes/end.ejs') %>
