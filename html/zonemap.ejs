@@ -1,9 +1,12 @@
 <%- include('./includes/head.ejs') %>
-<% var zoneSelection = user.zone_selection;
-var userzones = []; 
-for(var i = 0 ; i < zoneSelection.length ; i++){
-    userzones.push(zoneSelection[i].zone_name);
-} 
+<% var zoneSelection = user.zone_votes;
+var userzones = [];
+console.log(zoneSelection);
+if(zoneSelection){
+	for(var i = 0 ; i < zoneSelection.length ; i++){
+		userzones.push(zoneSelection[i].zone_name);
+	}
+}
  %>
 
 <style>

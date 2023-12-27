@@ -51,6 +51,7 @@ server.get("/", async function(req, res) {
     text_color: config.pages.general.text_color,
     site_name: config.server.site_name,
     site_url: config.server.site_url,
+    login_url: config.discord.redirect_url,
     radar_script: radar_script,
     pageTitle: 'landing'
   });
@@ -212,8 +213,11 @@ server.get("/login", async (req, res) => {
       }
     }
     req.session.login = true;
-    if (dbuser.customer_type == 'new' || dbuser.terms_reviewed == 'false' || dbuser.zones_reviewed == 'false') {
+    req.session.discord_id = user.id;
+    if (dbuser.customer_type == 'new' && dbuser.terms_reviewed == 'false' && dbuser.zones_reviewed == 'false') {
       return res.redirect(`/new`);
+    } else if (dbuser.customer_type == 'new' && dbuser.terms_reviewed == 'true' && dbuser.zones_reviewed == 'false') {
+      return res.redirect(`zonemap`);
     } else {
       return res.redirect(`/manage`);
     }
@@ -288,8 +292,9 @@ server.get("/zonemap", async function(req, res) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   }
-  var dbuser = await database.fetchUser(req.session.discord_id);
-  if (dbuser.customer_type == 'new' || dbuser.terms_reviewed == 'false') {
+  let dbuser = await database.fetchUser(req.session.discord_id);
+console.log(dbuser);
+  if (dbuser.customer_type == 'new' && dbuser.terms_reviewed == 'false') {
     return res.redirect(`/new`);
   }
   let radar_script = '';
@@ -514,7 +519,7 @@ server.get("/manage", async function(req, res) {
       radar_script: radar_script,
       user: dbuser
     });
-  //}
+  }
 });
 
 server.post("/manage", async function(req,res){
