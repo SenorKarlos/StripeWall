@@ -1,8 +1,7 @@
 <%- include('./includes/head.ejs') %>
 <% var zoneSelection = user.zone_votes;
 var userzones = [];
-console.log(zoneSelection);
-if(zoneSelection){
+if(!!zoneSelection){
 	for(var i = 0 ; i < zoneSelection.length ; i++){
 		userzones.push(zoneSelection[i].zone_name);
 	}
@@ -132,9 +131,12 @@ if(zoneSelection){
         if (confirm("Are you sure you want to add this zone to your profile?") == true) 
         {
             jsonValue = '[';
-            <% for( var i=0; i < zoneSelection.length; i++) { %>
-                jsonValue += '{"zone_name":"<%= zoneSelection[i].zone_name %>","parent_name":"<%= zoneSelection[i].parent_name %>","votes":"<%= zoneSelection[i].votes %>"},';      
-            <% } %>
+			<% if(!!zoneSelection)
+            {
+                for( var i=0; i < zoneSelection.length; i++) { %>
+                jsonValue += '{"zone_name":"<%= zoneSelection[i].zone_name %>","parent_name":"<%= zoneSelection[i].parent_name %>","votes":"<%= zoneSelection[i].votes %>"},';
+            <% }
+            } %>
             jsonValue += '{"zone_name":"'+zoneName+'","parent_name":"'+parentName+'","votes":"0"}]';
             document.getElementById('selection').value = jsonValue;
             //console.log(jsonValue)
