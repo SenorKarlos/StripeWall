@@ -1,5 +1,5 @@
 var stripe, bot, oauth2;
-const mysql = require('mysql');
+const mysql = require('mysql2');
 const moment = require('moment');
 const config = require("../files/config.json");
 const object = {
@@ -69,6 +69,107 @@ const object = {
       });
     });
   },
+  //------------------------------------------------------------------------------
+//  STRIPE USER TERMS REVIEWED
+//------------------------------------------------------------------------------
+termsReviewed: function(user_id) {
+  return new Promise(function(resolve) {
+    let query = `UPDATE stripe_users SET terms_reviewed = 'true' WHERE user_id = ?`;
+    let data = [user_id];
+    object.db.query(query, data, async function(err, record, fields) {
+      if (err) {
+        return console.info(err);
+      } else if (record[0]) {
+        return resolve(record[0]);
+      } else {
+        return resolve(null);
+      }
+    });
+  });
+},
+checkTermsReviewed: function(user_id) {
+  return new Promise(function(resolve) {
+    let query = `SELECT terms_reviewed FROM stripe_users WHERE user_id = ?`;
+    let data = [user_id];
+    object.db.query(query, data, async function(err, record, fields) {
+      if (err) {
+        return console.info(err);
+      } else if (record[0]) {
+        return resolve(record[0].terms_reviewed);
+      } else {
+        return resolve(null);
+      }
+    });
+  });
+},
+  //------------------------------------------------------------------------------
+//  STRIPE USER UPDATE ZONES
+//------------------------------------------------------------------------------
+updateZoneSelection: function(user_id, selection, zonediff) {
+  return new Promise(function(resolve) {
+    let query = `UPDATE stripe_users SET zone_selection = ? , zones_reviewed = ? WHERE user_id = ?`;
+    let data = [selection, 'true', user_id];
+    object.db.query(query, data, async function(err, record, fields) {
+      if (err) {
+        console.info(err);
+      } else if (record[0]) {
+        resolve(record[0]);
+      } else {
+        resolve(null);
+      }
+    });
+  });
+},
+updateTotalVotes: function(zonediff) {
+  return new Promise(function(resolve) {
+    let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
+    zonediff = JSON.parse(zonediff)
+    let data = [zonediff.difference, zonediff.zone_name];
+    object.db.query(query, data, async function(err, record, fields) {
+      if (err) {
+        console.info(err);
+      } else if (record[0]) {
+        resolve(record[0]);
+      } else {
+        resolve(null);
+      }
+      });
+  })
+},
+updateParentVotes: function(zonediff) {
+  return new Promise(function(resolve) {
+    let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
+    zonediff = JSON.parse(zonediff)
+    let data = [zonediff.difference, zonediff.parent_zone];
+    object.db.query(query, data, async function(err, record, fields) {
+      if (err) {
+        console.info(err);
+      } else if (record[0]) {
+        resolve(record[0]);
+      } else {
+        resolve(null);
+      }
+      });
+  })
+},
+  //------------------------------------------------------------------------------
+//  ZONE FETCH TABLE FETCH
+//------------------------------------------------------------------------------
+fetchZones: function() {
+  return new Promise(function(resolve) {
+    let query = `SELECT sz.*,sz2.zone_name as parent_name FROM service_zones sz LEFT JOIN service_zones sz2 ON sz.parent_zone = sz2.zone_name`;
+    let data = [];
+    object.db.query(query, data, async function(err, record, fields) {
+      if (err) {
+        return console.info(err);
+      } else if (record) {
+        return resolve(record);
+      } else {
+        return resolve(null);
+      }
+    });
+  });
+},
 //------------------------------------------------------------------------------
 //  MAINTENANCE ROUTINES (DATABASE)
 //------------------------------------------------------------------------------
