@@ -529,7 +529,7 @@ server.post("/manage", async function(req,res){
   res.redirect('/manage');
 })
 //------------------------------------------------------------------------------
-//  ACTIVE ONE-TIME CUSTOMER PAGE  (TO BE DELETED)
+//  ACTIVE Pay-As-You-Go CUSTOMER PAGE  (TO BE DELETED)
 //------------------------------------------------------------------------------
 server.get("/expiry", async function(req, res) {
   let unix = moment().unix();

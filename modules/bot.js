@@ -44,7 +44,7 @@ bot.sendDM = (member, title, body, color) => {
     .setTitle(title)
     .setDescription(body)
     .setFooter(config.server.site_name+' | '+bot.getTime('full'));
-  bot.guilds.cache.get(config.discord.guild_id).members.fetch(member.id).then(TARGET => {
+  bot.guilds.cache.get(config.discord.guild_id).members.fetch(member.user.id).then(TARGET => {
     return TARGET.send(embed).catch(err => {
       if (err) {
         console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Send Direct Message.', err);

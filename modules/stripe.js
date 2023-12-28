@@ -149,7 +149,7 @@ const stripe = {
                   if (customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
                     if (customer.subscriptions.data[x].items.data[0].price.id != record[0].price_id && customer.subscriptions.data[x].status == 'active') {
                       database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ? WHERE user_id = ?', ['subscriber', customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, customer.description]);
-                      await database.updateActiveVotes(customer.description, 1);
+                      if (record[0].customer_type == 'inactive' || record[0].customer_type == 'lifetime-inactive') { await database.updateActiveVotes(customer.description, 1); }
                       db_updated = true;
                     }
                   } // dead end of customer price vs config price
@@ -161,7 +161,7 @@ const stripe = {
                 if (record[0].price_id == config.stripe.price_ids[i].id) {
                   if (config.stripe.price_ids[i].mode == "subscription" || record[0].expiration < unix) {
                     database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = NULL, expiration = NULL WHERE user_id = ?', ['inactive', customer.description]);
-                    await database.updateTotalVote(customer.description, 0);
+                    if (record[0].customer_type == 'subscriber' || record[0].customer_type == 'pay-as-you-go' || record[0].customer_type == 'manual' || record[0].customer_type == 'lifetime-active') { await database.updateTotalVote(customer.description, 0); }
                     db_updated = true;
                   /*} else {*/
                     /* Maybe something about storing, pulling & checking invoice details & expiry calc for temp plans , but probably too much and not needed */
@@ -428,7 +428,7 @@ const stripe = {
               if (checkout.line_items.data[0].price.id == config.stripe.price_ids[i].id) {
                 bot.assignRole(user.user_id, config.stripe.price_ids[i].role_id);
                 bot.channels.cache.get(config.discord.welcome_channel)
-                  .send(config.discord.welcome_content.replace('%usertag%','<@'+member.id+'>'))
+                  .send(config.discord.welcome_content.replace('%usertag%','<@'+member.user.id+'>'))
                   .catch(console.info);
                 let charge_id;
                 if (!checkout.payment_intent) {
@@ -447,8 +447,8 @@ const stripe = {
                   bot.sendEmbed(member, '00FF00', '✅ Subscription Creation Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
                   return database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ?, tax_rate = ?, charge_id = ?, charges = ? WHERE user_id = ?', ['false', checkout.line_items.data[0].price.id, expiry, tax_rate, charge_id, chargecounter, member.user.id]);
                 } else if (data.object.mode == 'payment') {
-                  bot.sendDM(member,'✅ One-Time Access Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
-                  bot.sendEmbed(member, '00FF00', '✅ One-Time Access Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
+                  bot.sendDM(member,'✅ Pay-As-You-Go Access Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
+                  bot.sendEmbed(member, '00FF00', '✅ Pay-As-You-Go Access Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
                   expiry = checkout.payment_intent.latest_charge.created + config.stripe.price_ids[i].expiry;
                   return database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ?, tax_rate = ?, charge_id = ?, charges = ? WHERE user_id = ?', ['false', checkout.line_items.data[0].price.id, expiry, tax_rate, charge_id, chargecounter, member.user.id]);
                 }

@@ -1,5 +1,5 @@
 ALTER TABLE `stripe_users`
-	CHANGE COLUMN `manual` `customer_type` VARCHAR(255) NOT NULL DEFAULT 'new' COLLATE 'utf8mb4_unicode_ci' AFTER `token_expiration`,
+	CHANGE COLUMN `manual` `customer_type` VARCHAR(255) NOT NULL DEFAULT 'inactive' COLLATE 'utf8mb4_unicode_ci' AFTER `token_expiration`,
 	ADD COLUMN `terms_reviewed` VARCHAR(255) NULL DEFAULT 'false' AFTER `customer_type`,
 	ADD COLUMN `zones_reviewed` VARCHAR(255) NULL DEFAULT 'false' AFTER `terms_reviewed`,
 	CHANGE COLUMN `temp_plan_expiration` `expiration` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci' AFTER `price_id`,
