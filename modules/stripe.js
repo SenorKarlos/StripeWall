@@ -149,6 +149,7 @@ const stripe = {
                   if (customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
                     if (customer.subscriptions.data[x].items.data[0].price.id != record[0].price_id && customer.subscriptions.data[x].status == 'active') {
                       database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ? WHERE user_id = ?', ['subscriber', customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, customer.description]);
+                      await database.updateActiveVotes(customer.description, 1);
                       db_updated = true;
                     }
                   } // dead end of customer price vs config price
@@ -160,6 +161,7 @@ const stripe = {
                 if (record[0].price_id == config.stripe.price_ids[i].id) {
                   if (config.stripe.price_ids[i].mode == "subscription" || record[0].expiration < unix) {
                     database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = NULL, expiration = NULL WHERE user_id = ?', ['inactive', customer.description]);
+                    await database.updateTotalVote(customer.description, 0);
                     db_updated = true;
                   /*} else {*/
                     /* Maybe something about storing, pulling & checking invoice details & expiry calc for temp plans , but probably too much and not needed */
@@ -439,6 +441,7 @@ const stripe = {
                 let chargecounter = 0;
                 if (user.charges) { chargecounter = user.charges; }
                 chargecounter++;
+                await database.updateActiveVotes(member.user_id, 0);
                 if (data.object.mode == 'subscription') {
                   bot.sendDM(member,'✅ Subscription Creation Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info,'00FF00');
                   bot.sendEmbed(member, '00FF00', '✅ Subscription Creation Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);

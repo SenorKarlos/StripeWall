@@ -182,6 +182,7 @@ server.get("/login", async (req, res) => {
               if (!dbuser.price_id || dbuser.price_id && dbuser.price_id != customer.subscriptions.data[x].items.data[0].price.id || !dbuser.expiration || dbuser.expiration && dbuser.expiration != customer.subscriptions.data[x].current_period_end) {
                 try {
                   await database.runQuery(`UPDATE stripe_users SET customer_type = 'subscriber', price_id = ?, expiration = ? WHERE user_id = ?`, [customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, dbuser.user_id]);
+                  
                 } catch (e) {
                   req.session = null;
                   console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Subscription Price Record", e);
@@ -200,6 +201,7 @@ server.get("/login", async (req, res) => {
         if (dbuser.expiration && dbuser.expiration < unix) {
           try {
             await database.runQuery(`UPDATE stripe_users SET customer_type = 'inactive', price_id = NULL, expiration = NULL WHERE user_id = ?`, [dbuser.user_id]);
+            await database.updateActiveVotes(dbuser.user_id, 0);
           } catch (e) {
             req.session = null;
             console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Temp Access Price Record", e);
@@ -247,9 +249,7 @@ server.get("/new", async function(req, res) {
     site_url: config.server.site_url,
     radar_script: radar_script,
     userid: req.session.discord_id,
-    username: req.session.user_name,
-    pageTitle: 'new',
-    terms_reviewed: 'true'
+    username: req.session.user_name
   });
 });
 server.post("/new", async function(req,res){
@@ -293,8 +293,7 @@ server.get("/zonemap", async function(req, res) {
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   }
   let dbuser = await database.fetchUser(req.session.discord_id);
-console.log(dbuser);
-  if (dbuser.customer_type == 'new' && dbuser.terms_reviewed == 'false') {
+  if (dbuser.terms_reviewed == 'false') {
     return res.redirect(`/new`);
   }
   let radar_script = '';
@@ -484,7 +483,7 @@ server.get("/manage", async function(req, res) {
   if (!req.session.login || unix > req.session.now+1800) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' -  Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  } else {
+  }
   var dbuser = await database.fetchUser(req.session.discord_id);
   if (dbuser.terms_reviewed == 'false') {
     return res.redirect(`/new`);
@@ -509,19 +508,23 @@ server.get("/manage", async function(req, res) {
       radar_script: radar_script,
       user: dbuser
     });
-  }
 });
 
 server.post("/manage", async function(req,res){
   const userid = req.body.userid;
+  const usertype = req.body.usertype;
   const selection = req.body.selection;
   var zonediff = req.body.zonedifferences;
   zonediff = zonediff.split('|')
   await database.updateZoneSelection(userid, selection);
-  for(var i = 0 ; i < zonediff.length ; i++)
+  if(usertype != 'inactive' && usertype != "lifetime-inactive")
   {
-    await database.updateTotalVotes(zonediff[i]);
-    await database.updateParentVotes(zonediff[i]);
+    for(var i = 0 ; i < zonediff.length ; i++)
+    {
+      await database.updateTotalVotes(zonediff[i]);
+      await database.updateParentVotes(zonediff[i]);
+      
+    }
   }
   res.redirect('/manage');
 })

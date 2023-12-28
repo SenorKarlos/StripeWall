@@ -83,6 +83,7 @@ if(!!zoneSelection){
             } %>
         </div>
         <div style="clear: both;"></div>
+        <button type="button" style="background-color: grey; float:right;" onclick="window.location='/manage'">Manage Zones</button>
         <br>
         <br>
         <hr>
@@ -113,6 +114,7 @@ if(!!zoneSelection){
             </div>
         <% } %>
         </form>
+        
        <div style="clear: both;"></div>
     </div>     
     </center>
@@ -139,7 +141,6 @@ if(!!zoneSelection){
             } %>
             jsonValue += '{"zone_name":"'+zoneName+'","parent_name":"'+parentName+'","votes":"0"}]';
             document.getElementById('selection').value = jsonValue;
-            //console.log(jsonValue)
             document.getElementById('zoneForm').submit();
         }
     }

@@ -60,6 +60,7 @@ for(var i=0; i < zones.length; i++) {
                 <input type="hidden" name='selection' id='selection' value="">          
                 <input type="hidden" name='zonedifferences' id='zonedifferences' value="">          
                 <input type="hidden" name='userid' id='userid' value="<%= user.user_id %>">          
+                <input type="hidden" name='usertype' id='usertype' value="<%= user.customer_type %>">          
                 <% for(var i=0; i<zones.length; i++) { %>
                     <div class="column-4"">
                         <p style="margin: 10px; font-size: 30px; line-height: 70%"><%= zones[i].parent_name %></p>

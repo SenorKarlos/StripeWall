@@ -136,6 +136,33 @@ updateTotalVotes: function(zonediff) {
       });
   })
 },
+updateActiveVotes: function(userid, status){
+  let query = "SELECT zone_votes FROM stripe_users WHERE user_id = ?";
+  let data = [userid];
+  object.db.query(query, data, async function(err, records, fields) {
+    if (err) {
+      console.info(err);
+    }
+    if (records) {
+      var votes = records[0].zone_votes;
+      for(var i = 0 ; i < votes.length ; i++) {
+        if(status == 0){
+          query = `UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?`;
+          } else{
+          query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
+          }
+          console.log(votes[i].votes)
+          console.log(votes[i].zone_name)
+          data = [votes[i].votes, votes[i].zone_name];
+          console.log(query+ ' + ')
+          console.log(data)
+          object.runQuery(query, data);
+          data = [votes[i].votes, votes[i].parent_name];
+          object.runQuery(query, data);
+        }
+      }
+  })
+},
 updateParentVotes: function(zonediff) {
   return new Promise(function(resolve) {
     let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
@@ -200,6 +227,7 @@ fetchZones: function() {
                 let query = `UPDATE stripe_users SET customer_type = 'inactive', stripe_id = NULL, price_id = NULL, expiration = NULL WHERE user_id = ?`;
                 let data = [user.user_id];
                 object.runQuery(query, data);
+                await object.updateActiveVotes(user.user_id, 0);
                 db_updated = true;
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Stripe Customer ID Invalid/Deleted, removed from Database Record.");
               } else {
@@ -221,6 +249,7 @@ fetchZones: function() {
                 let query = `UPDATE stripe_users SET customer_type = 'inactive', price_id = NULL, expiration = NULL, charge_id = NULL WHERE user_id = ?`;
                 let data = [user.user_id];
                 await object.runQuery(query, data);
+                await object.updateActiveVotes(user.user_id, 0);
                 db_updated = true;
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Cancelled Subscriptions/Access.");
                 bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Cancelled Subscriptions/Access.', config.discord.log_channel);
@@ -229,6 +258,7 @@ fetchZones: function() {
                 let query = `UPDATE stripe_users SET customer_type = 'lifetime-inactive' WHERE user_id = ?`;
                 let data = [user.user_id];
                 await object.runQuery(query, data);
+                await object.updateActiveVotes(user.user_id, 0);
                 db_updated = true;
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Lifetime Member Left Guild. Set inactive.");
                 bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Lifetime Member Left Guild. Set inactive.', config.discord.log_channel);
@@ -440,6 +470,7 @@ fetchZones: function() {
                     let query = `UPDATE stripe_users SET customer_type = 'false', expiration = NULL WHERE user_id = ?`;
                     let data = [record[0].user_id];
                     await object.runQuery(query, data);
+                    await object.updateActiveVotes(record[0].user_id, 0);
                     bot.sendDM(member,'Subscription Ended', 'Your subscription has expired. Please sign up again to continue.','FFFF00');
                     bot.sendEmbed(member, 'FF0000', 'Manually Tracked User Expired ⚠', 'Removed Role & Flags. (Role Check)', config.discord.log_channel);
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return object.checkLifetime(); }
