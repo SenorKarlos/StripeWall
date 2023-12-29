@@ -4,56 +4,92 @@ var zones = user.zone_votes;
 for(var i=0; i < zones.length; i++) {
     available -= zones[i].votes;
 }
+
 %>
 <style>
     .column-4 {
         float: left;
         display: inline;
-        width: 21%;
+        width: 20%;
         height: 190px;
         padding: 0 10px 10px 10px;
         margin:10px;
-        border-color: black;
         border-style: solid;
         background-color: grey;
         word-wrap: break-word;
         overflow:auto;
         cursor: pointer;
+        background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
         }
+        .stretchedText {
+        letter-spacing: 2px;
+        display: inline-block;
+        font-size: 50px;
+        transform: scaleY(0.9);
+        transform-origin: 0 0;
+        margin-bottom: -50%;
+      }
 </style>
+<script type="text/javascript" src="./files/config.json"></script>
 <div class="rcorners1">
     <center>
       <div>
-        <div style="display:none">
-          <p><strong><font color="black">Your current subscription renews on <%= user.expiration %></font></strong></p>
+        <h1>Hello <%= user.user_name %></h1>           
+        <h2>You currently have <u><%= user.customer_type %></u> access</h1>
+        <br>
+        <% if(!!user.expiration)
+        {
+            var currentDate = new Date();
+            var currentTime = currentDate.getTime();
+            expireDate = new Date(user.expiration * 1000)
+            expireDate = expireDate.toDateString();
+        } 
+        %>
+        <div <% if(user.customer_type != 'subscriber') { %>style="display:none" <% } %>>
+          <p><strong><font color="black">Your current subscription renews on <b><%= expireDate %></b></font></strong></p>
           <p><strong><font color="black">Manage your subscription using the customer portal below</font></strong></p>
           <a href"#"><button>Customer Portal</button></a>
           <br>
           <br>
-          <p><strong><font color="black">Questions? Tips? Issues? Check out our FAQ <a href="#">here</a> or support chat <a href="#">here</a>. Travelling? Join other Alert servers <a href="#">here</a> and get alerts by setting temporary zones <a href="#">here</a></font>
         </div>
-        <div>
-            <p><strong><font color="black">Your Pay-As-You-Go access purchase expires on <%= user.expiration %></font></strong></p>
+        <div <% if(user.customer_type != 'pay-as-you-go' && user.customer_type != 'manual') { %>style="display:none" <% } %>>
+            <p><strong><font color="black">Your Pay-As-You-Go access purchase expires on <b><%= expireDate %></b></font></strong></p>
             <p><strong><font color="black">Top up or subscribe during the last 48 hours using the checkout below</font></strong></p>
-            <select>
+            <select style="height:50px">
                 <option selected>See plans</option>
-                <option>Plan 1</option>
-                <option>Plan 2</option>
-                <option>Plan 3</option>
+             <% for(var i=0; i < plans.length; i++) { %>
+                 <option><%= plans[i].title %></option>
+            <% } %>
               </select>
-              &emsp;
-            <a href"#"><button>Checkout</button></a>
             <br>
             <br>
-            <p><strong><font color="black">Questions? Tips? Issues? Check out our FAQ <a href="#">here</a> or support chat <a href="#">here</a>. Travelling? Join other Alert servers <a href="#">here</a> and get alerts by setting temporary zones <a href="#">here</a></font>
+            <a href="/checkout"><button <% if(user.expiration - currentTime < 172800) { %>disabled <% } %>>Checkout</button></a>
+            <br>
+            <br>
         </div>
+        <div <% if(user.customer_type != 'inactive' && user.customer_type != 'lifetime-inactive') { %>style="display:none" <% } %>>
+            <p><strong><font color="black">To have access to services and have your votes counted to the pool, choose one of the plans below.</b></font></strong></p>
+            <select style="height:50px">
+                <option selected>See plans</option>
+             <% for(var i=0; i < plans.length; i++) { %>
+                 <option><%= plans[i].title %></option>
+            <% } %>
+              </select>
+            <br>
+            <br>
+            <a href="/checkout"><button>Checkout</button></a>
+            <br>
+            <br>
+        </div>
+                <!--  <p><strong><font color="black">Questions? Tips? Issues? Check out our FAQ <a href="#">here</a> or support chat <a href="#">here</a>. Travelling? Join other Alert servers <a href="#">here</a> and get alerts by setting temporary zones <a href="#">here</a></font> -->
+
         <br>
         <hr>
         <div>
             <p><strong><font color="black">Total Fees and Donations to Date</font></strong></p>
-            <p><strong><font color="red"><%= user.total_spend %></font></strong></p>
+            <p><strong><font size="20px" color="red">$<%= user.total_spend %></font></strong></p>
             <p><strong><font color="black">Total Zone Votes</font></strong></p>
-            <p><strong><font color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
+            <p><strong><font size="20px" color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
             <br>
             <p><strong><font color="black"><u>Allocate your votes below</u></font></strong></p>
             <form method="POST" id="voteForm">   
@@ -62,13 +98,12 @@ for(var i=0; i < zones.length; i++) {
                 <input type="hidden" name='userid' id='userid' value="<%= user.user_id %>">          
                 <input type="hidden" name='usertype' id='usertype' value="<%= user.customer_type %>">          
                 <% for(var i=0; i<zones.length; i++) { %>
-                    <div class="column-4"">
-                        <p style="margin: 10px; font-size: 30px; line-height: 70%"><%= zones[i].parent_name %></p>
-                        <p style="font-size: 20px; line-height: 20%;"><%= zones[i].zone_name %></p>
-                        <p style="font-size: 15px; line-height: 10%">Votes: <span id="zone<%= zones[i].zone_name %>"><%= zones[i].votes %></span></p>
+                    <div class="column-4" style="font-stretch: expanded;">
+                        <p class="stretchedText" style="line-height: 70%"><%= zones[i].parent_name %></p><br>
+                        <p class="stretchedText" style="font-size: 30px; line-height: 20%;"><%= zones[i].zone_name %></p><br><br>
+                        <p style="font-size: 20px; line-height: 10%">Votes: <span id="zone<%= zones[i].zone_name %>"><%= zones[i].votes %></span></p>
                         <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','sub')">-</button>
                         <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','add')">+</button>
-                        <br>
                         <br>
                         <% if (zones.length > 1) { %>
                         <button type='button' onclick="removeZone('<%= zones[i].zone_name %>','add')">Remove Zone</button>
@@ -76,8 +111,8 @@ for(var i=0; i < zones.length; i++) {
                     </div>
                 <% } %>
             <div onclick="window.location='/zonemap'"class="column-4">
-                <h2>+</h2>
-                <h6>Add New Zone</h6>
+                <p style="font-size: 70px;">+</p>
+                <p style="font-size: 20px;">Add New Zone</p>
             </div>
             </form>
         </div>
