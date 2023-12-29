@@ -37,22 +37,40 @@ for(var i=0; i < zones.length; i++) {
         <h1>Hello <%= user.user_name %></h1>           
         <h2>You currently have <u><%= user.customer_type %></u> access</h1>
         <br>
-        <% if(!!user.expiration)
-        {
-            var currentDate = new Date();
-            var currentTime = currentDate.getTime();
-            expireDate = new Date(user.expiration * 1000)
-            expireDate = expireDate.toDateString();
-        } 
+        <% if(user.customer_type == 'subscriber') { 
+            var expireDate = '';
+            if(!!user.expiration)
+            {
+                expireDate = new Date(user.expiration * 1000)
+                expireDate = expireDate.toDateString();
+            } 
+            else 
+            {
+                expireDate = 'N/A'
+            }
         %>
-        <div <% if(user.customer_type != 'subscriber') { %>style="display:none" <% } %>>
+        <div>
           <p><strong><font color="black">Your current subscription renews on <b><%= expireDate %></b></font></strong></p>
           <p><strong><font color="black">Manage your subscription using the customer portal below</font></strong></p>
           <a href"#"><button>Customer Portal</button></a>
           <br>
           <br>
         </div>
-        <div <% if(user.customer_type != 'pay-as-you-go' && user.customer_type != 'manual') { %>style="display:none" <% } %>>
+        <% } else if(user.customer_type == 'pay-as-you-go' || user.customer_type == 'manual') {
+            var expireDate = '';
+             if(!!user.expiration)
+            {
+                var currentDate = new Date();
+                var currentTime = currentDate.getTime();
+                expireDate = new Date(user.expiration * 1000)
+                expireDate = expireDate.toDateString();
+            } 
+            else 
+            {
+                expireDate = 'N/A'
+            }
+         %>
+        <div>
             <p><strong><font color="black">Your Pay-As-You-Go access purchase expires on <b><%= expireDate %></b></font></strong></p>
             <p><strong><font color="black">Top up or subscribe during the last 48 hours using the checkout below</font></strong></p>
             <select style="height:50px">
@@ -67,7 +85,8 @@ for(var i=0; i < zones.length; i++) {
             <br>
             <br>
         </div>
-        <div <% if(user.customer_type != 'inactive' && user.customer_type != 'lifetime-inactive') { %>style="display:none" <% } %>>
+        <% } else if(user.customer_type == 'inactive' || user.customer_type == 'lifetime-inactive') { %>
+        <div>
             <p><strong><font color="black">To have access to services and have your votes counted to the pool, choose one of the plans below.</b></font></strong></p>
             <select style="height:50px">
                 <option selected>See plans</option>
@@ -81,6 +100,8 @@ for(var i=0; i < zones.length; i++) {
             <br>
             <br>
         </div>
+        <% } %>
+
                 <!--  <p><strong><font color="black">Questions? Tips? Issues? Check out our FAQ <a href="#">here</a> or support chat <a href="#">here</a>. Travelling? Join other Alert servers <a href="#">here</a> and get alerts by setting temporary zones <a href="#">here</a></font> -->
 
         <br>
