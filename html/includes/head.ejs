@@ -10049,32 +10049,33 @@ a.text-dark:hover, a.text-dark:focus {
     
     <style>
         .rcorners1 {
-            border-radius: 30px;
-            border: 5px solid grey;
-            padding: 30px;
-            min-width:50px!important;
-            max-width:99.99%!important;
-            margin: 50px;
-            transition: width 0.25s;
-            min-height:50px!important;
-            box-shadow:  0 0 20px  rga(0,0,0,0.6);
-            -moz-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
-            -webkit-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
-            -o-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
-            background: linear-gradient(to bottom right, #00c9db, #28a745);
-        }
-        .content {
-          max-width: 480px;
-          margin: auto;
-          text-align: center;
-        }
-        .fineprint {
-          font-size: 8pt;
-        }
-        body {
-            margin: 50px auto;
-            background-color: black;
-            text-align: center;
-            font-family: Arial, Helvetica, sans-serif;
-        }
+        border-radius: 30px;
+        border: 5px solid #<%= border_color %>;
+        padding: 30px;
+        min-width:50px!important;
+        max-width:99.99%!important;
+        margin: 50px;
+        transition: width 0.25s;
+        min-height:50px!important;
+        max-height:99.99%!important;
+        box-shadow:  0 0 20px  rga(0,0,0,0.6);
+        -moz-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        -webkit-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        -o-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
+        background: url("<%= background %>");
+    }
+    .content {
+      max-width: 480px;
+      margin: auto;
+      text-align: center;
+    }
+    .fineprint {
+      font-size: 8pt;
+    }
+    body {
+        margin: 50px auto;
+        background-color: <%= outer_background %>;
+        text-align: center;
+        font-family: Arial, Helvetica, sans-serif;
+    }
       </style>

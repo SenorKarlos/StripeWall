@@ -9,7 +9,24 @@ if(!!zoneSelection){
  %>
 
 <style>
+    @media (max-width: 500px) { 
     .column-4 {
+        float: left;
+        display: inline;
+        width: 80%;
+        height: 100px;
+        padding: 10px;
+        margin:5px;
+        border-color: black;
+        border-style: solid;
+        background-color: grey;
+        word-wrap: break-word;
+        overflow:auto;
+        cursor: pointer;
+        }
+    }
+    @media (min-width: 500px) and (max-width: 2000px) {
+        .column-4 {
         float: left;
         display: inline;
         width: 21%;
@@ -23,36 +40,12 @@ if(!!zoneSelection){
         overflow:auto;
         cursor: pointer;
         }
-    .rcorners1 {
-        border-radius: 30px;
-        border: 5px solid grey;
-        padding: 30px;
-        min-width:50px!important;
-        max-width:99.99%!important;
-        margin: 50px;
-        transition: width 0.25s;
-        min-height:50px!important;
-        max-height:99.99%!important;
-        box-shadow:  0 0 20px  rga(0,0,0,0.6);
-        -moz-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
-        -webkit-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
-        -o-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
-        background: linear-gradient(to bottom right, #00c9db, #28a745);
     }
-    .content {
-      max-width: 480px;
-      margin: auto;
-      text-align: center;
+
+    h3 {
+         word-wrap: break-word;
     }
-    .fineprint {
-      font-size: 8pt;
-    }
-    body {
-        margin: 50px auto;
-        background-color: black;
-        text-align: center;
-        font-family: Arial, Helvetica, sans-serif;
-    }
+    
     .cornerbutton {
         position:absolute;
         bottom:0;
@@ -64,11 +57,11 @@ if(!!zoneSelection){
       <div>
         <div>
             <br>
-          <h1><font color="black">Service Zone Information </font></h1>
+          <h1><font color="white">Service Zone Information </font></h1>
           <% if(user.zones_reviewed == 'false') { %>
-            <h3><font color="black">You must select at least one zone before proceeding</font></h3>
+            <h3><font color="white">You must select at least one zone before proceeding</font></h3>
         <% } %>
-          <p><strong><font color="black">Select District to see Zones</font></strong></p>
+          <p><strong><font color="white">Select District to see Zones</font></strong></p>
         </div>
         <div>
             <% var parentids = [];
@@ -76,7 +69,7 @@ if(!!zoneSelection){
                 if(zones[i].parent_zone === null) { 
                    parentids.push(zones[i].zone_name);
                     %>
-            <div class="column-4" onclick="showZones('<%= zones[i].zone_name %>')">
+            <div class="column-4" onclick="showZones('<%= zones[i].zone_name %>')" style="background-image: url('./images/<%= zones[i].Location %>');">
                 <h4><%= zones[i].zone_name %></h4>
             </div>
             <% } 
@@ -104,10 +97,12 @@ if(!!zoneSelection){
                         <input type="button" class="cornerbutton" value="Add Zone" onclick="addZone('<%= zones[j].zone_name %>', '<%= zones[j].parent_name %>')"/>
                         <% } %>
                     </div>
+                    <!---
                     <span style="float: left; margin-top:15px;">Active Users: 3<br>
                         Zone Votes: <%= zones[j].total_votes %><br>
                         Assigned Workers: <%= zones[j].assigned_workers %>
                     </span>
+                    --->
                 </div>
                 <% } 
             } %>

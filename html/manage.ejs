@@ -7,35 +7,97 @@ for(var i=0; i < zones.length; i++) {
 
 %>
 <style>
+    @media (max-width: 500px) { 
     .column-4 {
         float: left;
         display: inline;
-        width: 20%;
-        height: 190px;
-        padding: 0 10px 10px 10px;
-        margin:10px;
+        width: 80%;
+        height: 200px;
+        padding: 10px;
+        margin:5px;
+        border-color: black;
+        border-style: solid;
+        background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
+        word-wrap: break-word;
+        overflow-y: auto;
+        overflow-x: auto;
+        text-overflow: inherit;
+        white-space: normal;
+        text-align: justify;
+        cursor: pointer;
+        }
+    .column-new {
+        float: left;
+        display: inline;
+        width: 80%;
+        height: 200px;
+        margin:5px;
+        padding: 10px;
         border-style: solid;
         background-color: grey;
         word-wrap: break-word;
         overflow:auto;
         cursor: pointer;
         background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
+     }
+    .planSelect {
+        height:50px;
+        max-width: 200px;
+    }
+    }
+    @media (min-width: 500px) and (max-width: 5000px) {
+    .column-4 {
+        float: left;
+        display: inline;
+        width: 21%;
+        padding: 10px;
+        margin:5px;
+        border-color: black;
+        border-style: solid;
+        background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
+        word-wrap: break-word;
+        cursor: pointer;
+        overflow-y: auto;
+        overflow-x: auto;
+        text-overflow: inherit;
+        white-space: normal;
+        text-align: justify;
         }
+     .column-new {
+        float: left;
+        display: inline;
+        width: 21%;
+        margin:5px;
+        border-style: solid;
+        background-color: grey;
+        word-wrap: break-word;
+        overflow:auto;
+        cursor: pointer;
+        background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
+     }
+        .planSelect {
+            height:50px;
+        }
+    }
         .stretchedText {
-        letter-spacing: 2px;
         display: inline-block;
-        font-size: 50px;
         transform: scaleY(0.9);
         transform-origin: 0 0;
         margin-bottom: -50%;
-      }
+        line-height: 70%;
+        font-size: 25px;
+        }
 </style>
 <script type="text/javascript" src="./files/config.json"></script>
 <div class="rcorners1">
     <center>
       <div>
-        <h1>Hello <%= user.user_name %></h1>           
-        <h2>You currently have <u><%= user.customer_type %></u> access</h1>
+        <h1 style="color:white">Hello <%= user.user_name %></h1>  
+        <% if(user.customer_type == 'inactive' || user.customer_type == 'inactive-lifetime') {  %>       
+            <h2 style="color:white">You currently have no access to services</h1>
+        <% } else { %>
+             <h2 style="color:white">You currently have <u><%= user.customer_type %></u> access</h1>
+        <% } %>
         <br>
         <% if(user.customer_type == 'subscriber') { 
             var expireDate = '';
@@ -50,8 +112,8 @@ for(var i=0; i < zones.length; i++) {
             }
         %>
         <div>
-          <p><strong><font color="black">Your current subscription renews on <b><%= expireDate %></b></font></strong></p>
-          <p><strong><font color="black">Manage your subscription using the customer portal below</font></strong></p>
+          <p><strong><font color="white">Your current subscription renews on <b><%= expireDate %></b></font></strong></p>
+          <p><strong><font color="white">Manage your subscription using the customer portal below</font></strong></p>
           <a href"#"><button>Customer Portal</button></a>
           <br>
           <br>
@@ -71,9 +133,9 @@ for(var i=0; i < zones.length; i++) {
             }
          %>
         <div>
-            <p><strong><font color="black">Your Pay-As-You-Go access purchase expires on <b><%= expireDate %></b></font></strong></p>
-            <p><strong><font color="black">Top up or subscribe during the last 48 hours using the checkout below</font></strong></p>
-            <select style="height:50px">
+            <p><strong><font color="white">Your Pay-As-You-Go access purchase expires on <b><%= expireDate %></b></font></strong></p>
+            <p><strong><font color="white">Top up or subscribe during the last 48 hours using the checkout below</font></strong></p>
+            <select class="planSelect">
                 <option selected>See plans</option>
              <% for(var i=0; i < plans.length; i++) { %>
                  <option><%= plans[i].title %></option>
@@ -85,10 +147,10 @@ for(var i=0; i < zones.length; i++) {
             <br>
             <br>
         </div>
-        <% } else if(user.customer_type == 'inactive' || user.customer_type == 'lifetime-inactive') { %>
+        <% } else if(user.customer_type == 'inactive') { %>
         <div>
-            <p><strong><font color="black">To have access to services and have your votes counted to the pool, choose one of the plans below.</b></font></strong></p>
-            <select style="height:50px">
+            <p><strong><font color="white">To have access to services and have your votes counted to the pool, choose one of the plans below.</b></font></strong></p>
+            <select class="planSelect">
                 <option selected>See plans</option>
              <% for(var i=0; i < plans.length; i++) { %>
                  <option><%= plans[i].title %></option>
@@ -100,6 +162,32 @@ for(var i=0; i < zones.length; i++) {
             <br>
             <br>
         </div>
+        <% } else if(user.customer_type == 'lifetime-inactive') { %>
+        <div>
+            <form method="POST" id="lifetimeForm">
+                <input name="userid" type="hidden" value ="<%= user.user_id %>">
+                <input name="status" type="hidden" value ="1">
+                <p><strong><font color="white">You lifetime access is currently inactive. Press the button below to reactivate services</b></font></strong></p>
+                <br>
+                <br>
+                <button type="button" onclick="confirmToggle()">Switch to active</button>
+                <br>
+                <br>
+            </form>
+        </div>
+        <% } else if(user.customer_type == 'lifetime-active') { %>
+        <div>
+            <form method="POST" id="lifetimeForm">
+                <input name="userid" type="hidden" value ="<%= user.user_id %>">
+                <input name="status" type="hidden" value ="0">
+                <p><strong><font color="white">You lifetime access is currently active. To disable services and remove your votes from the pool, press the button below.</b></font></strong></p>
+                <br>
+                <br>
+                <button type="button" onclick="confirmToggle()">Switch to inactive</button>
+                <br>
+                <br>
+            </form>
+        </div>
         <% } %>
 
                 <!--  <p><strong><font color="black">Questions? Tips? Issues? Check out our FAQ <a href="#">here</a> or support chat <a href="#">here</a>. Travelling? Join other Alert servers <a href="#">here</a> and get alerts by setting temporary zones <a href="#">here</a></font> -->
@@ -107,12 +195,12 @@ for(var i=0; i < zones.length; i++) {
         <br>
         <hr>
         <div>
-            <p><strong><font color="black">Total Fees and Donations to Date</font></strong></p>
+            <p><strong><font color="white">Total Fees and Donations to Date</font></strong></p>
             <p><strong><font size="20px" color="red">$<%= user.total_spend %></font></strong></p>
-            <p><strong><font color="black">Total Zone Votes</font></strong></p>
+            <p><strong><font color="white">Total Zone Votes</font></strong></p>
             <p><strong><font size="20px" color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
             <br>
-            <p><strong><font color="black"><u>Allocate your votes below</u></font></strong></p>
+            <p><strong><font color="white"><u>Allocate your votes below</u></font></strong></p>
             <form method="POST" id="voteForm">   
                 <input type="hidden" name='selection' id='selection' value="">          
                 <input type="hidden" name='zonedifferences' id='zonedifferences' value="">          
@@ -120,9 +208,9 @@ for(var i=0; i < zones.length; i++) {
                 <input type="hidden" name='usertype' id='usertype' value="<%= user.customer_type %>">          
                 <% for(var i=0; i<zones.length; i++) { %>
                     <div class="column-4" style="font-stretch: expanded;">
-                        <p class="stretchedText" style="line-height: 70%"><%= zones[i].parent_name %></p><br>
-                        <p class="stretchedText" style="font-size: 30px; line-height: 20%;"><%= zones[i].zone_name %></p><br><br>
-                        <p style="font-size: 20px; line-height: 10%">Votes: <span id="zone<%= zones[i].zone_name %>"><%= zones[i].votes %></span></p>
+                        <p class="stretchedText"><%= zones[i].parent_name %></p><br>
+                        <p class="stretchedText" style="font-size: 20px;"><%= zones[i].zone_name %></p><br><br>
+                        <p style="font-size: 15px; line-height: 10%">Votes: <span id="zone<%= zones[i].zone_name %>"><%= zones[i].votes %></span></p>
                         <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','sub')">-</button>
                         <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','add')">+</button>
                         <br>
@@ -131,7 +219,7 @@ for(var i=0; i < zones.length; i++) {
                         <% } %>
                     </div>
                 <% } %>
-            <div onclick="window.location='/zonemap'"class="column-4">
+            <div onclick="window.location='/zonemap'"class="column-new">
                 <p style="font-size: 70px;">+</p>
                 <p style="font-size: 20px;">Add New Zone</p>
             </div>
@@ -142,11 +230,11 @@ for(var i=0; i < zones.length; i++) {
         
         <div style="float:left; width: 100%">
             <button onclick="submitVotes()">Confirm Votes</button>
-            <p><strong><font color="black">Donate <a href="#">here</a> to increase votes and help maintain and improve services!</font></strong></p>
-            <p><strong><font color="black">EMT Address</font></strong></p>
-            <p><strong><font color="black">Ko-Fi Widget</font></strong></p>
-            <p><strong><font color="black">Crypto Addresses</font></strong></p>
-            <p><strong><font color="black">NOTE: DONATIONS ARE MANUALLY ADDED TO TOTAL</font></strong></p>
+            <p><strong><font color="white">Donate <a href="#">here</a> to increase votes and help maintain and improve services!</font></strong></p>
+            <p><strong><font color="white">EMT Address</font></strong></p>
+            <p><strong><font color="white">Ko-Fi Widget</font></strong></p>
+            <p><strong><font color="white">Crypto Addresses</font></strong></p>
+            <p><strong><font color="white">NOTE: DONATIONS ARE MANUALLY ADDED TO TOTAL</font></strong></p>
         </div>
         <div style="clear: both;"></div> 
     </div></center>
@@ -222,6 +310,13 @@ for(var i=0; i < zones.length; i++) {
         document.getElementById('selection').value = jsonValue;
         document.getElementById('zonedifferences').value = jsonDiff;
         document.getElementById('voteForm').submit();
+    }
+    function confirmToggle()
+    {
+        if (confirm("Are you sure you want to change your lifetime status?") == true) 
+        {
+            document.getElementById('lifetimeForm').submit();
+        }
     }
   </script>
   <%- include('./includes/end.ejs') %>

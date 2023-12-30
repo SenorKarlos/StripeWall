@@ -16,6 +16,7 @@ const config = require(__dirname+"/config/config.json");
 var sessionAge = 86400000;
 const server = express();
 server.engine("html", require("ejs").renderFile);
+
 server.use(cookieSession({
   name: "session",
   keys: [config.server.session_key],
@@ -433,6 +434,7 @@ server.get("/error", async function(req, res) {
 //------------------------------------------------------------------------------
 server.get("/checkout", async function(req, res) {
   let unix = moment().unix();
+  
   if (!req.session.login || unix > req.session.now+1800) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
@@ -447,6 +449,7 @@ server.get("/checkout", async function(req, res) {
   } else if (req.session.price_id && !req.session.expiration) {
     return res.redirect(`/manage`);
   } else {
+    
     let checkoutbody = '';
     for (let i = 0; i < config.stripe.price_ids.length; i++) {
       if (config.stripe.price_ids[i].mode != 'legacy') {
@@ -512,19 +515,27 @@ server.get("/manage", async function(req, res) {
 });
 
 server.post("/manage", async function(req,res){
-  const userid = req.body.userid;
-  const usertype = req.body.usertype;
-  const selection = req.body.selection;
-  var zonediff = req.body.zonedifferences;
-  zonediff = zonediff.split('|')
-  await database.updateZoneSelection(userid, selection);
-  if(usertype != 'inactive' && usertype != "lifetime-inactive")
+  if (typeof req.body.status !== 'undefined') {  //lifetime user changing their status
+    const userid = req.body.userid;
+    const status = req.body.status;
+    await database.updateActiveVotes(userid,status,true) 
+  }
+  else //updating zone counts
   {
-    for(var i = 0 ; i < zonediff.length ; i++)
+    const userid = req.body.userid;
+    const usertype = req.body.usertype;
+    const selection = req.body.selection;
+    var zonediff = req.body.zonedifferences;
+    zonediff = zonediff.split('|')
+   await database.updateZoneSelection(userid, selection);
+    if(usertype != 'inactive' && usertype != "lifetime-inactive")
     {
-      await database.updateTotalVotes(zonediff[i]);
-      await database.updateParentVotes(zonediff[i]);
-      
+      for(var i = 0 ; i < zonediff.length ; i++)
+      {
+       await database.updateTotalVotes(zonediff[i]);
+       await database.updateParentVotes(zonediff[i]);
+        
+      }
     }
   }
   res.redirect('/manage');
@@ -614,7 +625,6 @@ server.get("/manual", async function(req, res) {
       user_name: req.session.username,
       email: req.session.email
     });
-  }
 });
 //------------------------------------------------------------------------------
 //  ACTIVE LIFETIME USER PAGE (TO BE DELETED)
@@ -633,6 +643,7 @@ server.get("/lifetime-active", async function(req, res) {
   } else if (!req.session.customer_type || req.session.customer_type && req.session.expiration-86400 < unix) {
     return res.redirect(`/checkout`);
   } else {
+    
     let intro = config.pages.lifetime.active_life_intro;
     let radar_script = '';
     if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
@@ -660,6 +671,7 @@ server.get("/lifetime-active", async function(req, res) {
 //------------------------------------------------------------------------------
 server.get("/lifetime-inactive", async function(req, res) {
   let unix = moment().unix();
+  
   if (!req.session.login || unix > req.session.now+600) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' - Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
@@ -671,7 +683,7 @@ server.get("/lifetime-inactive", async function(req, res) {
     return res.redirect(`/manage`);
   } else if (!req.session.customer_type || req.session.customer_type && req.session.expiration-86400 < unix) {
     return res.redirect(`/checkout`);
-  } else {
+  } else { 
     let intro = config.pages.lifetime.inactive_life_intro;
     let radar_script = '';
     if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }

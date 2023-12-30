@@ -90,22 +90,31 @@ updateTotalVotes: async function(zonediff) {
       return false;
     }
 },
-updateActiveVotes: async function(userid, status){
+updateActiveVotes: async function(userid, status, lifetimeToggle = false){
   let query = "SELECT zone_votes FROM stripe_users WHERE user_id = ?";
   let data = [userid];
+  let lifetime = ''
   result = await object.db.query(query, data);
   if (result[0][0]) {
     var votes = result[0][0].zone_votes;
     for(var i = 0 ; i < votes.length ; i++) {
       if(status == 0) {
+        lifetime = 'lifetime-inactive'
         query = `UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?`;
         } else{
+        lifetime = 'lifetime-active'
         query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
         }
         data = [votes[i].votes, votes[i].zone_name];
 
         object.runQuery(query, data);
         data = [votes[i].votes, votes[i].parent_name];
+        object.runQuery(query, data);
+      }
+      if(lifetimeToggle != false) //only for lifetime users.
+      {
+        query = `UPDATE stripe_users SET customer_type = ? WHERE user_id = ?`;
+        data = [lifetime, userid];
         object.runQuery(query, data);
       }
     }

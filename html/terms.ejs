@@ -1,52 +1,21 @@
 <%- include('./includes/head.ejs') %>
-<style>
-    .rcorners1 {
-        border-radius: 30px;
-        border: 5px solid grey;
-        padding: 30px;
-        min-width:50px!important;
-        max-width:99.99%!important;
-        margin: 50px;
-        transition: width 0.25s;
-        min-height:50px!important;
-        max-height:99.99%!important;
-        box-shadow:  0 0 20px  rga(0,0,0,0.6);
-        -moz-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
-        -webkit-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
-        -o-box-shadow: 0 0 20px  rgba(0,0,0,0.6);
-        background: linear-gradient(to bottom right, #00c9db, #28a745);
-    }
-    .content {
-      max-width: 480px;
-      margin: auto;
-      text-align: center;
-    }
-    .fineprint {
-      font-size: 8pt;
-    }
-    body {
-        margin: 50px auto;
-        background-color: black;
-        text-align: center;
-        font-family: Arial, Helvetica, sans-serif;
-    }
-  </style>
+
 <div class="rcorners1 background">
     <center>
       <div>
         <div>
             <br>
-          <h1><font color="black">Welcome <%= username %> </font></h1>
-          <p><strong><font color="black">Description of services</font></strong></p>
+          <h1><font color="white">Welcome <%= username %> </font></h1>
+          <p><strong><font color="white">Description of services</font></strong></p>
         </div>
         <div>
             <form method="POST">
                 <input name="userid" type="hidden" value="<%= userid %>"
-                <h3><font color="black">Review Terms of Service</font></h3>
+                <h3><font color="white">Review Terms of Service</font></h3>
                 <div>
                     <input type="checkbox" onclick="agreeButton()" id="terms" name="agree" value="1">
-                    <label><strong><font color="black">I have read the <span style="cursor: pointer;" onclick="showHideTerms()"><b><u>terms of service</u></b></font></strong></span></label>
-                    <p id="termtext" style="display: none;"><strong><font color="black">Terms of service text</font></u></strong></p>
+                    <label><strong><font color="white">I have read the <span style="cursor: pointer;" onclick="showHideTerms()"><b><u>terms of service</u></b></font></strong></span></label>
+                    <p id="termtext" style="display: none;"><strong><font color="white">Terms of service text</font></u></strong></p>
                 </div>
                 <br>
                 <input name="agree" id="agreebtn" disabled type="submit" value="I Agree">
