@@ -103,11 +103,11 @@ const stripe = {
       let unix = moment().unix();
       parse.forEach((customer,index) => {
         let indexcounter = index + 1;
-        setTimeout(function() {
-          record = database.db.query('SELECT * FROM stripe_users WHERE user_id = ?', [customer.description])
+        setTimeout(async function() {
+          record = await database.db.query('SELECT * FROM stripe_users WHERE user_id = ?', [customer.description]);
             let stripe_updated = false;
             let db_updated = false;
-            if (!record[0][0]) { return console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+')', err.message); }
+            if (!record[0]) { return console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+')', err.message); }
             if (record[0].length = 0) {
               try {
                 database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, email) VALUES (?, ?, ?, ?)', [customer.name, customer.description, customer.id, customer.email]);
@@ -125,11 +125,9 @@ const stripe = {
                 if (indexcounter === parse.length) { return stripe.customer.doneParse(); }
               }
             }
-            record = record[0]
             if (!record[0].charges) {
-
               let hasHistory = [];
-              for (const charges of stripe_js.charges.list({ customer: customer.id, limit: 100 })) {
+              for await (const charges of stripe_js.charges.list({ customer: customer.id, limit: 100 })) {
                 hasHistory.push(charges);
               }
               if (hasHistory[0]) {

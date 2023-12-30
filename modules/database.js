@@ -151,7 +151,6 @@ fetchZones: async function() {
       }
     else {
       records = records[0];
-console.log(records);
         console.info("["+bot.getTime("stamp")+"] [database.js] Checking for Discord profile updates and Stripe ID validity on "+records.length+" Database Users.");
         records.forEach((user, index) => {
           let indexcounter = index + 1;
@@ -165,7 +164,6 @@ console.log(records);
               } catch (e) {
                 return console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to fetch Stripe record.", e);
               }
-console.log(customer);
               if (!customer || customer.deleted == true) {
                 let query = `UPDATE stripe_users SET customer_type = 'inactive', stripe_id = NULL, price_id = NULL, expiration = NULL WHERE user_id = ?`;
                 let data = [user.user_id];
@@ -359,9 +357,11 @@ console.log(customer);
                   if (indexcounter === records.length) { return object.doneDatabaseRoles(); }
                 } // end guild member
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  User left guild mid-maintenance, will be corrected next run.");
+                if (indexcounter === records.length) { return object.doneDatabaseRoles(); }
                 break;
               default:
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  User is Inactive, Manually Administered, Lifetime or Admin and handled in Discord Role Check.");
+                if (indexcounter === records.length) { return object.doneDatabaseRoles(); }
             }
           }, 1000 * index);
         }); //end for each user record
