@@ -14,7 +14,8 @@ const oauth2 = {
 //------------------------------------------------------------------------------
 //  FETCH ACCESS TOKEN
 //------------------------------------------------------------------------------
-  fetchAccessToken: async function(code) {
+  fetchAccessToken: function(code) {
+    return new Promise(async function(resolve) {
       let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=authorization_code&code=${code}&redirect_uri=${config.discord.redirect_url}&scope=${oauth2.scope}`;
       let headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -22,15 +23,17 @@ const oauth2 = {
       axios.post("https://discord.com/api/oauth2/token", data, {
         headers: headers
       }).then(async function(response) {
-        return response.data;
+        return resolve(response.data);
       }).catch(error => {
-        return error;
+        return resolve(error);
       });
+    });
   },
 //------------------------------------------------------------------------------
 //  REFRESH ACCESS TOKEN
 //------------------------------------------------------------------------------
-  refreshAccessToken: async function(refresh_token, user) {
+  refreshAccessToken: function(refresh_token, user) {
+    return new Promise(async function(resolve) {
       let unix = moment().unix();
       let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=refresh_token&refresh_token=${refresh_token}&redirect_uri=${config.discord.redirect_url}&scope=${oauth2.scope}`;
       let headers = {
@@ -43,30 +46,33 @@ const oauth2 = {
         let token_expiration = (unix+response.data.expires_in);
         database.runQuery('UPDATE stripe_users SET access_token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?', [response.data.access_token, response.data.refresh_token, token_expiration, user.user_id]);
         console.info('['+bot.getTime('stamp')+'] [oauth2.js] '+user.user_name+' ('+user.user_id+') Updated Discord OAuth2 info in Database.');
-        return response.data;
+        return resolve(response.data);
       }).catch(error => {
-        return error;
+        return resolve(error);
       });
+    });
   },
 //------------------------------------------------------------------------------
 //  FETCH DISCORD USER
 //------------------------------------------------------------------------------
-  fetchUser: async function(access_token) {
+  fetchUser: function(access_token) {
+    return new Promise(async function(resolve) {
       axios.get(oauth2.base_url+`v6/users/@me`, {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           "Authorization": `Bearer ${access_token}`
         }
       }).then(function(response) {
-        return response.data;
+        return resolve(response.data);
       }).catch(error => {
-        return error;
+        return resolve(error);
       });
+    });
   },
 //------------------------------------------------------------------------------
 //  JOIN THE USER TO A GUILD
 //------------------------------------------------------------------------------
-  joinGuild: async function(access_token, guild_id, user_id) {
+  joinGuild: function(access_token, guild_id, user_id) {
     bot.users.fetch(user_id).then(async (user) => {
       let options = {
         'accessToken': access_token

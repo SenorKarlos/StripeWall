@@ -151,6 +151,7 @@ fetchZones: async function() {
       }
     else {
       records = records[0];
+console.log(records);
         console.info("["+bot.getTime("stamp")+"] [database.js] Checking for Discord profile updates and Stripe ID validity on "+records.length+" Database Users.");
         records.forEach((user, index) => {
           let indexcounter = index + 1;
@@ -164,6 +165,7 @@ fetchZones: async function() {
               } catch (e) {
                 return console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Unable to fetch Stripe record.", e);
               }
+console.log(customer);
               if (!customer || customer.deleted == true) {
                 let query = `UPDATE stripe_users SET customer_type = 'inactive', stripe_id = NULL, price_id = NULL, expiration = NULL WHERE user_id = ?`;
                 let data = [user.user_id];
