@@ -13,8 +13,7 @@ const stripe = {
 //------------------------------------------------------------------------------
 //  CREATE A CUSTOMER
 //------------------------------------------------------------------------------
-    create: function(user_name, user_id, user_email) {
-      return new Promise(function(resolve) {
+    create: async function(user_name, user_id, user_email) {
         stripe_js.customers.create({
           name: user_name,
           description: user_id,
@@ -22,52 +21,47 @@ const stripe = {
         }, function(err, customer) {
           if(err) {
             console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Creating Customer.', err.message);
-            return resolve('ERROR');
+            return 'ERROR';
           } else {
             console.info('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.name+' ('+customer.description+' | '+customer.id+') has been Created.');
             database.runQuery('UPDATE stripe_users SET stripe_id = ? WHERE user_id = ?', [customer.id, user_id]);
-            return resolve(customer);
+            return customer;
           }
         });
-      });
     },
 //------------------------------------------------------------------------------
 //  UPDATE A CUSTOMER
 //------------------------------------------------------------------------------
-    update: function(customer_id, email, name) {
-      return new Promise(function(resolve) {
+    update: async function(customer_id, email, name) {
         stripe_js.customers.update(
           customer_id,
           { email: email, name: name },
           function(err, customer) {
             if(err) {
               console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Updating Customer.', err.message);
-              return resolve('ERROR');
+              return 'ERROR';
             } else {
               console.info('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.name+' ('+customer.description+' | '+customer.id+') has been Updated.');
-              return resolve(customer);
+              return customer;
             }
           }
         );
-      });
     },
 //------------------------------------------------------------------------------
 //  FETCH A CUSTOMER
 //------------------------------------------------------------------------------
-    fetch: function(customer_id) {
-      return new Promise(function(resolve) {
+    fetch: async function(customer_id) {
         stripe_js.customers.retrieve(
           customer_id, { expand: ['subscriptions.data', 'subscriptions.data.latest_invoice'], },
           function(err, customer) {
             if(err) {
               console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Fetching Customer.', err.message);
-              return resolve('ERROR');
+              return 'ERROR';
             } else {
-              return resolve(customer);
+              return customer;
             }
           }
         );
-      });
     },
 //------------------------------------------------------------------------------
 //  DELETE A CUSTOMER
@@ -104,11 +98,11 @@ const stripe = {
       parse.forEach((customer,index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
-          database.db.query('SELECT * FROM stripe_users WHERE user_id = ?', [customer.description], async function (err, record, fields) {
+          record = database.db.query('SELECT * FROM stripe_users WHERE user_id = ?', [customer.description])
             let stripe_updated = false;
             let db_updated = false;
-            if (err) { return console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+')', err.message); }
-            if (record.length = 0) {
+            if (!record[0][0]) { return console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+')', err.message); }
+            if (record[0].length = 0) {
               try {
                 database.runQuery('INSERT INTO stripe_users (user_name, user_id, stripe_id, email) VALUES (?, ?, ?, ?)', [customer.name, customer.description, customer.id, customer.email]);
                 console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Inserted User into Database. This user may require Manual Temp Plan updating');
@@ -118,14 +112,16 @@ const stripe = {
                 data.user_id = customer.description;
                 data.email = customer.email;
                 data.stripe_id = customer.id;
-                record.splice(0, 0, data);
+                record[0].splice(0, 0, data);
               } catch (e) {
                 console.info('['+bot.getTime('stamp')+'] [stripe.js] ('+indexcounter+' of '+parse.length+') '+customer.name+' ('+customer.description+' | '+customer.id+') Unable to insert User into Database, ', e);
                 bot.sendEmbed(customer.name, customer.description, "FF0000", "Stripe.JS Maintenance Log", "Unable to insert User into Database, "+e, config.discord.log_channel);
                 if (indexcounter === parse.length) { return stripe.customer.doneParse(); }
               }
             }
+            record = record[0]
             if (!record[0].charges) {
+
               let hasHistory = [];
               for await (const charges of stripe_js.charges.list({ customer: customer.id, limit: 100 })) {
                 hasHistory.push(charges);
@@ -136,7 +132,7 @@ const stripe = {
               }
             }
             if (customer.name != record[0].user_name || customer.email != record[0].email) {
-              await stripe.customer.update(customer.id, record[0].email, record[0].user_name);
+              stripe.customer.update(customer.id, record[0].email, record[0].user_name);
               stripe_updated = true;
             }
             if (customer.id != record[0].stripe_id) {
@@ -191,7 +187,6 @@ const stripe = {
                 console.info(log_start+log_db_ver+' &'+log_str_ver);
                 if (indexcounter === parse.length) { return stripe.customer.doneParse(); }
             } // end if updated or verified
-          }); // dead end after database fetch
         }, 1000 * index);
       }); //end for each customer
     },
@@ -207,21 +202,19 @@ const stripe = {
 //------------------------------------------------------------------------------
 //  CANCEL A SUSBCRIPTION
 //------------------------------------------------------------------------------
-    cancel: function(username, user_id, subscription_id){
-      return new Promise(function(resolve) {
+    cancel: async function(username, user_id, subscription_id){
         stripe_js.subscriptions.del(
           subscription_id,
           function(err, confirmation) {
             if(err){
               console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Canceling Subscription.', err.message);
-              return resolve(null);
+              return null;
             } else{
               bot.sendEmbed(username, user_id, 'FF0000', 'Subscription Cancellation', '', config.discord.log_channel);
               console.info("["+bot.getTime("stamp")+"] [stripe.js] "+username+"'s subscription has been cancelled due to leaving the Server.");
-              return resolve(confirmation);
+              return confirmation;
             }
         });
-      });
     }
   },
 //------------------------------------------------------------------------------
@@ -300,20 +293,18 @@ const stripe = {
         });
       }
     },
-    fetchCheckout: function(checkout_id) {
-      return new Promise(function(resolve) {
+    fetchCheckout: async function(checkout_id) {
         stripe_js.checkout.sessions.retrieve(
           checkout_id, { expand: ['line_items.data','payment_intent','payment_intent.latest_charge'], },
           function(err, checkout) {
             if(err) {
               console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Fetching Checkout.', err.message);
-              return resolve('ERROR');
+              return 'ERROR';
             } else {
-              return resolve(checkout);
+              return checkout;
             }
           }
         );
-      });
     }
   },
 //------------------------------------------------------------------------------
