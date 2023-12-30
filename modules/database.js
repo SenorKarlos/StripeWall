@@ -1,5 +1,5 @@
 var stripe, bot, oauth2;
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2');
 const moment = require('moment');
 const config = require("../config/config.json");
 const object = {
@@ -14,188 +14,127 @@ const object = {
     port: config.database.port,
     database: config.database.name,
     charset : 'utf8mb4'
-  }),
+  }).promise(),
 //------------------------------------------------------------------------------
 //  RUN QUERY FUNCTION
 //------------------------------------------------------------------------------
-  runQuery: function(query, data, success) {
-    return new Promise(function(resolve) {
-      object.db.query(query, data, function(err, user, fields) {
-        if (err) {
-          console.info(err);
-          return resolve(false);
-        } else if (success) {
-          console.info(success);
-          return resolve(true);
-        } else {
-          return resolve(true);
-        }
-      });
-    });
+  runQuery: async function(query, data, success) {
+     result = object.db.query(query, data);
+      if (!result[0]) {
+        return false
+      } else if (success) {
+        console.info(success);
+        return true;
+      } else {
+        return true;
+      }
   },
 //------------------------------------------------------------------------------
 //  USER TABLE FETCH
 //------------------------------------------------------------------------------
-  fetchUser: function(user_id) {
-    return new Promise(function(resolve) {
+  fetchUser: async function(user_id) {
       let query = `SELECT * FROM stripe_users WHERE user_id = ?`;
       let data = [user_id];
-      object.db.query(query, data, async function(err, record, fields) {
-        if (err) {
-          return console.info(err);
-        } else if (record[0]) {
-          return resolve(record[0]);
-        } else {
-          return resolve(null);
-        }
-      });
-    });
+      result = await object.db.query(query, data)
+      if(result[0][0]) {
+        return result[0][0];
+       }
+      else
+        return false;
   },
 //------------------------------------------------------------------------------
 //  STRIPE USER TABLE FETCH
 //------------------------------------------------------------------------------
-  fetchStripeUser: function(user_id, stripe_id) {
-    return new Promise(function(resolve) {
+  fetchStripeUser: async function(user_id, stripe_id) {
       let query = `SELECT * FROM stripe_users WHERE user_id = ? AND stripe_id = ?`;
       let data = [user_id, stripe_id];
-      object.db.query(query, data, async function(err, record, fields) {
-        if (err) {
-          return console.info(err);
-        } else if (record[0]) {
-          return resolve(record[0]);
-        } else {
-          return resolve(null);
-        }
-      });
-    });
+      result = await object.db.query(query, data);
+      if(result[0][0]) {
+          return result[0][0];
+      }
+      else{
+        return false;
+      }
   },
   //------------------------------------------------------------------------------
 //  STRIPE USER TERMS REVIEWED
 //------------------------------------------------------------------------------
-termsReviewed: function(user_id) {
-  return new Promise(function(resolve) {
-    let query = `UPDATE stripe_users SET terms_reviewed = 'true' WHERE user_id = ?`;
-    let data = [user_id];
-    object.db.query(query, data, async function(err, record, fields) {
-      if (err) {
-        return console.info(err);
-      } else if (record[0]) {
-        return resolve(record[0]);
-      } else {
-        return resolve(null);
-      }
-    });
-  });
-},
-checkTermsReviewed: function(user_id) {
-  return new Promise(function(resolve) {
-    let query = `SELECT terms_reviewed FROM stripe_users WHERE user_id = ?`;
-    let data = [user_id];
-    object.db.query(query, data, async function(err, record, fields) {
-      if (err) {
-        return console.info(err);
-      } else if (record[0]) {
-        return resolve(record[0].terms_reviewed);
-      } else {
-        return resolve(null);
-      }
-    });
-  });
+termsReviewed: async function(user_id) {
+  let query = `UPDATE stripe_users SET terms_reviewed = 'true' WHERE user_id = ?`;
+  let data = [user_id];
+  await object.db.query(query, data)
 },
   //------------------------------------------------------------------------------
 //  STRIPE USER UPDATE ZONES
 //------------------------------------------------------------------------------
-updateZoneSelection: function(user_id, selection, zonediff) {
-  return new Promise(function(resolve) {
+updateZoneSelection: async function(user_id, selection) {
     let query = `UPDATE stripe_users SET zone_votes = ? , zones_reviewed = ? WHERE user_id = ?`;
     let data = [selection, 'true', user_id];
-    object.db.query(query, data, async function(err, record, fields) {
-      if (err) {
-        console.info(err);
-      } else if (record[0]) {
-        resolve(record[0]);
-      } else {
-        resolve(null);
-      }
-    });
-  });
+    result = await object.db.query(query, data);
+    if(result[0][0]) {
+      return result[0][0];
+    }
+    else{
+      return false;
+    }
 },
-updateTotalVotes: function(zonediff) {
-  return new Promise(function(resolve) {
+updateTotalVotes: async function(zonediff) {
     let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
     zonediff = JSON.parse(zonediff)
     let data = [zonediff.difference, zonediff.zone_name];
-    object.db.query(query, data, async function(err, record, fields) {
-      if (err) {
-        console.info(err);
-      } else if (record[0]) {
-        resolve(record[0]);
-      } else {
-        resolve(null);
-      }
-      });
-  })
+    result = await object.db.query(query, data);
+    if(result[0][0]) {
+      return result[0][0];
+    }
+    else{
+      return false;
+    }
 },
-updateActiveVotes: function(userid, status){
+updateActiveVotes: async function(userid, status){
   let query = "SELECT zone_votes FROM stripe_users WHERE user_id = ?";
   let data = [userid];
-  object.db.query(query, data, async function(err, records, fields) {
-    if (err) {
-      console.info(err);
-    }
-    if (records) {
-      var votes = records[0].zone_votes;
-      for(var i = 0 ; i < votes.length ; i++) {
-        if(status == 0){
-          query = `UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?`;
-          } else{
-          query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
-          }
-          console.log(votes[i].votes)
-          console.log(votes[i].zone_name)
-          data = [votes[i].votes, votes[i].zone_name];
-          console.log(query+ ' + ')
-          console.log(data)
-          object.runQuery(query, data);
-          data = [votes[i].votes, votes[i].parent_name];
-          object.runQuery(query, data);
+  result = await object.db.query(query, data);
+  if (result[0][0]) {
+    var votes = result[0][0].zone_votes;
+    for(var i = 0 ; i < votes.length ; i++) {
+      if(status == 0) {
+        query = `UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?`;
+        } else{
+        query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
         }
+        data = [votes[i].votes, votes[i].zone_name];
+
+        object.runQuery(query, data);
+        data = [votes[i].votes, votes[i].parent_name];
+        object.runQuery(query, data);
       }
-  })
+    }
 },
-updateParentVotes: function(zonediff) {
-  return new Promise(function(resolve) {
+updateParentVotes: async function(zonediff) {
     let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
     zonediff = JSON.parse(zonediff)
     let data = [zonediff.difference, zonediff.parent_zone];
-    object.db.query(query, data, async function(err, record, fields) {
-      if (err) {
-        console.info(err);
-      } else if (record[0]) {
-        resolve(record[0]);
-      } else {
-        resolve(null);
-      }
-      });
-  })
+    result = await object.db.query(query, data);
+    if(result[0][0]) {
+      return result[0][0];
+    }
+    else{
+      return false;
+    }
 },
   //------------------------------------------------------------------------------
 //  ZONE FETCH TABLE FETCH
 //------------------------------------------------------------------------------
-fetchZones: function() {
-  return new Promise(function(resolve) {
+fetchZones: async function() {
     let query = `SELECT sz.*,sz2.zone_name as parent_name FROM service_zones sz LEFT JOIN service_zones sz2 ON sz.parent_zone = sz2.zone_name`;
     let data = [];
-    object.db.query(query, data, async function(err, record, fields) {
-      if (err) {
-        return console.info(err);
-      } else if (record) {
-        return resolve(record);
-      } else {
-        return resolve(null);
-      }
-    });
-  });
+    result = await object.db.query(query, data);
+    if(result[0]) {
+      return result[0];
+    }
+    else{
+      return false;
+    }
 },
 //------------------------------------------------------------------------------
 //  MAINTENANCE ROUTINES (DATABASE)
@@ -257,7 +196,7 @@ fetchZones: function() {
                 let query = `UPDATE stripe_users SET customer_type = 'inactive', price_id = NULL, expiration = NULL, charge_id = NULL WHERE user_id = ?`;
                 let data = [user.user_id];
                 await object.runQuery(query, data);
-                await object.updateActiveVotes(user.user_id, 0);
+               // await object.updateActiveVotes(user.user_id, 0);
                 db_updated = true;
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Cancelled Subscriptions/Access.");
                 bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Cancelled Subscriptions/Access.', config.discord.log_channel);
@@ -266,7 +205,7 @@ fetchZones: function() {
                 let query = `UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, customer_type = 'lifetime-inactive', expiration = ? WHERE user_id = ?`;
                 let data = [user.user_id, 9999999998];
                 await object.runQuery(query, data);
-                await object.updateActiveVotes(user.user_id, 0);
+               // await object.updateActiveVotes(user.user_id, 0);
                 db_updated = true;
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Lifetime Member Left Guild. Set inactive.");
                 bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Lifetime Member Left Guild. Set inactive.', config.discord.log_channel);
@@ -477,7 +416,7 @@ fetchZones: function() {
                       let query = `UPDATE stripe_users SET customer_type = 'inactive', expiration = NULL WHERE user_id = ?`;
                       let data = [record[0].user_id];
                       await object.runQuery(query, data);
-                      await object.updateActiveVotes(record[0].user_id, 0);
+                      //await object.updateActiveVotes(record[0].user_id, 0);
                       console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record[0].stripe_id+") Manually Tracked User Expired, Removing Role & Flags.");
                       bot.sendDM(member, 'Subscription Ended', 'Your subscription has expired. Please sign up again to continue.', 'FFFF00');
                       bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Manually Tracked User Expired ⚠', 'Removed Role & Flags. (Role Check)', config.discord.log_channel);
