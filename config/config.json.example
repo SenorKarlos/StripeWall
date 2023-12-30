@@ -39,6 +39,13 @@
     "blacklist": []
   },
 
+  "service_zones": {
+    "init_source": "geofence.json",
+    "roles_enabled": false,
+    "votes_enabled": false,
+    "vote_worth": 0
+  },
+
   "pages": {
     "general":{
       "terms": "Do not redistribute scanned data. The sole exception being Raids you plan to attend ONLY. Doing so will result in immediate revokation of all access.",
@@ -172,6 +179,22 @@
         "id": "price_",
         "role_id": "000000000000000000",
         "mode": "legacy"
+      }
+    ],
+    "donation_ids": [
+      {
+        "id": "price_",
+        "role_id": "000000000000000000",
+        "mode": "payment",
+        "title": "One-Time Donation",
+        "text": "Minimum $5, Boost your Zone Votes!"
+      },
+      {
+        "id": "price_",
+        "role_id": "000000000000000000",
+        "mode": "subscription",
+        "title": "Monthly Subscription Donation",
+        "text": "Increments of $5, Boost your Zone Votes every month!"
       }
     ]
   }

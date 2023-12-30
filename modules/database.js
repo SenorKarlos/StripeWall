@@ -56,86 +56,81 @@ const object = {
         return false;
       }
   },
-  //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 //  STRIPE USER TERMS REVIEWED
 //------------------------------------------------------------------------------
-termsReviewed: async function(user_id) {
-  let query = `UPDATE stripe_users SET terms_reviewed = 'true' WHERE user_id = ?`;
-  let data = [user_id];
-  await object.db.query(query, data)
-},
-  //------------------------------------------------------------------------------
+  termsReviewed: async function(user_id) {
+    let query = `UPDATE stripe_users SET terms_reviewed = 'true' WHERE user_id = ?`;
+    let data = [user_id];
+    await object.db.query(query, data)
+  },
+//------------------------------------------------------------------------------
 //  STRIPE USER UPDATE ZONES
 //------------------------------------------------------------------------------
-updateZoneSelection: async function(user_id, selection) {
+  updateZoneSelection: async function(user_id, selection) {
     let query = `UPDATE stripe_users SET zone_votes = ? , zones_reviewed = ? WHERE user_id = ?`;
     let data = [selection, 'true', user_id];
     result = await object.db.query(query, data);
-    if(result[0][0]) {
+    if (result[0][0]) {
       return result[0][0];
-    }
-    else{
+    } else {
       return false;
     }
-},
-updateTotalVotes: async function(zonediff) {
+  },
+  updateTotalVotes: async function(zonediff) {
     let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
     zonediff = JSON.parse(zonediff)
     let data = [zonediff.difference, zonediff.zone_name];
     result = await object.db.query(query, data);
-    if(result[0][0]) {
+    if (result[0][0]) {
       return result[0][0];
-    }
-    else{
+    } else {
       return false;
     }
-},
-updateActiveVotes: async function(userid, status){
-  let query = "SELECT zone_votes FROM stripe_users WHERE user_id = ?";
-  let data = [userid];
-  result = await object.db.query(query, data);
-  if (result[0][0]) {
-    var votes = result[0][0].zone_votes;
-    for(var i = 0 ; i < votes.length ; i++) {
-      if(status == 0) {
-        query = `UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?`;
-        } else{
-        query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
+  },
+  updateActiveVotes: async function(userid, status){
+    let query = "SELECT zone_votes FROM stripe_users WHERE user_id = ?";
+    let data = [userid];
+    result = await object.db.query(query, data);
+    if (result[0][0]) {
+      var votes = result[0][0].zone_votes;
+      for(var i = 0 ; i < votes.length ; i++) {
+        if(status == 0) {
+          query = `UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?`;
+        } else {
+          query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
         }
         data = [votes[i].votes, votes[i].zone_name];
-
         object.runQuery(query, data);
         data = [votes[i].votes, votes[i].parent_name];
         object.runQuery(query, data);
       }
     }
-},
-updateParentVotes: async function(zonediff) {
+  },
+  updateParentVotes: async function(zonediff) {
     let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
     zonediff = JSON.parse(zonediff)
     let data = [zonediff.difference, zonediff.parent_zone];
     result = await object.db.query(query, data);
-    if(result[0][0]) {
+    if (result[0][0]) {
       return result[0][0];
-    }
-    else{
+    } else {
       return false;
     }
-},
-  //------------------------------------------------------------------------------
-//  ZONE FETCH TABLE FETCH
+  },
 //------------------------------------------------------------------------------
-fetchZones: async function() {
+//  ZONE TABLE FETCH
+//------------------------------------------------------------------------------
+  fetchZones: async function() {
     let query = `SELECT sz.*,sz2.zone_name as parent_name FROM service_zones sz LEFT JOIN service_zones sz2 ON sz.parent_zone = sz2.zone_name`;
     let data = [];
     result = await object.db.query(query, data);
-    if(result[0]) {
+    if (result[0]) {
       return result[0];
-    }
-    else{
+    } else {
       return false;
     }
-},
+  },
 //------------------------------------------------------------------------------
 //  MAINTENANCE ROUTINES (DATABASE)
 //------------------------------------------------------------------------------

@@ -44,7 +44,7 @@ const oauth2 = {
       }).then(async function(response) {
         console.info('['+bot.getTime('stamp')+'] [oauth2.js] Successfully Refreshed a Token', response.data);
         let token_expiration = (unix+response.data.expires_in);
-        database.runQuery(`UPDATE stripe_users SET access_token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?`, [response.data.access_token, response.data.refresh_token, token_expiration, user.user_id]);
+        database.runQuery('UPDATE stripe_users SET access_token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?', [response.data.access_token, response.data.refresh_token, token_expiration, user.user_id]);
         console.info('['+bot.getTime('stamp')+'] [oauth2.js] '+user.user_name+' ('+user.user_id+') Updated Discord OAuth2 info in Database.');
         return resolve(response.data);
       }).catch(error => {
