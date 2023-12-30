@@ -625,6 +625,7 @@ server.get("/manual", async function(req, res) {
       user_name: req.session.username,
       email: req.session.email
     });
+  }
 });
 //------------------------------------------------------------------------------
 //  ACTIVE LIFETIME USER PAGE (TO BE DELETED)
