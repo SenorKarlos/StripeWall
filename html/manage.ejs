@@ -206,6 +206,8 @@ for(var i=0; i < zones.length; i++) {
                 <input type="hidden" name='zonedifferences' id='zonedifferences' value="">          
                 <input type="hidden" name='userid' id='userid' value="<%= user.user_id %>">          
                 <input type="hidden" name='usertype' id='usertype' value="<%= user.customer_type %>">          
+                <input type="hidden" name='remZone' id='remZone' value="">          
+                <input type="hidden" name='remParentZone' id='remParentZone' value="">          
                 <% for(var i=0; i<zones.length; i++) { %>
                     <div class="column-4" style="font-stretch: expanded;">
                         <p class="stretchedText"><%= zones[i].parent_name %></p><br>
@@ -283,6 +285,7 @@ for(var i=0; i < zones.length; i++) {
                 if(id == '<%= zones[i].zone_name %>')
                 {
                     zones[id] = 0;
+                    parentZone = '<%= zones[i].parent_name %>';
                     var difference = zones[id] - originalzones['<%= zones[i].zone_name %>'];
                     jsonDiff ='{"zone_name":"<%= zones[i].zone_name %>","parent_zone":"<%= zones[i].parent_name %>","difference":"'+difference+'"}'
                 }
@@ -292,6 +295,8 @@ for(var i=0; i < zones.length; i++) {
             jsonValue += ']';
             document.getElementById('zonedifferences').value = jsonDiff;
             document.getElementById('selection').value = jsonValue;
+            document.getElementById('remZone').value = id;
+            document.getElementById('remParentZone').value = parentZone;
             document.getElementById('voteForm').submit();
         }
     }

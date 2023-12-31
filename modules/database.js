@@ -70,14 +70,25 @@ termsReviewed: async function(user_id) {
 updateZoneSelection: async function(user_id, selection) {
     let query = `UPDATE stripe_users SET zone_votes = ? , zones_reviewed = ? WHERE user_id = ?`;
     let data = [selection, 'true', user_id];
-    result = await object.db.query(query, data);
-    if(result[0][0]) {
-      return result[0][0];
-    }
-    else{
-      return false;
-    }
+    await object.db.query(query, data);
 },
+
+updateZoneUsers: async function(zone, parent, addOrSub = 1) {
+  let query = '';
+  if(addOrSub == 1){
+    query = `UPDATE service_zones SET total_users = total_users + 1 WHERE zone_name = ?`;
+  }
+  else
+  {
+    query = `UPDATE service_zones SET total_users = total_users - 1 WHERE zone_name = ?`;
+  }
+
+  let data = [zone];
+  await object.db.query(query, data);
+  data = [parent];
+  await object.db.query(query, data);
+},
+
 updateTotalVotes: async function(zonediff) {
     let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
     zonediff = JSON.parse(zonediff)
@@ -100,10 +111,10 @@ updateActiveVotes: async function(userid, status, lifetimeToggle = false){
     for(var i = 0 ; i < votes.length ; i++) {
       if(status == 0) {
         lifetime = 'lifetime-inactive'
-        query = `UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?`;
+        query = `UPDATE service_zones SET total_votes = total_votes - ?, total_users = total_users - 1 WHERE zone_name = ?`;
         } else{
         lifetime = 'lifetime-active'
-        query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
+        query = `UPDATE service_zones SET total_votes = total_votes + ? , total_users = total_users + 1 WHERE zone_name = ?`;
         }
         data = [votes[i].votes, votes[i].zone_name];
 
@@ -130,6 +141,11 @@ updateParentVotes: async function(zonediff) {
     else{
       return false;
     }
+},
+updateZoneOverride: async function(value,zone) {
+  let query = 'UPDATE service_zones SET admin_worker_override = ? WHERE zone_name = ?';
+  let data = [value, zone]
+  await object.db.query(query, data);
 },
   //------------------------------------------------------------------------------
 //  ZONE FETCH TABLE FETCH

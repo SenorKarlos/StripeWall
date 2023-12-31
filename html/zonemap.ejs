@@ -77,12 +77,16 @@ if(!!zoneSelection){
         </div>
         <div style="clear: both;"></div>
         <button type="button" style="background-color: grey; float:right;" onclick="window.location='/manage'">Manage Zones</button>
+        <button type="button" style="background-color: grey; float:right;" onclick="window.location='/report'">Zone Report</button>
         <br>
         <br>
         <hr>
         <form id="zoneForm" method="POST">
             <input type="hidden" name='selection' id='selection' value="">          
+            <input type="hidden" name='newZone' id='newZone' value="">          
+            <input type="hidden" name='newParentZone' id='newParentZone' value="">          
             <input type="hidden" name='userid' id='userid' value="<%= user.user_id %>">
+            <input type="hidden" name='usertype' id='usertype' value="<%= user.customer_type %>">
             <input type="hidden" name='zonesreviewed' value="<%= user.zones_reviewed %>">
             <% for(var i=0; i < parentids.length; i++) { %>
             <div class="zones" id="zone<%= parentids[i] %>" style="display:none;">
@@ -136,6 +140,8 @@ if(!!zoneSelection){
             } %>
             jsonValue += '{"zone_name":"'+zoneName+'","parent_name":"'+parentName+'","votes":"0"}]';
             document.getElementById('selection').value = jsonValue;
+            document.getElementById('newZone').value = zoneName;
+            document.getElementById('newParentZone').value = parentName;
             document.getElementById('zoneForm').submit();
         }
     }

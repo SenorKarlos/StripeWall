@@ -295,7 +295,7 @@ server.get("/zonemap", async function(req, res) {
   }
   let dbuser = await database.fetchUser(req.session.discord_id);
   if (dbuser.terms_reviewed == 'false') {
-   return res.redirect(`/new`);
+    return res.redirect(`/new`);
   }
   let radar_script = '';
   let zones = await database.fetchZones();
@@ -321,13 +321,59 @@ server.get("/zonemap", async function(req, res) {
 
 server.post("/zonemap", async function(req,res){
   const userid = req.body.userid;
+  const usertype = req.body.userid;
+  const newZone = req.body.newZone;
+  const newParentZone = req.body.newParentZone;
   const selection = req.body.selection;
   const reviewed = req.body.zonesreviewed;
   await database.updateZoneSelection(userid, selection);
+  if(usertype != 'inactive' && usertype != 'lifetime-inactive')  //add to total user count if active
+  {
+    await database.updateZoneUsers(newZone, newParentZone);
+  }
   if(reviewed == 'true')
     res.redirect('/zonemap');
   else
     res.redirect('/manage');
+})
+
+//------------------------------------------------------------------------------
+//  ZONE REPORT PAGE
+//------------------------------------------------------------------------------
+server.get("/report", async function(req, res) {
+  let unix = moment().unix();
+  let dbuser = await database.fetchUser(req.session.discord_id);
+  if (!req.session.login || unix > req.session.now+1800) {
+    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
+   return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+  }
+  let radar_script = '';
+  let zones = await database.fetchZones();
+
+  if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
+  return res.render(__dirname+"/html/report.ejs", {
+    terms: config.pages.general.terms,
+    disclaimer: config.pages.general.disclaimer,
+    warning: config.pages.general.warning,
+    background: config.pages.general.background,
+    outer_background: config.pages.general.outer_background,
+    border_color: config.pages.general.border_color,
+    title_color: config.pages.general.title_color,
+    text_color: config.pages.general.text_color,
+    site_name: config.server.site_name,
+    site_url: config.server.site_url,
+    radar_script: radar_script,
+    usertype : dbuser.customer_type,
+    zones: zones
+  });
+});
+
+server.post("/report", async function(req,res){
+  const overrides = req.body.overrides[0];
+ for(var i = 0 ; i < overrides.zone.length ; i++){
+     await database.updateZoneOverride(overrides.overrides[i], overrides.zone[i]);
+ }
+  res.redirect('/report');
 })
 //------------------------------------------------------------------------------
 //  WORKER RESULT PAGE
@@ -525,12 +571,19 @@ server.post("/manage", async function(req,res){
     const userid = req.body.userid;
     const usertype = req.body.usertype;
     const selection = req.body.selection;
+    const removeZone = req.body.remZone;
+    const removeParentZone = req.body.remParentZone;
+
     var zonediff = req.body.zonedifferences;
     zonediff = zonediff.split('|')
    await database.updateZoneSelection(userid, selection);
-    if(usertype != 'inactive' && usertype != "lifetime-inactive")
+    if(usertype != 'inactive' && usertype != "lifetime-inactive") //adjust zone values only if active user
     {
-      for(var i = 0 ; i < zonediff.length ; i++)
+      if(removeZone != '') //removing a zone. Decrease total users from zone.
+      {
+        await database.updateZoneUsers(removeZone,removeParentZone,0);
+      }
+      for(var i = 0 ; i < zonediff.length ; i++) //adjusting vote counts
       {
        await database.updateTotalVotes(zonediff[i]);
        await database.updateParentVotes(zonediff[i]);
@@ -625,6 +678,7 @@ server.get("/manual", async function(req, res) {
       user_name: req.session.username,
       email: req.session.email
     });
+  }
 });
 //------------------------------------------------------------------------------
 //  ACTIVE LIFETIME USER PAGE (TO BE DELETED)

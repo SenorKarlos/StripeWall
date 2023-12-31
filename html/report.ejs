@@ -1,0 +1,109 @@
+<%- include('./includes/head.ejs') %>
+<% var parents = [];
+var userTotal = 0;
+var voteTotal = 0;
+var workerTotal = 0;
+var percentage = 0;
+
+for(var i=0; i<zones.length; i++) {
+    if(zones[i].parent_zone == null)
+    {     
+        parents.push(zones[i]);
+        userTotal += zones[i].total_users;
+        voteTotal += zones[i].total_votes;
+        workerTotal += zones[i].assigned_workers;
+    }
+}
+
+%>
+<div class="rcorners1 background">
+<button type="button" style="float:right;margin-right:50px;" onclick="window.location='/manage'">Manage Zones</button>&emsp;&emsp;
+<button type="button" style="float:right;margin-right:10px;" onclick="window.location='/zonemap'">Zone Map</button>
+<br>
+<br>
+<br>
+<section class="ftco-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center mb-5">
+              <h2 class="heading-section">Service Zones Report</h2>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="table-wrap">
+                    <form method="POST">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                            <th>District/Service Zone</th>
+                            <th>Total Users</th>
+                            <th>Total Votes</th>
+                            <th>Worker %</th>
+                            <th>Admin Adjust</th>
+                            <th>Workers</th>  
+                        </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th scope="row">All Areas</th>
+                                <td><%= userTotal %></td>
+                                <td><%= voteTotal %></td>
+                                <td>100%</td>
+                                <td></td>
+                                <td><%= workerTotal %></td>
+                            </tr>
+                           <% for(var i=0; i<parents.length; i++) { 
+                            if(parents[i].total_votes != 0){
+                                percentage = (voteTotal / parents[i].total_votes * workerTotal); 
+                             }
+                            else{
+                                 percentage = 0; 
+                             } %>
+                            <tr>
+                                <th scope="row"><%= parents[i].zone_name %></th>
+                                <td><%= parents[i].total_users %></td>
+                                <td><%= parents[i].total_votes %></td>
+                                <td><%= parents[i].calc_workers %>%</td>
+                                <td><%= parents[i].admin_worker_override %></td>                                
+                                <td><%= parents[i].assigned_workers %></td> 
+                            </tr>
+                            <% for(var j=0; j<zones.length; j++) {
+                                if(zones[j].parent_zone == parents[i].zone_name)
+                                { 
+                                    if(zones[j].total_votes != 0){
+                                        percentage = (voteTotal / zones[j].total_votes * parents[i].assigned_workers);
+                                    }
+                                    else{
+                                        percentage = 0;
+                                    } %>
+                                    <tr>
+                                        <input style="width: 50px" type="hidden" name='overrides[][zone]' value="<%= zones[j].zone_name %>">
+                                        <th scope="row">&emsp;&emsp;<%= zones[j].zone_name %></th>
+                                        <td><%= zones[j].total_users %></td>
+                                        <td><%= zones[j].total_votes %></td>
+                                        <td><%= zones[j].calc_workers %>%</td>     
+                                        <% if (usertype == 'admin') { %>                         
+                                         <td><input style="width: 50px" type="number" name='overrides[][overrides]' value="<%= zones[j].admin_worker_override %>"></td>  
+                                        <% } else { %>
+                                            <td><%= zones[j].admin_worker_override %></td>
+                                        <% } %>                              
+                                        <td><%= zones[j].assigned_workers %></td> 
+                                    </tr>
+                                <% }
+                                 }
+                             } %>
+
+                        </tbody>
+                    </table>
+                    <% if (usertype == 'admin') { %>
+                         <input type="submit" value="Submit overrides">
+                    <% } %>
+                    </form>
+                 </div>
+            </div>
+         </div>
+    </div>
+</section>
+</div>
+<%- include('./includes/end.ejs') %>
