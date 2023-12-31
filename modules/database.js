@@ -130,6 +130,7 @@ updateActiveVotes: async function(userid, status, lifetimeToggle = false){
       }
     }
 },
+
 updateParentVotes: async function(zonediff) {
     let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
     zonediff = JSON.parse(zonediff)
@@ -223,7 +224,7 @@ fetchZones: async function() {
                 let query = `UPDATE stripe_users SET customer_type = 'inactive', price_id = NULL, expiration = NULL, charge_id = NULL WHERE user_id = ?`;
                 let data = [user.user_id];
                 await object.runQuery(query, data);
-               // await object.updateActiveVotes(user.user_id, 0);
+                await object.updateActiveVotes(user.user_id, 0);
                 db_updated = true;
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Cancelled Subscriptions/Access.");
                 bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Cancelled Subscriptions/Access.', config.discord.log_channel);
@@ -232,7 +233,7 @@ fetchZones: async function() {
                 let query = `UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, customer_type = 'lifetime-inactive', expiration = ? WHERE user_id = ?`;
                 let data = [user.user_id, 9999999998];
                 await object.runQuery(query, data);
-               // await object.updateActiveVotes(user.user_id, 0);
+                await object.updateActiveVotes(user.user_id, 0);
                 db_updated = true;
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Lifetime Member Left Guild. Set inactive.");
                 bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Lifetime Member Left Guild. Set inactive.', config.discord.log_channel);
@@ -445,7 +446,7 @@ fetchZones: async function() {
                       let query = `UPDATE stripe_users SET customer_type = 'inactive', expiration = NULL WHERE user_id = ?`;
                       let data = [record.user_id];
                       object.runQuery(query, data);
-                      //await object.updateActiveVotes(record[0].user_id, 0);
+                      object.updateActiveVotes(record[0].user_id, 0);
                       console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.stripe_id+") Manually Tracked User Expired, Removing Role & Flags.");
                       bot.sendDM(member, 'Subscription Ended', 'Your subscription has expired. Please sign up again to continue.', 'FFFF00');
                       bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Manually Tracked User Expired ⚠', 'Removed Role & Flags. (Role Check)', config.discord.log_channel);
@@ -583,9 +584,68 @@ fetchZones: async function() {
     }
   },
   doneDiscordRoles: async function() {
-    console.info("["+bot.getTime("stamp")+"] [database.js] Role checks complete");
+    console.info("["+bot.getTime("stamp")+"] [database.js] Role checks complete. Starting to sync users and votes for zones");
+    return object.syncZones();
+  },
+  syncZones: async function() {
+    let query = "SELECT zone_votes FROM stripe_users WHERE customer_type <> 'inactive' AND customer_type <> 'lifetime-inactive'";
+    let data = [];
+    result = await object.db.query(query, data);
+    if (result[0]) {
+      totals = result[0];
+      var userTotal = [];
+      var voteTotal = [];
+      for(var i = 0 ; i < totals.length ; i++) {  //loop through users
+          if(!!totals[i].zone_votes) {
+            
+            votes = totals[i].zone_votes;
+            for(var j = 0 ; j < votes.length ; j++)  {//loop through zones users currently use
+              if(typeof voteTotal[votes[j].zone_name] === 'undefined')
+              {
+                userTotal[votes[j].zone_name] = 0;
+                voteTotal[votes[j].zone_name] = 0;
+              }
+              if(typeof voteTotal[votes[j].parent_name] === 'undefined')
+              {
+                userTotal[votes[j].parent_name] = 0;
+                voteTotal[votes[j].parent_name] = 0;
+              }
+              voteTotal[votes[j].zone_name] += Number(votes[j].votes);
+              voteTotal[votes[j].parent_name] += Number(votes[j].votes);
+              userTotal[votes[j].zone_name] += 1;
+              userTotal[votes[j].parent_name] += 1;
+            }
+          }
+        }
+        console.log(userTotal)
+        console.log(voteTotal)
+        query = "SELECT zone_name, total_users, total_votes FROM service_zones";
+        result = await object.db.query(query, data);
+        if (result[0]) {
+          zones = result[0];
+          for(var i = 0 ; i < zones.length ; i++) {  //loop through zones to compare them with data from above
+            if(zones[i].total_users != userTotal[zones[i].zone_name]){
+              console.log("["+bot.getTime("stamp")+"] [database.js] Mismatched user totals for zone: " + zones[i].zone_name + ". "+ zones[i].total_users + " vs " + userTotal[zones[i].zone_name] + ". Updating value");
+              query = 'UPDATE service_zones SET total_users = ? WHERE zone_name = ?';
+              data = [userTotal[zones[i].zone_name], zones[i].zone_name];
+              await object.db.query(query, data);
+            }
+            if(zones[i].total_votes != voteTotal[zones[i].zone_name]){
+              console.log("["+bot.getTime("stamp")+"] [database.js] Mismatched user totals for zone: " + zones[i].zone_name + ". "+ zones[i].total_votes + " vs " + voteTotal[zones[i].zone_name] + ". Updating value");
+              query = 'UPDATE service_zones SET total_votes = ? WHERE zone_name = ?';
+              data = [voteTotal[zones[i].zone_name], zones[i].zone_name];
+              await object.db.query(query, data);
+            }
+          }
+        }
+        else
+        {
+            console.info("["+bot.getTime("stamp")+"] [database.js] No users found.");
+        }
+    }
+     console.info("["+bot.getTime("stamp")+"] [database.js] Zone sync complete.");
     return console.info("["+bot.getTime("stamp")+"] [database.js] Maintenance routines complete.");
-  }
+  }  
 }
 
 // EXPORT OBJECT

@@ -161,7 +161,7 @@ const stripe = {
                 if (record[0].price_id == config.stripe.price_ids[i].id) {
                   if (config.stripe.price_ids[i].mode == "subscription" || record[0].expiration < unix) {
                     database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = NULL, expiration = NULL WHERE user_id = ?', ['inactive', customer.description]);
-                    if (record[0].customer_type == 'subscriber' || record[0].customer_type == 'pay-as-you-go' || record[0].customer_type == 'manual' || record[0].customer_type == 'lifetime-active') { database.updateTotalVote(customer.description, 0); }
+                    if (record[0].customer_type == 'subscriber' || record[0].customer_type == 'pay-as-you-go' || record[0].customer_type == 'manual' || record[0].customer_type == 'lifetime-active') { database.updateActiveVotes(customer.description, 0); }
                     db_updated = true;
                   /*} else {*/
                     /* Maybe something about storing, pulling & checking invoice details & expiry calc for temp plans , but probably too much and not needed */
