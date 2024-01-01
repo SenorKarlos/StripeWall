@@ -201,7 +201,14 @@ for(var i=0; i < zones.length; i++) {
             <p><strong><font size="20px" color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
             <br>
             <p><strong><font color="white"><u>Allocate your votes below</u></font></strong></p>
+              
             <form method="POST" id="voteForm">   
+                <div>
+                    <input type="radio" <% if(user.format == 0) { %>checked="checked" <% } %> onchange="changeFormat(0)" id="number" name="format" value="0">
+                    <label for="number"><font color="white"># Format</font></label>&nbsp;&nbsp;
+                    <input type="radio" <% if(user.format == 1) { %>checked="checked" <% } %> onchange="changeFormat(1)" id="percentage" name="format" value="1">
+                    <label for="percentage"><font color="white">% Format</font></label>
+                </div>
                 <input type="hidden" name='selection' id='selection' value="">          
                 <input type="hidden" name='zonedifferences' id='zonedifferences' value="">          
                 <input type="hidden" name='userid' id='userid' value="<%= user.user_id %>">          
@@ -212,7 +219,8 @@ for(var i=0; i < zones.length; i++) {
                     <div class="column-4" style="font-stretch: expanded;">
                         <p class="stretchedText"><%= zones[i].parent_name %></p><br>
                         <p class="stretchedText" style="font-size: 20px;"><%= zones[i].zone_name %></p><br><br>
-                        <p style="font-size: 15px; line-height: 10%">Votes: <span id="zone<%= zones[i].zone_name %>"><%= zones[i].votes %></span></p>
+                        <p style="font-size: 15px; line-height: 10%">Votes:</p>
+                        <p style="line-height: 10%"><span class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>id="zone0<%= zones[i].zone_name %>"><%= zones[i].votes %></span><span class="format1" <% if(user.format == 0) { %>style="display:none" <% } %>id="zone1<%= zones[i].zone_name %>"><%= (zones[i].votes/total)*100 %>%</span></p>
                         <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','sub')">-</button>
                         <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','add')">+</button>
                         <br>
@@ -258,7 +266,8 @@ for(var i=0; i < zones.length; i++) {
             if(available > 0)
             {
                 document.getElementById('remainVotes').innerHTML = --available;
-                document.getElementById('zone'+id).innerHTML = ++zones[id];
+                document.getElementById('zone0'+id).innerHTML = ++zones[id];
+                document.getElementById('zone1'+id).innerHTML = String((zones[id]/total)*100) + '%';
             }
         }
         else
@@ -266,7 +275,8 @@ for(var i=0; i < zones.length; i++) {
             if(available < total && zones[id] > 0)
             {
                 document.getElementById('remainVotes').innerHTML = ++available;
-                document.getElementById('zone'+id).innerHTML = --zones[id];
+                document.getElementById('zone0'+id).innerHTML = --zones[id];
+                document.getElementById('zone1'+id).innerHTML = String((zones[id]/total)*100) + '%';
             }
         }
     }
@@ -321,6 +331,25 @@ for(var i=0; i < zones.length; i++) {
         if (confirm("Are you sure you want to change your lifetime status?") == true) 
         {
             document.getElementById('lifetimeForm').submit();
+        }
+    }
+    function changeFormat(format)
+    {
+        if(format == 0)
+        {
+            hide = 1;
+        }
+        else
+        {
+            hide = 0;
+        }
+        var spanHide = document.getElementsByClassName("format"+hide);
+        for(var i = 0; i < spanHide.length; i++){
+            spanHide[i].style.display = "none"; 
+        }
+        var spanShow = document.getElementsByClassName("format"+format);
+        for(var i = 0; i < spanShow.length; i++){
+            spanShow[i].style.display = "block"; 
         }
     }
   </script>

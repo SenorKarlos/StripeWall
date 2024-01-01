@@ -67,9 +67,9 @@ termsReviewed: async function(user_id) {
   //------------------------------------------------------------------------------
 //  STRIPE USER UPDATE ZONES
 //------------------------------------------------------------------------------
-updateZoneSelection: async function(user_id, selection) {
-    let query = `UPDATE stripe_users SET zone_votes = ? , zones_reviewed = ? WHERE user_id = ?`;
-    let data = [selection, 'true', user_id];
+updateZoneSelection: async function(user_id, selection, format) {
+    let query = `UPDATE stripe_users SET zone_votes = ? , zones_reviewed = ?, format = ? WHERE user_id = ?`;
+    let data = [selection, 'true', format, user_id];
     await object.db.query(query, data);
 },
 
@@ -617,8 +617,6 @@ fetchZones: async function() {
             }
           }
         }
-        console.log(userTotal)
-        console.log(voteTotal)
         query = "SELECT zone_name, total_users, total_votes FROM service_zones";
         result = await object.db.query(query, data);
         if (result[0]) {

@@ -295,7 +295,7 @@ server.get("/zonemap", async function(req, res) {
   }
   let dbuser = await database.fetchUser(req.session.discord_id);
   if (dbuser.terms_reviewed == 'false') {
-    return res.redirect(`/new`);
+   return res.redirect(`/new`);
   }
   let radar_script = '';
   let zones = await database.fetchZones();
@@ -573,10 +573,11 @@ server.post("/manage", async function(req,res){
     const selection = req.body.selection;
     const removeZone = req.body.remZone;
     const removeParentZone = req.body.remParentZone;
+    const format = req.body.format;
 
     var zonediff = req.body.zonedifferences;
     zonediff = zonediff.split('|')
-   await database.updateZoneSelection(userid, selection);
+   await database.updateZoneSelection(userid, selection, format);
     if(usertype != 'inactive' && usertype != "lifetime-inactive") //adjust zone values only if active user
     {
       if(removeZone != '') //removing a zone. Decrease total users from zone.
