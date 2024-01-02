@@ -83,7 +83,7 @@ for(var i=0; i<zones.length; i++) {
                                         <td><%= zones[j].total_users %></td>
                                         <td><%= zones[j].total_votes %></td>
                                         <td><%= zones[j].calc_workers %>%</td>     
-                                        <% if (usertype == 'admin') { %>                         
+                                        <% if (usertype == 'administrator') { %>                         
                                          <td><input style="width: 50px" type="number" name='overrides[][overrides]' value="<%= zones[j].admin_worker_override %>"></td>  
                                         <% } else { %>
                                             <td><%= zones[j].admin_worker_override %></td>

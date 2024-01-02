@@ -560,6 +560,7 @@ server.get("/manage", async function(req, res) {
       plans: config.stripe.price_ids,
       donations: config.stripe.donation_ids,
       voteworth: config.service_zones.vote_worth,
+      discord: config.discord,
       user: dbuser
     });
 });
