@@ -28,8 +28,8 @@
     "bot_token": "your bot token",
     "redirect_url": "https://yourdomain.site/login",
     "guild_id": "000000000000000000",
-    "lifetime_role": false,
-    "inactive_lifetime_role": false,
+    "lifetime_role": "",
+    "inactive_lifetime_role": "",
     "log_channel": "000000000000000000",
     "welcome_channel": "000000000000000000",
     "welcome_content": "Thank You For Your Purchase, %usertag%! Please visit the <#000000000000000000> channel to activate your services!",
@@ -120,60 +120,52 @@
         "role_id": "000000000000000000",
         "mode": "payment",
         "expiry": 2629743,
-        "title": "$7.50 One Month Access",
-        "text": "Gain access to all services with no subscription. Great for testing it out if you're not sure!"
+        "title": "$7.50 One Month Access"
       },
       {
         "id": "price_",
         "role_id": "000000000000000000",
         "mode": "subscription",
-        "title": "$6.00 Monthly Subscription",
-        "text": "Save $1.50/mth vs the One Month price! Convenient automatic billing!"
+        "title": "$6.00 Monthly Subscription"
       },
       {
         "id": "price_",
         "role_id": "000000000000000000",
         "mode": "payment",
         "expiry": 7889229,
-        "title": "$21.00 Three Month Access",
-        "text": "Save $0.50/mth vs One Month ($1.50 total) and play for a season!"
+        "title": "$21.00 Three Month Access"
       },
       {
         "id": "price_",
         "role_id": "000000000000000000",
         "mode": "subscription",
-        "title": "$17.25 Quarterly Subscription Access",
-        "text": "Save another $0.25/mth($0.75) vs Monthly Sub ($5.25 total vs One Month) and stay active with only 4 charges a year!"
+        "title": "$17.25 Quarterly Subscription Access"
       },
       {
         "id": "price_",
         "role_id": "000000000000000000",
         "mode": "payment",
         "expiry": 15778458,
-        "title": "$39.00 Six Month Access",
-        "text": "Save $1.00/mth vs One Month ($6.00 total) and play for half the year!"
+        "title": "$39.00 Six Month Access"
       },
       {
         "id": "price_",
         "role_id": "000000000000000000",
         "mode": "subscription",
-        "title": "$33.00 Semi-Annual Subscription",
-        "text": "Save another $0.50/mth($3.00) vs Monthly Sub ($12.00 total vs One Month) and play on with only 2 charges a year!"
+        "title": "$33.00 Semi-Annual Subscription"
       },
       {
         "id": "price_",
         "role_id": "000000000000000000",
         "mode": "payment",
         "expiry": 31556926,
-        "title": "$72.00 One Year Access",
-        "text": "Save $1.50/mth vs One Month ($18.00 total) and get a whole year with no commitment!"
+        "title": "$72.00 One Year Access"
       },
       {
         "id": "price_",
         "role_id": "000000000000000000",
         "mode": "subscription",
-        "title": "$60.00 Annual Subscription Access",
-        "text": "Save another $1.00/mth($12.00) vs Monthly Sub ($30.00 total vs One Month) and never be interrupted with automatic renewals!"
+        "title": "$60.00 Annual Subscription Access"
       },
       {
         "id": "price_",
@@ -186,15 +178,13 @@
         "id": "price_",
         "role_id": "000000000000000000",
         "mode": "payment",
-        "title": "One-Time Donation",
-        "text": "Minimum $5, Boost your Zone Votes!"
+        "title": "One-Time Donation"
       },
       {
         "id": "price_",
         "role_id": "000000000000000000",
         "mode": "subscription",
-        "title": "Monthly Subscription Donation",
-        "text": "Increments of $5, Boost your Zone Votes every month!"
+        "title": "Monthly Subscription Donation"
       }
     ]
   }

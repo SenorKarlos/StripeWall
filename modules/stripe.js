@@ -298,18 +298,20 @@ const stripe = {
         });
       }
     },
-    fetchCheckout: async function(checkout_id) {
+    fetchCheckout: function(checkout_id) {
+      return new Promise(function(resolve) {
         stripe_js.checkout.sessions.retrieve(
           checkout_id, { expand: ['line_items.data','payment_intent','payment_intent.latest_charge'], },
           function(err, checkout) {
             if(err) {
               console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Fetching Checkout.', err.message);
-              return 'ERROR';
+              return resolve('ERROR');
             } else {
-              return checkout;
+              return resolve(checkout);
             }
           }
         );
+      });
     }
   },
 //------------------------------------------------------------------------------
@@ -376,6 +378,8 @@ const stripe = {
               }
               database.runQuery('UPDATE stripe_users SET tax_rate = ? WHERE user_id = ?', [tax_rate, user.user_id]);
               return bot.sendEmbed(user.user_name, user.user_id, 'FF0000', '📋 Stripe Customer Changed Tax Jurisdiction.', 'Updated Tax information.', config.discord.log_channel);
+            } else {
+              return console.info('['+bot.getTime('stamp')+'] [stripe.js] Tax jurisdiction same, nothing to change');
             }
         }
 //------------------------------------------------------------------------------
@@ -413,8 +417,8 @@ const stripe = {
         user = await database.fetchStripeUser(customer.description, customer.id);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
         checkout = await stripe.sessions.fetchCheckout(data.object.id);
-        gt_amount = parseFloat(data.object.amount_total/100).toFixed(2);
-        st_amount = parseFloat(data.object.amount_subtotal/100).toFixed(2);
+        gt_amount = data.object.amount_total/100;
+        st_amount = data.object.amount_subtotal/100;
         total_spend = user.total_spend+st_amount;
         if (config.service_zones) {
           total_votes = parseFloat(total_spend/config.service_zones.vote_worth).toFixed(0)+1;
