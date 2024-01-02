@@ -104,8 +104,8 @@ if(!!zoneSelection){
                 if(zones[i].parent_zone === null) { 
                    parentids.push(zones[i].zone_name);
                     %>
-            <div class="column-4" onclick="showZones('<%= zones[i].zone_name %>')" style="background-image: url('<%= zones[i].img_url %>');background-size: contain;background-repeat: no-repeat;">
-                <h4><%= zones[i].zone_name %></h4>
+            <div class="column-4" style="text-align: center;" onclick="showZones('<%= zones[i].zone_name %>')" style="background-image: url('<%= zones[i].img_url %>');background-size: contain;background-repeat: no-repeat;">
+                <h4 style="padding: 40px 0;"><%= zones[i].zone_name %></h4>
             </div>
             <% } 
             } %>
@@ -128,8 +128,8 @@ if(!!zoneSelection){
                 if(zones[j].parent_zone == parentids[i] ) { 
                 %>
                 <div style="float:left; width: 100%">
-                    <div style="display:inline-block;position:relative; background-image: url('<%= zones[j].img_url%>');background-size: cover; background-repeat: no-repeat;" class="column-4">
-                        <h4><%= zones[j].zone_name %></h4>
+                    <div style="text-align:center;display:inline-block;position:relative; background-image: url('<%= zones[j].img_url%>');background-size: cover; background-repeat: no-repeat;" class="column-4">
+                        <h4 style="padding: 40px 0;"><%= zones[j].zone_name %></h4>
                         <% if(userzones.includes(zones[j].zone_name) == false)
                         { %>
                         <input type="button" class="cornerbutton" value="Add Zone" onclick="addZone('<%= zones[j].zone_name %>', '<%= zones[j].parent_name %>')"/>
