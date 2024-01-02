@@ -9,12 +9,19 @@
                         <h1>POKEMON GO LIVE <br /><span id="">MAPS & ALERTS</span></h1>
                         <h3>Features:</h3>
                         <ul>
-                            <li>-1st feature</li>
-                            <li>-2nd feature</li>
-                            <li>-And so on</li>
+                            <li>1st feature</li>
+                            <li>2nd feature</li>
+                            <li>And so on</li>
                         </ul>
                         <p>Log in with Discord to view all details, service areas & plans and start or manage your services</p>
                         <a href="<%= login_url %>"><img src="https://poke-map.ca/images/discordbutton.png" style="width: 200px;"></a>
+                        <% if(!!userid) { %>
+                            <br><br>
+                            <div style="text-align: center;">
+                             <button type="button" style="background-color: grey;" onclick="window.location='/manage'">Manage Zones</button>
+                             <button type="button" style="margin-left: 10px; background-color: grey;" onclick="window.location='/zonemap'">Zone Map</button>
+                            </div>
+                            <% } %>
                     </div>
                 </div> 
                 <div class="col-lg-6">

@@ -56,7 +56,7 @@ server.get("/", async function(req, res) {
     site_url: config.server.site_url,
     login_url: config.discord.redirect_url,
     radar_script: radar_script,
-    pageTitle: 'landing'
+    userid: req.session.discord_id
   });
 });
 //------------------------------------------------------------------------------

@@ -9,12 +9,12 @@ if(!!zoneSelection){
  %>
 
 <style>
-    @media (max-width: 500px) { 
+    @media (min-width: 320px) and (max-width: 599px) { 
     .column-4 {
         float: left;
         display: inline;
         width: 80%;
-        height: 100px;
+        height: 150px;
         padding: 10px;
         margin:5px;
         border-color: black;
@@ -25,12 +25,17 @@ if(!!zoneSelection){
         cursor: pointer;
         }
     }
-    @media (min-width: 500px) and (max-width: 2000px) {
-        .column-4 {
+    .btn {
+        width:70%;
+        margin-bottom: 10px;
+
+    }
+    @media (min-width: 600px) and (max-width: 1024px) { 
+    .column-4 {
         float: left;
         display: inline;
-        width: 21%;
-        height: 100px;
+        width: 40%;
+        height: 150px;
         padding: 10px;
         margin:5px;
         border-color: black;
@@ -40,6 +45,32 @@ if(!!zoneSelection){
         overflow:auto;
         cursor: pointer;
         }
+     .btn {
+        width:150px;
+        margin-right: 10px; 
+        float:right;
+    }
+    }
+    @media (min-width: 1025px) and (max-width: 5000px) {
+        .column-4 {
+        float: left;
+        display: inline;
+        width: 21%;
+        height: 150px;
+        padding: 10px;
+        margin:5px;
+        border-color: black;
+        border-style: solid;
+        background-color: grey;
+        word-wrap: break-word;
+        overflow:auto;
+        cursor: pointer;
+        }
+        .btn {
+        width:150px;
+        margin-right: 10px; 
+        float:right;
+    }
     }
 
     h3 {
@@ -58,6 +89,10 @@ if(!!zoneSelection){
         <div>
             <br>
           <h1><font color="white">Service Zone Information </font></h1>
+          <button type="button" class="btn" style="background-color: white;" onclick="window.location='https://docs.google.com/forms/d/e/1FAIpQLScZ2HaseU2Fec_oOUakj90DN85EpcSddnk4NKV1iEs76FqMUw/viewform'">Request a Zone</button>
+        <button type="button" class="btn" style="background-color: white;" onclick="window.location='/manage'">Manage Zones</button>
+        <button type="button" class="btn" style="background-color: white; " onclick="window.location='/report'">Zone Report</button>
+        <div style="clear: both;"></div>
           <% if(user.zones_reviewed == 'false') { %>
             <h3><font color="white">You must select at least one zone before proceeding</font></h3>
         <% } %>
@@ -69,16 +104,14 @@ if(!!zoneSelection){
                 if(zones[i].parent_zone === null) { 
                    parentids.push(zones[i].zone_name);
                     %>
-            <div class="column-4" onclick="showZones('<%= zones[i].zone_name %>')" style="background-image: url('<%= zones[i].img_url %>');">
+            <div class="column-4" onclick="showZones('<%= zones[i].zone_name %>')" style="background-image: url('<%= zones[i].img_url %>');background-size: contain;background-repeat: no-repeat;">
                 <h4><%= zones[i].zone_name %></h4>
             </div>
             <% } 
             } %>
         </div>
         <div style="clear: both;"></div>
-        <button type="button" style="background-color: grey; float:right;" onclick="window.location='https://docs.google.com/forms/d/e/1FAIpQLScZ2HaseU2Fec_oOUakj90DN85EpcSddnk4NKV1iEs76FqMUw/viewform'">Request a Zone</button>
-        <button type="button" style="background-color: grey; float:right;" onclick="window.location='/manage'">Manage Zones</button>
-        <button type="button" style="background-color: grey; float:right;" onclick="window.location='/report'">Zone Report</button>
+        
         <br>
         <br>
         <hr>
@@ -95,7 +128,7 @@ if(!!zoneSelection){
                 if(zones[j].parent_zone == parentids[i] ) { 
                 %>
                 <div style="float:left; width: 100%">
-                    <div style="display:inline-block;position:relative; background-image: url('<%= zones[j].img_url%>');" class="column-4">
+                    <div style="display:inline-block;position:relative; background-image: url('<%= zones[j].img_url%>');background-size: cover; background-repeat: no-repeat;" class="column-4">
                         <h4><%= zones[j].zone_name %></h4>
                         <% if(userzones.includes(zones[j].zone_name) == false)
                         { %>
