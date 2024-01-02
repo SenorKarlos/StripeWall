@@ -558,6 +558,8 @@ server.get("/manage", async function(req, res) {
       site_url: config.server.site_url,
       radar_script: radar_script,
       plans: config.stripe.price_ids,
+      donations: config.stripe.donation_ids,
+      voteworth: config.service_zones.vote_worth,
       user: dbuser
     });
 });

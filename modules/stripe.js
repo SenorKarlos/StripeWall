@@ -229,9 +229,10 @@ const stripe = {
 //  CHECKOUT
 //------------------------------------------------------------------------------
     checkout: async function(req, res) {
-      const mode = req.body.mode;
-      const customerID = req.body.customerID;
-      const priceID = req.body.priceID;
+      var values = req.body.checkout.split(":");
+      const customerID = values[0];
+      const priceID = values[1];
+      const mode = values[2];
       var sessionbody = {
         mode: mode,
         customer: customerID,

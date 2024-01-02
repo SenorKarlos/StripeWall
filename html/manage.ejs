@@ -152,7 +152,10 @@ for(var i=0; i < zones.length; i++) {
         <div>
           <p><strong><font color="white">Your current subscription renews on <b><%= expireDate %></b></font></strong></p>
           <p><strong><font color="white">Manage your subscription using the customer portal below</font></strong></p>
-          <a href"#"><button>Customer Portal</button></a>
+          <form action="/create-customer-portal-session" method="POST">
+             <input type="hidden" name="customerID" value="<%= user.stripe_id %>">
+             <input type="submit" value="Customer Portal">
+          </form>
           <br>
           <br>
         </div>
@@ -173,30 +176,34 @@ for(var i=0; i < zones.length; i++) {
         <div>
             <p><strong><font color="white">Your Pay-As-You-Go access purchase expires on <b><%= expireDate %></b></font></strong></p>
             <p><strong><font color="white">Top up or subscribe during the last 48 hours using the checkout below</font></strong></p>
-            <select class="planSelect">
-                <option selected>See plans</option>
+            <form action="/create-checkout-session" method="POST">
+            <select class="planSelect" name="checkout">
+                <option selected disabled>See plans</option>
              <% for(var i=0; i < plans.length; i++) { %>
-                 <option><%= plans[i].title %></option>
+                 <option value="<%= user.stripe_id + ':' + plans[i].id  + ':' + plans[i].mode %>"><%= plans[i].title %></option>
             <% } %>
               </select>
-            <br>
-            <br>
-            <a href="/checkout"><button <% if(user.expiration - currentTime < 172800) { %>disabled <% } %>>Checkout</button></a>
+                <br>
+                <br>
+                <input type="submit" <% if(user.expiration - currentTime < 172800) { %>disabled <% } %> value="Checkout">
+            </form>
             <br>
             <br>
         </div>
         <% } else if(user.customer_type == 'inactive') { %>
         <div>
             <p><strong><font color="white">To have access to services and have your votes counted to the pool, choose one of the plans below.</b></font></strong></p>
-            <select class="planSelect">
-                <option selected>See plans</option>
-             <% for(var i=0; i < plans.length; i++) { %>
-                 <option><%= plans[i].title %></option>
+            <form action="/create-checkout-session" method="POST">
+             <select class="planSelect" name="checkout">
+                <option selected disabled>See plans</option>
+                <% for(var i=0; i < plans.length; i++) { %>
+                    <option value="<%= user.stripe_id + ':' + plans[i].id + ':' + plans[i].mode %>"><%= plans[i].title %></option>
             <% } %>
-              </select>
-            <br>
-            <br>
-            <a href="/checkout"><button>Checkout</button></a>
+                </select>
+                <br>
+                <br>
+                <input type="submit" value="Checkout">
+            </form>
             <br>
             <br>
         </div>
@@ -235,8 +242,9 @@ for(var i=0; i < zones.length; i++) {
         <div>
             <p><strong><font color="white">Total Fees and Donations to Date</font></strong></p>
             <p><strong><font size="20px" color="red">$<%= user.total_spend %></font></strong></p>
-            <p><strong><font color="white">Total Zone Votes</font></strong></p>
+            <p><strong><font color="white">At $<%= voteworth%> per vote, you have</font></strong></p>
             <p><strong><font size="20px" color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
+            <p><strong><font color="white">votes</font></strong></p>
             <br>
             <p><strong><font color="white"><u>Allocate your votes below</u></font></strong></p>
               
@@ -278,11 +286,22 @@ for(var i=0; i < zones.length; i++) {
         
         <div style="float:left; width: 100%">
             <button onclick="submitVotes()">Confirm Votes</button>
-            <p><strong><font color="white">Donate <a href="#">here</a> to increase votes and help maintain and improve services!</font></strong></p>
-            <p><strong><font color="white">EMT Address</font></strong></p>
-            <p><strong><font color="white">Ko-Fi Widget</font></strong></p>
-            <p><strong><font color="white">Crypto Addresses</font></strong></p>
-            <p><strong><font color="white">NOTE: DONATIONS ARE MANUALLY ADDED TO TOTAL</font></strong></p>
+            <br>
+            <br>
+           <% if(user.customer_type != 'lifetime-inactive' && user.customer_type != 'inactive') { %>
+            <p><strong><font color="white">Donate below to increase votes and help maintain and improve services!</font></strong></p>
+            <form action="/create-checkout-session" method="POST">
+                <select class="donateSelect" name="donate">
+                   <option selected disabled>See donations</option>
+                   <% for(var i=0; i < donations.length; i++) { %>
+                       <option value="<%= user.stripe_id + ':' + donations[i].id + ':' + donations[i].mode %>"><%= donations[i].title %></option>
+               <% } %>
+                   </select>
+                   <br>
+                   <br>
+                   <input type="submit" value="Donate">
+               </form>
+            <% } %>
         </div>
         <div style="clear: both;"></div> 
     </div></center>
