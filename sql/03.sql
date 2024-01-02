@@ -1,2 +1,2 @@
 ALTER TABLE `service_zones` ADD COLUMN `total_users` INT(10) NOT NULL DEFAULT 0 COLLATE 'utf8mb4_unicode_ci' AFTER `parent_zone`;
-ALTER TABLE `service_zones` ADD COLUMN `Location` VARCHAR(255) DEFAULT NULL;
+ALTER TABLE `service_zones` ADD COLUMN `img_url` VARCHAR(255) DEFAULT NULL;

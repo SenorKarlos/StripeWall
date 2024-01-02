@@ -69,7 +69,7 @@ if(!!zoneSelection){
                 if(zones[i].parent_zone === null) { 
                    parentids.push(zones[i].zone_name);
                     %>
-            <div class="column-4" onclick="showZones('<%= zones[i].zone_name %>')" style="background-image: url('./images/<%= zones[i].Location %>');">
+            <div class="column-4" onclick="showZones('<%= zones[i].zone_name %>')" style="background-image: url('<%= zones[i].img_url %>');">
                 <h4><%= zones[i].zone_name %></h4>
             </div>
             <% } 
@@ -95,7 +95,7 @@ if(!!zoneSelection){
                 if(zones[j].parent_zone == parentids[i] ) { 
                 %>
                 <div style="float:left; width: 100%">
-                    <div style="display:inline-block;position:relative;" class="column-4">
+                    <div style="display:inline-block;position:relative; background-image: url('<%= zones[j].img_url%>');" class="column-4">
                         <h4><%= zones[j].zone_name %></h4>
                         <% if(userzones.includes(zones[j].zone_name) == false)
                         { %>
