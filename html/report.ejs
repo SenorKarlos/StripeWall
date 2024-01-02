@@ -2,6 +2,7 @@
 <% var parents = [];
 var userTotal = 0;
 var voteTotal = 0;
+var adminTotal = 0;
 var workerTotal = 0;
 var percentage = 0;
 
@@ -12,6 +13,7 @@ for(var i=0; i<zones.length; i++) {
         userTotal += zones[i].total_users;
         voteTotal += zones[i].total_votes;
         workerTotal += zones[i].assigned_workers;
+        adminTotal += zones[i].admin_worker_override;
     }
 }
 
@@ -50,7 +52,7 @@ for(var i=0; i<zones.length; i++) {
                                 <td><%= userTotal %></td>
                                 <td><%= voteTotal %></td>
                                 <td>100%</td>
-                                <td></td>
+                                <td><%= adminTotal %></td>
                                 <td><%= workerTotal %></td>
                             </tr>
                            <% for(var i=0; i<parents.length; i++) { 
@@ -96,7 +98,7 @@ for(var i=0; i<zones.length; i++) {
 
                         </tbody>
                     </table>
-                    <% if (usertype == 'admin') { %>
+                    <% if (usertype == 'administrator') { %>
                          <input type="submit" value="Submit overrides">
                     <% } %>
                     </form>

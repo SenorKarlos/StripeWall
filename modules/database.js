@@ -141,9 +141,23 @@ const database = {
     }
   },
   updateZoneOverride: async function(value,zone) {
-    let query = 'UPDATE service_zones SET admin_worker_override = ? WHERE zone_name = ?';
-    let data = [value, zone]
+    if(value == ''){
+      value = 0;
+    }
+    var query = 'SELECT admin_worker_override, parent_zone FROM service_zones WHERE zone_name = ?';
+    var data = [zone];
+    result = await database.db.query(query, data);
+    originalValue = result[0][0].admin_worker_override;
+    if(result[0][0].parent_zone != null)
+    {
+      query = 'UPDATE service_zones SET admin_worker_override = admin_worker_override +  ? WHERE zone_name = ?';
+      data = [value - originalValue, result[0][0].parent_zone];
+      await database.db.query(query, data);
+    }
+    query = 'UPDATE service_zones SET admin_worker_override = ? WHERE zone_name = ?';
+    data = [value, zone]
     await database.db.query(query, data);
+   
   },
 //------------------------------------------------------------------------------
 //  ZONE FETCH TABLE FETCH
