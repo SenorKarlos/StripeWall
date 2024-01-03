@@ -55,8 +55,8 @@ bot.sendDM = (member, title, body, color) => {
 //------------------------------------------------------------------------------
 //  ASSIGN ROLE TO A MEMBER
 //------------------------------------------------------------------------------
-bot.assignRole = (user_id, role_id) => {
-  let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user_id);
+bot.assignRole = (server_id, user_id, role_id) => {
+  let member = bot.guilds.cache.get(server_id).members.cache.get(user_id);
   console.info('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' Requires Role: '+role_id);
   if (!member) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Assign the User a role.');
@@ -73,8 +73,8 @@ bot.assignRole = (user_id, role_id) => {
 //------------------------------------------------------------------------------
 //  REMOVE ROLE FROM A MEMBER
 //------------------------------------------------------------------------------
-bot.removeRole = (user_id, role_id) => {
-  let member = bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user_id);
+bot.removeRole = (server_id, user_id, role_id) => {
+  let member = bot.guilds.cache.get(server_id).members.cache.get(user_id);
   console.info('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' Requires Role Removal: '+role_id);
   if (!member) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to remove the role from the User.');

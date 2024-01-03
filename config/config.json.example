@@ -43,7 +43,8 @@
     "init_source": "geofence.json",
     "roles_enabled": false,
     "votes_enabled": false,
-    "vote_worth": 0
+    "vote_worth": 0,
+    "workers": 0
   },
 
   "pages": {

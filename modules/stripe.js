@@ -440,7 +440,7 @@ const stripe = {
           default:
             for (let i = 0; i < config.stripe.price_ids.length; i++) {
               if (checkout.line_items.data[0].price.id == config.stripe.price_ids[i].id) {
-                bot.assignRole(user.user_id, config.stripe.price_ids[i].role_id);
+                bot.assignRole(config.discord.guild_id, user.user_id, config.stripe.price_ids[i].role_id);
                 bot.channels.cache.get(config.discord.welcome_channel)
                   .send(config.discord.welcome_content.replace('%usertag%','<@'+member.user.id+'>'))
                   .catch(console.info);
@@ -593,7 +593,7 @@ const stripe = {
             if (data.object.status == "active" && data.previous_attributes.items) {
               for (let i = 0; i < config.stripe.price_ids.length; i++) {
                 if (data.object.items.data[0].price.id == config.stripe.price_ids[i].id) {
-                  bot.assignRole(customer.description, config.stripe.price_ids[i].role_id);
+                  bot.assignRole(config.discord.guild_id, customer.description, config.stripe.price_ids[i].role_id);
                   bot.sendDM(member,'Subscription Sucessfully Updated! ✅', 'Thank you for your continuing business!','00FF00');
                   bot.sendEmbed(user.user_name, user.user_id, '00FF00', 'Subscription Sucessfully Updated! ✅', '', config.discord.log_channel);
                   database.runQuery('UPDATE stripe_users SET price_id = ? WHERE user_id = ?', [data.object.items.data[0].price.id, member.user.id]);

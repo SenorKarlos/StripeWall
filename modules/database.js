@@ -126,7 +126,6 @@ const database = {
         data = [lifetime, userid];
         database.runQuery(query, data);
       }
-      database.updateWorkerCalc(config.service_zones.workers);
     }
   },
   updateParentVotes: async function(zonediff) {
@@ -142,47 +141,9 @@ const database = {
     }
   },
   updateZoneOverride: async function(value,zone) {
-    if(value == ''){
-      value = 0;
-    }
-    var query = 'SELECT admin_worker_override, parent_zone FROM service_zones WHERE zone_name = ?';
-    var data = [zone];
-    result = await database.db.query(query, data);
-    originalValue = result[0][0].admin_worker_override;
-    if(result[0][0].parent_zone != null)
-    {
-      query = 'UPDATE service_zones SET admin_worker_override = admin_worker_override +  ? WHERE zone_name = ?';
-      data = [value - originalValue, result[0][0].parent_zone];
-      await database.db.query(query, data);
-    }
-    query = 'UPDATE service_zones SET admin_worker_override = ? WHERE zone_name = ?';
-    data = [value, zone]
+    let query = 'UPDATE service_zones SET admin_worker_override = ? WHERE zone_name = ?';
+    let data = [value, zone]
     await database.db.query(query, data);
-   
-  },
-  updateWorkerCalc: async function(workers){
-    var query = 'SELECT zone_name,total_votes,parent_zone,admin_worker_override FROM service_zones';
-    var data = [];
-    result = await database.db.query(query, data);
-    if (result[0]) {
-      result=result[0];
-      var totalVotes = 0;
-      var voteCalc = 0;
-      var assigned = 0;
-      for(var i = 0 ; i < result.length ; i++) { //grab vote total first from parents
-        if(result[i].parent_zone == null){
-          totalVotes += result[i].total_votes; 
-        }
-      }
-      for(var i = 0 ; i < result.length ; i++) { //loop again to update values
-        voteCalc =  Math.round(result[i].total_votes * 100.0 / totalVotes) / 100;
-        voteCalc = Math.round(voteCalc * workers);
-        assigned = voteCalc + result[i].admin_worker_override;
-        query = 'UPDATE service_zones SET calc_workers = ? , assigned_workers = ? WHERE zone_name = ?';
-        data = [voteCalc, assigned, result[i].zone_name]
-        await database.db.query(query, data);
-      }
-    }
   },
 //------------------------------------------------------------------------------
 //  ZONE FETCH TABLE FETCH
@@ -397,13 +358,13 @@ const database = {
                       }
                     } else if (user.stripe_id && user.price_id) { // end if member role matches config role (no role but they have a stripe & price ID)
                       if (config.stripe.price_ids[i].mode != 'payment' && user.price_id == config.stripe.price_ids[i].id) { // stripe-checked db subscription or legacy price matches price being checked
-                        bot.assignRole(member.user.id, config.stripe.price_ids[i].role_id);
+                        bot.assignRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id);
                         console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") User found without Role, Assigned.");
                         bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
                         if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
                       } else if (config.stripe.price_ids[i].mode == 'payment' && user.price_id == config.stripe.price_ids[i].id) { // check for Pay-As-You-Go purch roles
                         if (user.expiration > unix) { //check if expired
-                          bot.assignRole(member.user.id, config.stripe.price_ids[i].role_id); // add & log
+                          bot.assignRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id); // add & log
                           console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  Pay-As-You-Go User found without Role, Assigned.");
                           bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
                           if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
@@ -581,7 +542,7 @@ const database = {
       activeNoRole.forEach((user, index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
-          bot.assignRole(user.user_id, config.discord.lifetime_role);
+          bot.assignRole(config.discord.guild_id, user.user_id, config.discord.lifetime_role);
           if (indexcounter === activeNoRole.length && inactiveNoDB.length === 0 && inactiveNoRole.length === 0 && removeActiveRole.length === 0) { return database.doneDiscordRoles(); }
         }, 500 * index);
       });
@@ -603,7 +564,7 @@ const database = {
       inactiveNoRole.forEach((user, index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
-          bot.assignRole(user.user_id, config.discord.inactive_lifetime_role);
+          bot.assignRole(config.discord.guild_id, user.user_id, config.discord.inactive_lifetime_role);
           if (indexcounter === inactiveNoRole.length && removeActiveRole.length === 0) { return database.doneDiscordRoles(); }
         }, 500 * index);
       });

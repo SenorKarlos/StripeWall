@@ -366,8 +366,7 @@ server.get("/report", async function(req, res) {
     site_url: config.server.site_url,
     radar_script: radar_script,
     usertype : dbuser.customer_type,
-    zones: zones,
-    workers: config.service_zones.workers
+    zones: zones
   });
 });
 
@@ -376,7 +375,6 @@ server.post("/report", async function(req,res){
  for(var i = 0 ; i < overrides.zone.length ; i++){
      await database.updateZoneOverride(overrides.overrides[i], overrides.zone[i]);
  }
- await database.updateWorkerCalc(config.service_zones.workers);
   res.redirect('/report');
 })
 //------------------------------------------------------------------------------
@@ -426,14 +424,14 @@ server.post("/lifetime-toggle", async (req, res) => {
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   } else {
     if (req.body.action == "activate") {
-      bot.assignRole(req.session.discord_id, config.discord.lifetime_role);
-      bot.removeRole(req.session.discord_id, config.discord.inactive_lifetime_role);
+      bot.assignRole(config.discord.guild_id, req.session.discord_id, config.discord.lifetime_role);
+      bot.removeRole(config.discord.guild_id, req.session.discord_id, config.discord.inactive_lifetime_role);
       database.runQuery('UPDATE stripe_users SET expiration = ? WHERE user_id = ?', [9999999999, req.session.discord_id]);
       await new Promise(resolve => setTimeout(resolve, 500));
       return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
     } else if (req.body.action == "deactivate") {
-      bot.assignRole(req.session.discord_id, config.discord.inactive_lifetime_role);
-      bot.removeRole(req.session.discord_id, config.discord.lifetime_role);
+      bot.assignRole(config.discord.guild_id, req.session.discord_id, config.discord.inactive_lifetime_role);
+      bot.removeRole(config.discord.guild_id, req.session.discord_id, config.discord.lifetime_role);
       database.runQuery('UPDATE stripe_users SET expiration = ? WHERE user_id = ?', [9999999998, req.session.discord_id]);
       await new Promise(resolve => setTimeout(resolve, 500));
       return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
@@ -598,7 +596,6 @@ server.post("/manage", async function(req,res){
         
       }
     }
-    await database.updateWorkerCalc(config.service_zones.workers);
   }
   res.redirect('/manage');
 })
