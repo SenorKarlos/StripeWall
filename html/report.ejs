@@ -38,7 +38,7 @@ for(var i=0; i<zones.length; i++) {
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                            <th>District/Service Zone</th>
+                            <th style="text-align: left;">District/Service Zone</th>
                             <th>Total Users</th>
                             <th>Total Votes</th>
                             <th>Worker %</th>
@@ -48,16 +48,16 @@ for(var i=0; i<zones.length; i++) {
                         </thead>
                         <tbody>
                             <tr>
-                                <th scope="row">All Areas</th>
+                                <th scope="row" style="text-align: left;">All Areas</th>
                                 <td><%= userTotal %></td>
                                 <td><%= voteTotal %></td>
-                                <td></td>
+                                <td><%= workers %></td>
                                 <td><%= adminTotal %></td>
                                 <td><%= workerTotal %></td>
                             </tr>
                            <% for(var i=0; i<parents.length; i++) {  %>
                             <tr>
-                                <th scope="row"><%= parents[i].zone_name %></th>
+                                <th scope="row" style="text-align: left;"><%= parents[i].zone_name %></th>
                                 <td><%= parents[i].total_users %></td>
                                 <td><%= parents[i].total_votes %></td>
                                 <td><%= parents[i].calc_workers %></td>

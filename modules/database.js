@@ -170,8 +170,14 @@ const database = {
         }
       }
       for(var i = 0 ; i < result.length ; i++) { //loop again to update values
-        voteCalc =  Math.round(result[i].total_votes * 100.0 / totalVotes) / 100;
-        voteCalc = Math.round(voteCalc * workers);
+        if(totalVotes == 0)
+        {
+          voteCalc = 0;
+        }
+        else {
+          voteCalc =  Math.round(result[i].total_votes * 100.0 / totalVotes) / 100;
+          voteCalc = Math.round(voteCalc * workers);
+        }
         assigned = voteCalc + result[i].admin_worker_override;
         query = 'UPDATE service_zones SET calc_workers = ? , assigned_workers = ? WHERE zone_name = ?';
         data = [voteCalc, assigned, result[i].zone_name]
