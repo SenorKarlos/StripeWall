@@ -65,7 +65,7 @@ const database = {
     await database.db.query(query, data)
   },
 //------------------------------------------------------------------------------
-//  STRIPE USER UPDATE ZONES
+//  ZONE VOTE/WORKER FUNCTIONS
 //------------------------------------------------------------------------------
   updateZoneSelection: async function(user_id, selection, format) {
     let query = `UPDATE stripe_users SET zone_votes = ? , zones_reviewed = ?, format = ? WHERE user_id = ?`;
@@ -156,34 +156,82 @@ const database = {
     await database.db.query(query, data);
   },
   updateWorkerCalc: async function(workers) {
-    var query = 'SELECT zone_name,total_votes,parent_zone,admin_worker_override FROM service_zones';
+    var query = 'SELECT * FROM service_zones';
     var data = [];
     result = await database.db.query(query, data);
     if (result[0]) {
       result=result[0];
-      var totalVotes = 0;
-      var voteCalc = 0;
-      var assigned = 0;
-      for(var i = 0 ; i < result.length ; i++) { //grab vote total first from parents
+      result.sort(function(a, b){return a.total_votes - b.total_votes});
+      var totalVotes = 0, voteCalc = 0, assigned = 0, remaining = workers, parents = [], children = [];
+      for (let i = 0; i < result.length; i++) { //grab vote total first from parents and sort into arrays
         if (result[i].parent_zone == null) {
-          totalVotes += result[i].total_votes; 
+          totalVotes += result[i].total_votes;
+          result[i].calcWorkerCounter = 0;
+          result[i].assignWorkerCounter = 0;
+          parents.push(result[i]);
+        } else {
+          children.push(result[i]);
         }
       }
-      for(var i = 0 ; i < result.length ; i++) { //loop again to update values
-        if(totalVotes == 0)
-        {
-          voteCalc = 0;
+      if (totalVotes === 0) { return; }
+      for (let i = 0; i < children.length; i++) { //loop children to update workers, respecting max
+        voteCalc = Math.round(children[i].total_votes * 100.0 / totalVotes) / 100;
+        voteCalc = Math.round(voteCalc * workers);
+        remaining = remaining - voteCalc;
+        if (i == children.length-1) {
+          voteCalc = voteCalc + remaining;
         }
-        else {
-          voteCalc =  Math.round(result[i].total_votes * 100.0 / totalVotes) / 100;
-          voteCalc = Math.round(voteCalc * workers);
-        }
-        assigned = voteCalc + result[i].admin_worker_override;
+        assigned = voteCalc + children[i].admin_worker_override;
         query = 'UPDATE service_zones SET calc_workers = ? , assigned_workers = ? WHERE zone_name = ?';
-        data = [voteCalc, assigned, result[i].zone_name]
+        data = [voteCalc, assigned, children[i].zone_name];
+        await database.db.query(query, data);
+        for (let p = 0; p < parents.length; p++) {
+          if (children[i].parent_zone == parents[p].zone_name) {
+            parents[p].calcWorkerCounter = parents[p].calcWorkerCounter + voteCalc;
+            parents[p].assignWorkerCounter = parents[p].assignWorkerCounter + assigned;
+          }
+        }
+      }
+      for (let t = 0; t < parents.length; t++) { //loop through parents to update counts in DB
+        query = 'UPDATE service_zones SET calc_workers = ? , assigned_workers = ? WHERE zone_name = ?';
+        data = [parents[t].calcWorkerCounter, parents[t].assignWorkerCounter, parents[t].zone_name];
         await database.db.query(query, data);
       }
     }
+  },
+  calcZoneUsers: async function() {
+    let query = `SELECT user_id, customer_type, zone_votes FROM stripe_users WHERE zone_votes IS NOT NULL`;
+    let data = [];
+    let user_counts = [];
+    user_counts[0] = { zone_name: "all_zones", count: 0 };
+    let parent_counts = [];
+    result = await database.db.query(query, data);
+    if (result[0][0]) {
+      result = result[0];
+      for (let i = 0; i < result.length; i++) {
+        if (result[i].customer_type == 'administrator' || result[i].customer_type == 'lifetime-active' || result[i].customer_type == 'subscriber' || result[i].customer_type == 'pay-as-you-go' || result[i].customer_type == 'manual') {
+          user_counts[0].count++
+          for (let x = 0; x < result[i].zone_votes.length; x++) {
+            result[i].zone_votes[x].user_id = result[i].user_id;
+            parent_counts.push(result[i].zone_votes[x]);
+          }
+        }
+      }
+      let uniqueUsersMap = new Map();
+      parent_counts.forEach(parent => {
+        let key = `${parent.parent_name}_${parent.user_id}`;
+        if (!uniqueUsersMap.has(key)) {
+          uniqueUsersMap.set(key, true);
+          let existingParent = user_counts.find(item => item.zone_name === parent.parent_name);
+          if (existingParent) {
+            existingParent.count++;
+          } else {
+            user_counts.push({ zone_name: parent.parent_name, count: 1 });
+          }
+        }
+      });
+    }
+    return user_counts;
   },
 //------------------------------------------------------------------------------
 //  ZONE FETCH TABLE FETCH

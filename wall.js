@@ -351,7 +351,8 @@ server.get("/report", async function(req, res) {
   }
   let radar_script = '';
   let zones = await database.fetchZones();
-
+  let user_totals = await database.calcZoneUsers();
+  let allAreaTotal = user_totals[0].count;
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
   return res.render(__dirname+"/html/report.ejs", {
     terms: config.pages.general.terms,
@@ -367,7 +368,8 @@ server.get("/report", async function(req, res) {
     radar_script: radar_script,
     usertype : dbuser.customer_type,
     zones: zones,
-    workers: config.service_zones.workers
+    workers: config.service_zones.workers,
+    allAreaTotal: allAreaTotal
   });
 });
 
@@ -379,31 +381,6 @@ server.post("/report", async function(req,res){
   await database.updateWorkerCalc(config.service_zones.workers);
   res.redirect('/report');
 })
-//------------------------------------------------------------------------------
-//  WORKER RESULT PAGE
-//------------------------------------------------------------------------------
-server.get("/workers", async function(req, res) {
-  let unix = moment().unix();
-  if (!req.session.login || unix > req.session.now+1800) {
-    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  }
-  let radar_script = '';
-  if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-  return res.render(__dirname+"/html/workers.html", {
-    terms: config.pages.general.terms,
-    disclaimer: config.pages.general.disclaimer,
-    warning: config.pages.general.warning,
-    background: config.pages.general.background,
-    outer_background: config.pages.general.outer_background,
-    border_color: config.pages.general.border_color,
-    title_color: config.pages.general.title_color,
-    text_color: config.pages.general.text_color,
-    site_name: config.server.site_name,
-    site_url: config.server.site_url,
-    radar_script: radar_script
-  });
-});
 //------------------------------------------------------------------------------
 //  STRIPE CHECKOUT
 //------------------------------------------------------------------------------
