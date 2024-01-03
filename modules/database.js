@@ -126,6 +126,7 @@ const database = {
         data = [lifetime, userid];
         database.runQuery(query, data);
       }
+      database.updateWorkerCalc(config.service_zones.workers);
     }
   },
   updateParentVotes: async function(zonediff) {
@@ -158,6 +159,30 @@ const database = {
     data = [value, zone]
     await database.db.query(query, data);
    
+  },
+  updateWorkerCalc: async function(workers){
+    var query = 'SELECT zone_name,total_votes,parent_zone,admin_worker_override FROM service_zones';
+    var data = [];
+    result = await database.db.query(query, data);
+    if (result[0]) {
+      result=result[0];
+      var totalVotes = 0;
+      var voteCalc = 0;
+      var assigned = 0;
+      for(var i = 0 ; i < result.length ; i++) { //grab vote total first from parents
+        if(result[i].parent_zone == null){
+          totalVotes += result[i].total_votes; 
+        }
+      }
+      for(var i = 0 ; i < result.length ; i++) { //loop again to update values
+        voteCalc =  Math.round(result[i].total_votes * 100.0 / totalVotes) / 100;
+        voteCalc = Math.round(voteCalc * workers);
+        assigned = voteCalc + result[i].admin_worker_override;
+        query = 'UPDATE service_zones SET calc_workers = ? , assigned_workers = ? WHERE zone_name = ?';
+        data = [voteCalc, assigned, result[i].zone_name]
+        await database.db.query(query, data);
+      }
+    }
   },
 //------------------------------------------------------------------------------
 //  ZONE FETCH TABLE FETCH

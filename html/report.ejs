@@ -4,7 +4,7 @@ var userTotal = 0;
 var voteTotal = 0;
 var adminTotal = 0;
 var workerTotal = 0;
-var percentage = 0;
+
 
 for(var i=0; i<zones.length; i++) {
     if(zones[i].parent_zone == null)
@@ -12,8 +12,8 @@ for(var i=0; i<zones.length; i++) {
         parents.push(zones[i]);
         userTotal += zones[i].total_users;
         voteTotal += zones[i].total_votes;
-        workerTotal += zones[i].assigned_workers;
         adminTotal += zones[i].admin_worker_override;
+        workerTotal += zones[i].assigned_workers;
     }
 }
 
@@ -43,7 +43,7 @@ for(var i=0; i<zones.length; i++) {
                             <th>Total Votes</th>
                             <th>Worker %</th>
                             <th>Admin Adjust</th>
-                            <th>Workers</th>  
+                            <th>Assigned Workers</th>  
                         </tr>
                         </thead>
                         <tbody>
@@ -51,40 +51,28 @@ for(var i=0; i<zones.length; i++) {
                                 <th scope="row">All Areas</th>
                                 <td><%= userTotal %></td>
                                 <td><%= voteTotal %></td>
-                                <td>100%</td>
+                                <td></td>
                                 <td><%= adminTotal %></td>
                                 <td><%= workerTotal %></td>
                             </tr>
-                           <% for(var i=0; i<parents.length; i++) { 
-                            if(parents[i].total_votes != 0){
-                                percentage = (voteTotal / parents[i].total_votes * workerTotal); 
-                             }
-                            else{
-                                 percentage = 0; 
-                             } %>
+                           <% for(var i=0; i<parents.length; i++) {  %>
                             <tr>
                                 <th scope="row"><%= parents[i].zone_name %></th>
                                 <td><%= parents[i].total_users %></td>
                                 <td><%= parents[i].total_votes %></td>
-                                <td><%= parents[i].calc_workers %>%</td>
+                                <td><%= parents[i].calc_workers %></td>
                                 <td><%= parents[i].admin_worker_override %></td>                                
                                 <td><%= parents[i].assigned_workers %></td> 
                             </tr>
                             <% for(var j=0; j<zones.length; j++) {
                                 if(zones[j].parent_zone == parents[i].zone_name)
-                                { 
-                                    if(zones[j].total_votes != 0){
-                                        percentage = (voteTotal / zones[j].total_votes * parents[i].assigned_workers);
-                                    }
-                                    else{
-                                        percentage = 0;
-                                    } %>
+                                {  %>
                                     <tr>
                                         <input style="width: 50px" type="hidden" name='overrides[][zone]' value="<%= zones[j].zone_name %>">
                                         <th scope="row">&emsp;&emsp;<%= zones[j].zone_name %></th>
                                         <td><%= zones[j].total_users %></td>
                                         <td><%= zones[j].total_votes %></td>
-                                        <td><%= zones[j].calc_workers %>%</td>     
+                                        <td><%= zones[j].calc_workers %></td>     
                                         <% if (usertype == 'administrator') { %>                         
                                          <td><input style="width: 50px" type="number" name='overrides[][overrides]' value="<%= zones[j].admin_worker_override %>"></td>  
                                         <% } else { %>
