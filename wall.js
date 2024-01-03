@@ -366,15 +366,17 @@ server.get("/report", async function(req, res) {
     site_url: config.server.site_url,
     radar_script: radar_script,
     usertype : dbuser.customer_type,
-    zones: zones
+    zones: zones,
+    workers: config.service_zones.workers
   });
 });
 
 server.post("/report", async function(req,res){
   const overrides = req.body.overrides[0];
- for(var i = 0 ; i < overrides.zone.length ; i++){
-     await database.updateZoneOverride(overrides.overrides[i], overrides.zone[i]);
- }
+  for(var i = 0 ; i < overrides.zone.length ; i++){
+    await database.updateZoneOverride(overrides.overrides[i], overrides.zone[i]);
+  }
+  await database.updateWorkerCalc(config.service_zones.workers);
   res.redirect('/report');
 })
 //------------------------------------------------------------------------------
@@ -592,10 +594,10 @@ server.post("/manage", async function(req,res){
       for(var i = 0 ; i < zonediff.length ; i++) //adjusting vote counts
       {
        await database.updateTotalVotes(zonediff[i]);
-       await database.updateParentVotes(zonediff[i]);
-        
+       await database.updateParentVotes(zonediff[i]);        
       }
     }
+    await database.updateWorkerCalc(config.service_zones.workers);
   }
   res.redirect('/manage');
 })

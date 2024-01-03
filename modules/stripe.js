@@ -528,7 +528,7 @@ const stripe = {
           case (config.stripe.rem_role_any_refund && user.charge_id && data.object.id == user.charge_id):
             for (let i = 0; i < config.stripe.price_ids.length; i++) {
               if (user.price_id == config.stripe.price_ids[i].id) {
-                bot.removeRole(customer.description, config.stripe.price_ids[i].role_id);
+                bot.removeRole(config.discord.guild_id, customer.description, config.stripe.price_ids[i].role_id);
                 database.runQuery('UPDATE stripe_users SET price_id = NULL, expiration = NULL, charge_id = NULL WHERE user_id = ?', [user.user_id]);
               }
             }
@@ -563,7 +563,7 @@ const stripe = {
             for (let i = 0; i < config.stripe.price_ids.length; i++) {
               if (data.object.items.data[0].price.id == config.stripe.price_ids[i].id) {
                 bot.sendDM(member,'Subscription Record Deleted! ⚰', 'If you did not cancel, your payment has failed. Please log in and select a new plan','FF0000');
-                bot.removeRole(customer.description, config.stripe.price_ids[i].role_id);
+                bot.removeRole(config.discord.guild_id, customer.description, config.stripe.price_ids[i].role_id);
                 bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Subscription Record Deleted! ⚰', '', config.discord.log_channel);
                 return database.runQuery('UPDATE stripe_users SET price_id = NULL, tax_rate = NULL, charge_id = NULL WHERE user_id = ?', [customer.description]);
               }
@@ -599,7 +599,7 @@ const stripe = {
                   database.runQuery('UPDATE stripe_users SET price_id = ? WHERE user_id = ?', [data.object.items.data[0].price.id, member.user.id]);
                   for (let x = 0; x < config.stripe.price_ids.length; x++) {
                     if (data.previous_attributes.items.data[0].price.id == config.stripe.price_ids[x].id) {
-                      bot.removeRole(customer.description, config.stripe.price_ids[x].role_id);
+                      bot.removeRole(config.discord.guild_id, customer.description, config.stripe.price_ids[x].role_id);
                     }
                   }
                 }
