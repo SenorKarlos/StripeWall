@@ -459,10 +459,10 @@ const database = {
         }
         members.forEach((member, index) => { //for each member in role
           let indexcounter = index + 1;
-          setTimeout(function() {
+          setTimeout(async function() {
             let query = `SELECT * FROM stripe_users WHERE user_id = ?`;
             let data = [member.user.id];
-            record = database.db.query(query, data);
+            record = await database.db.query(query, data);
             if (!record[0][0]) {
               bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id);
               bot.sendEmbed(member, 'FF0000', 'User found without a DB Record ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
@@ -532,6 +532,7 @@ const database = {
       records = await database.db.query(query, data)
       if (!records[0]) {
         console.info('No stripe lifetime users');
+        return database.doneDiscordRoles();
       } else {
         records[0].forEach((user, index) => {
           if (user.expiration == 9999999999) {
@@ -541,8 +542,6 @@ const database = {
           }
         });
         return database.syncLifetime(active, inactive, activeUsers, inactiveUsers);
-      } else { 
-        return database.doneDiscordRoles();
       }
     }
   },
