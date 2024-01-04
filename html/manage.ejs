@@ -139,6 +139,7 @@ for(var i=0; i < zones.length; i++) {
         margin-bottom: -50%;
         line-height: 70%;
         font-size: 25px;
+        line-height: 120%;
         }
 </style>
 <script type="text/javascript" src="./files/config.json"></script>
@@ -229,9 +230,8 @@ for(var i=0; i < zones.length; i++) {
             if(discord.inactive_lifetime_role != '') {
                 if(user.customer_type == 'lifetime-inactive') { %>
                 <div>
-                    <form method="POST" id="lifetimeForm">
-                        <input name="userid" type="hidden" value ="<%= user.user_id %>">
-                        <input name="status" type="hidden" value ="1">
+                    <form action="/lifetime-toggle" method="POST" id="lifetimeForm">
+                        <input name="action" type="hidden" value ="activate">
                         <p><strong><font color="white">Your services are currently deactivated. Press the button below to reactivate services</b></font></strong></p>
                         <br>
                         <br>
@@ -242,9 +242,8 @@ for(var i=0; i < zones.length; i++) {
                 </div>
              <% } else if(user.customer_type == 'lifetime-active') { %>
                 <div>
-                    <form method="POST" id="lifetimeForm">
-                        <input name="userid" type="hidden" value ="<%= user.user_id %>">
-                        <input name="status" type="hidden" value ="0">
+                    <form action="/lifetime-toggle" method="POST" id="lifetimeForm">
+                        <input name="action" type="hidden" value ="deactivate">
                         <p><strong><font color="white"> Your services are currently activated. Please visit the #setup-instructions channel in Discord to ensure all required steps have been completed.</b></font></strong></p>
                         <p><strong><font color="white">To disable services and remove your votes from the pool, press the button below.</b></font></strong></p>
                         <br>

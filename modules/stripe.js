@@ -149,7 +149,10 @@ const stripe = {
                   if (customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
                     if (customer.subscriptions.data[x].items.data[0].price.id != record[0].price_id && customer.subscriptions.data[x].status == 'active') {
                       database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ? WHERE user_id = ?', ['subscriber', customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, customer.description]);
-                      if (record[0].customer_type == 'inactive' || record[0].customer_type == 'lifetime-inactive') { database.updateActiveVotes(customer.description, 1); }
+                      if (record[0].customer_type == 'inactive' || record[0].customer_type == 'lifetime-inactive') { 
+                        await database.updateActiveVotes(customer.description, 1);
+                        await database.updateZoneRoles(customer.description);
+                      }
                       db_updated = true;
                     }
                   } // dead end of customer price vs config price
@@ -161,7 +164,10 @@ const stripe = {
                 if (record[0].price_id == config.stripe.price_ids[i].id) {
                   if (config.stripe.price_ids[i].mode == "subscription" || record[0].expiration < unix) {
                     database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = NULL, expiration = NULL WHERE user_id = ?', ['inactive', customer.description]);
-                    if (record[0].customer_type == 'subscriber' || record[0].customer_type == 'pay-as-you-go' || record[0].customer_type == 'manual' || record[0].customer_type == 'lifetime-active') { database.updateActiveVotes(customer.description, 0); }
+                    if (record[0].customer_type == 'subscriber' || record[0].customer_type == 'pay-as-you-go' || record[0].customer_type == 'manual' || record[0].customer_type == 'lifetime-active') { 
+                      await database.updateActiveVotes(customer.description, 0); 
+                      await database.updateZoneRoles(customer.description, null, 'all','remove');
+                    }
                     db_updated = true;
                   /*} else {*/
                     /* Maybe something about storing, pulling & checking invoice details & expiry calc for temp plans , but probably too much and not needed */
@@ -394,7 +400,8 @@ const stripe = {
             let query = ''
             let data = [];
             if (user.customer_type == 'subscriber' || user.customer_type == 'pay-as-you-go') {
-              await database.updateActiveVotes(customer.description, 0);              
+              await database.updateActiveVotes(customer.description, 0);
+              await database.updateZoneRoles(customer.description, null, 'all','remove');              
               query = 'UPDATE stripe_users SET customer_type = ?, stripe_id = NULL, price_id = NULL, tax_rate = NULL, charge_id = NULL WHERE user_id = ?'
               data = ['inactive', user.user_id];
             } else { 
@@ -464,7 +471,10 @@ const stripe = {
                 if (user.charges) { chargecounter = user.charges; }
                 chargecounter++;
                 let cx_type, type_text;
-                if (user.customer_type == 'inactive' || user.customer_type == 'lifetime-inactive') { await database.updateActiveVotes(customer.description, 1); }
+                if (user.customer_type == 'inactive' || user.customer_type == 'lifetime-inactive') { 
+                  await database.updateActiveVotes(customer.description, 1); 
+                  await database.updateZoneRoles(customer.description);
+                }
                 if (data.object.mode == 'subscription') {
                   cx_type = 'subscriber';
                   type_text = '✅ Subscription Creation Payment to';

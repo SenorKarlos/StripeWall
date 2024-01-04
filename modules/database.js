@@ -72,6 +72,85 @@ const database = {
     let data = [selection, 'true', format, user_id];
     await database.db.query(query, data);
   },
+  updateZoneRoles: async function(user_id, selection = null, target = 'all', action = 'add') {
+    if(selection == null)
+    {
+      query = "SELECT zone_votes FROM stripe_users WHERE user_id = ?";
+      data = [user_id];
+      result = await database.db.query(query, data);
+      if(result[0][0].roles == null)
+      {
+        return 0;
+      }
+      zones = result[0][0].zone_votes;
+    }
+    else
+    {
+      zones = JSON.parse(selection);
+    }
+    highestVote = 0;
+    highestZone = '';
+    if(target == 'all'){ //cycle through all zones
+      for(var i = 0 ; i < zones.length ; i++) { //find highest vote before assigning roles
+        if(zones[i].votes > highestVote)
+        {
+          highestZone = zones[i].zone_name;
+        }
+      }
+      for(var i = 0 ; i < zones.length ; i++) {
+        query = "SELECT roles FROM service_zones WHERE zone_name = ?";
+        data = [zones[i].zone_name];
+        result = await database.db.query(query, data);
+        if(result[0][0].roles != null){
+          roles = result[0][0].roles;
+          for(var j = 0 ; j < roles.length ; j++) {
+            if(roles[j].assign_on == 'any_area'){
+              if(action == 'add'){
+                //console.log('any area role added to' + zones[i].zone_name);
+                bot.assignRole(roles[j].serverID,user_id,roles[j].roleID)
+              } else{
+                //console.log('any area role removed from' + zones[i].zone_name);
+                bot.removeRole(roles[j].serverID,user_id,roles[j].roleID)
+              }
+              
+            } else if(roles[j].assign_on == 'any_votes'){
+              if(zones[i].votes > 0){
+                if(action == 'add'){
+                  //console.log('any votes role added to' + zones[i].zone_name);
+                  bot.assignRole(roles[j].serverID,user_id,roles[j].roleID)
+                } else{
+                //console.log('any votes role removed from' + zones[i].zone_name);
+                bot.removeRole(roles[j].serverID,user_id,roles[j].roleID)
+                }
+              }
+            } else if(roles[j].assign_on == 'most_votes'){
+                if(highestZone == zones[i].zone_name){
+                  if(action == 'add'){
+                    //console.log('most votes role added to' + zones[i].zone_name);
+                    bot.assignRole(roles[j].serverID,user_id,roles[j].roleID)
+                 } else{
+                  //console.log('most votes role removed from' + zones[i].zone_name);
+                    bot.removeRole(roles[j].serverID,user_id,roles[j].roleID)
+                  }
+                }
+            }
+          }
+        }
+      }
+    }
+    else{ //one zone specified. This means we're removing roles
+      query = "SELECT roles FROM service_zones WHERE zone_name = ?";
+        data = [target];
+        result = await database.db.query(query, data);
+        if(result[0][0].roles != null){
+          roles = result[0][0].roles;
+          for(var j = 0 ; j < roles.length ; j++) {
+              //console.log('removeRole from' + target);
+             bot.removeRole(roles[j].serverID,user_id,roles[j].roleID)
+          }
+        }
+    }
+  },
   updateZoneUsers: async function(zone, parent, addOrSub = 1) {
     let query = '';
     if(addOrSub == 1){
@@ -280,7 +359,10 @@ const database = {
               let query = `UPDATE stripe_users SET customer_type = ?, stripe_id = NULL, price_id = NULL, expiration = NULL, charge_id = NULL WHERE user_id = ?`;
               let data = [cx_type, user.user_id];
               database.runQuery(query, data);
-              if (user.customer_type != 'inactive' && user.customer_type != 'lifetime-inactive' && user.customer_type != 'administrator' && user.zone_votes) { await database.updateActiveVotes(user.user_id, 0); }
+              if (user.customer_type != 'inactive' && user.customer_type != 'lifetime-inactive' && user.customer_type != 'administrator' && user.zone_votes) { 
+                await database.updateActiveVotes(user.user_id, 0);
+                await database.updateZoneRoles(user.user_id, null, 'all','remove');
+              }
               db_updated = true;
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Stripe Customer ID Invalid/Deleted, removed from Database Record.");
             } else {
@@ -311,6 +393,7 @@ const database = {
               let data = [user.user_id];
               await database.runQuery(query, data);
               await database.updateActiveVotes(user.user_id, 0);
+              await database.updateZoneRoles(user.user_id, null, 'all','remove');
               db_updated = true;
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Cancelled Subscriptions/Access.");
               bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Cancelled Subscriptions/Access.', config.discord.log_channel);
@@ -320,6 +403,7 @@ const database = {
               let data = [user.user_id, 9999999998];
               await database.runQuery(query, data);
               await database.updateActiveVotes(user.user_id, 0);
+              await database.updateZoneRoles(user.user_id, null, 'all','remove');
               db_updated = true;
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Lifetime Member Left Guild. Set inactive.");
               bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Lifetime Member Left Guild. Set inactive.', config.discord.log_channel);
@@ -532,6 +616,7 @@ const database = {
                     let data = [record.user_id];
                     database.runQuery(query, data);
                     database.updateActiveVotes(record[0].user_id, 0);
+                    await database.updateZoneRoles(record[0].user_id, null, 'all','remove');
                     console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.stripe_id+") Manually Tracked User Expired, Removing Role & Flags.");
                     bot.sendDM(member, 'Subscription Ended', 'Your subscription has expired. Please sign up again to continue.', 'FFFF00');
                     bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Manually Tracked User Expired ⚠', 'Removed Role & Flags. (Role Check)', config.discord.log_channel);

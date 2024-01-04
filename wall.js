@@ -205,6 +205,7 @@ server.get("/login", async (req, res) => {
           try {
             await database.runQuery(`UPDATE stripe_users SET customer_type = 'inactive', price_id = NULL, expiration = NULL WHERE user_id = ?`, [dbuser.user_id]);
             await database.updateActiveVotes(dbuser.user_id, 0);
+            await database.updateZoneRoles(dbuser.user_id, null, 'all','remove');
           } catch (e) {
             req.session = null;
             console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Temp Access Price Record", e);
@@ -332,6 +333,8 @@ server.post("/zonemap", async function(req,res){
   if(usertype != 'inactive' && usertype != 'lifetime-inactive')  //add to total user count if active
   {
     await database.updateZoneUsers(newZone, newParentZone);
+    await database.updateZoneRoles(userid, selection);
+
   }
   if(reviewed == 'true')
     res.redirect('/zonemap');
@@ -344,7 +347,7 @@ server.post("/zonemap", async function(req,res){
 //------------------------------------------------------------------------------
 server.get("/report", async function(req, res) {
   let unix = moment().unix();
-  let dbuser = await database.fetchUser(req.session.discord_id);
+  let dbuser = await database.fetchUser(1)//req.session.discord_id);
   if (!req.session.login || unix > req.session.now+1800) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
@@ -545,37 +548,35 @@ server.get("/manage", async function(req, res) {
 });
 
 server.post("/manage", async function(req,res){
-  if (typeof req.body.status !== 'undefined') {  //lifetime user changing their status
-    const userid = req.body.userid;
-    const status = req.body.status;
-    await database.updateActiveVotes(userid,status,true) 
-  }
-  else //updating zone counts
-  {
-    const userid = req.body.userid;
-    const usertype = req.body.usertype;
-    const selection = req.body.selection;
-    const removeZone = req.body.remZone;
-    const removeParentZone = req.body.remParentZone;
-    const format = req.body.format;
 
-    var zonediff = req.body.zonedifferences;
-    zonediff = zonediff.split('|')
-   await database.updateZoneSelection(userid, selection, format);
-    if(usertype != 'inactive' && usertype != "lifetime-inactive") //adjust zone values only if active user
+  const userid = req.body.userid;
+  const usertype = req.body.usertype;
+  const selection = req.body.selection;
+  const removeZone = req.body.remZone;
+  const removeParentZone = req.body.remParentZone;
+  const format = req.body.format;
+
+  var zonediff = req.body.zonedifferences;
+  zonediff = zonediff.split('|')
+  await database.updateZoneSelection(userid, selection, format);
+  if(usertype != 'inactive' && usertype != "lifetime-inactive") //adjust zone values only if active user
+  {
+    if(removeZone != '') //removing a zone. Decrease total users from zone.
     {
-      if(removeZone != '') //removing a zone. Decrease total users from zone.
-      {
-        await database.updateZoneUsers(removeZone,removeParentZone,0);
-      }
-      for(var i = 0 ; i < zonediff.length ; i++) //adjusting vote counts
-      {
-       await database.updateTotalVotes(zonediff[i]);
-       await database.updateParentVotes(zonediff[i]);        
-      }
+      await database.updateZoneUsers(removeZone,removeParentZone,0);
+      await database.updateZoneRoles(userid,selection,removeZone)
     }
-    await database.updateWorkerCalc(config.service_zones.workers);
+    else
+    {
+      await database.updateZoneRoles(userid,selection)
+    }
+    for(var i = 0 ; i < zonediff.length ; i++) //adjusting vote counts
+    {
+      await database.updateTotalVotes(zonediff[i]);
+      await database.updateParentVotes(zonediff[i]);        
+    }
   }
+  await database.updateWorkerCalc(config.service_zones.workers);
   res.redirect('/manage');
 })
 //------------------------------------------------------------------------------
