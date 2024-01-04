@@ -41,7 +41,6 @@ server.use(
 //------------------------------------------------------------------------------
 server.get("/", async function(req, res) {
   let radar_script = '';
- 
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
   return res.render(__dirname+"/html/main.ejs", {
     terms: config.pages.general.terms,
@@ -55,8 +54,7 @@ server.get("/", async function(req, res) {
     site_name: config.server.site_name,
     site_url: config.server.site_url,
     login_url: config.discord.redirect_url,
-    radar_script: radar_script,
-    userid: req.session.discord_id
+    radar_script: radar_script
   });
 });
 //------------------------------------------------------------------------------
@@ -238,6 +236,7 @@ server.get("/new", async function(req, res) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   }
+  let dbuser = await database.fetchUser(req.session.discord_id);
   let radar_script = '';
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
   return res.render(__dirname+"/html/terms.ejs", {
@@ -253,39 +252,14 @@ server.get("/new", async function(req, res) {
     site_url: config.server.site_url,
     radar_script: radar_script,
     userid: req.session.discord_id,
-    username: req.session.user_name
+    username: dbuser.user_name
   });
 });
 server.post("/new", async function(req,res){
-  const userid = req.body.userid;
+  let userid = req.body.userid;
   await database.termsReviewed(userid);
   res.redirect('/zonemap');
 })
-//------------------------------------------------------------------------------
-//  EXISTING USER PAGE
-//------------------------------------------------------------------------------
-server.get("/new", async function(req, res) {
-  let unix = moment().unix();
-  if (!req.session.login || unix > req.session.now+1800) {
-    console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
-    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
-  }
-  let radar_script = '';
-  if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
-  return res.render(__dirname+"/html/users.html", {
-    terms: config.pages.general.terms,
-    disclaimer: config.pages.general.disclaimer,
-    warning: config.pages.general.warning,
-    background: config.pages.general.background,
-    outer_background: config.pages.general.outer_background,
-    border_color: config.pages.general.border_color,
-    title_color: config.pages.general.title_color,
-    text_color: config.pages.general.text_color,
-    site_name: config.server.site_name,
-    site_url: config.server.site_url,
-    radar_script: radar_script
-  });
-});
 //------------------------------------------------------------------------------
 //  ZONE MAP PAGE
 //------------------------------------------------------------------------------
@@ -347,7 +321,7 @@ server.post("/zonemap", async function(req,res){
 //------------------------------------------------------------------------------
 server.get("/report", async function(req, res) {
   let unix = moment().unix();
-  let dbuser = await database.fetchUser(1)//req.session.discord_id);
+  let dbuser = await database.fetchUser(req.session.discord_id);
   if (!req.session.login || unix > req.session.now+1800) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed, Sending to Login");
    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
@@ -401,20 +375,25 @@ server.post("/create-customer-portal-session", async (req, res) => {
 //------------------------------------------------------------------------------
 server.post("/lifetime-toggle", async (req, res) => {
   let unix = moment().unix();
-  if (!req.session.login || unix > req.session.now+600 || !req.body) {
+  if (!req.session.login || unix > req.session.now+1800 || !req.body) {
     console.info("["+bot.getTime("stamp")+"] [wall.js] Direct Link Accessed or Data 'Old' - Sending to Login");
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   } else {
+    let dbuser = await database.fetchUser(req.session.discord_id);
     if (req.body.action == "activate") {
-      bot.assignRole(config.discord.guild_id, req.session.discord_id, config.discord.lifetime_role);
-      bot.removeRole(config.discord.guild_id, req.session.discord_id, config.discord.inactive_lifetime_role);
-      database.runQuery('UPDATE stripe_users SET expiration = ? WHERE user_id = ?', [9999999999, req.session.discord_id]);
+      bot.assignRole(config.discord.guild_id, req.session.discord_id, config.discord.lifetime_role, dbuser.user_name, dbuser.access_token);
+      bot.removeRole(config.discord.guild_id, req.session.discord_id, config.discord.inactive_lifetime_role, dbuser.user_name);
+      await database.updateActiveVotes(req.session.discord_id, 1);
+      await database.updateZoneRoles(req.session.discord_id);
+      database.runQuery('UPDATE stripe_users SET customer_type = ?, expiration = ? WHERE user_id = ?', ['lifetime-active', 9999999999, req.session.discord_id]);
       await new Promise(resolve => setTimeout(resolve, 500));
       return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
     } else if (req.body.action == "deactivate") {
-      bot.assignRole(config.discord.guild_id, req.session.discord_id, config.discord.inactive_lifetime_role);
-      bot.removeRole(config.discord.guild_id, req.session.discord_id, config.discord.lifetime_role);
-      database.runQuery('UPDATE stripe_users SET expiration = ? WHERE user_id = ?', [9999999998, req.session.discord_id]);
+      bot.assignRole(config.discord.guild_id, req.session.discord_id, config.discord.inactive_lifetime_role, dbuser.user_name, dbuser.access_token);
+      bot.removeRole(config.discord.guild_id, req.session.discord_id, config.discord.lifetime_role, dbuser.user_name);
+      await database.updateActiveVotes(req.session.discord_id, 0);
+      await database.updateZoneRoles(req.session.discord_id);
+      database.runQuery('UPDATE stripe_users SET customer_type = ?, expiration = ? WHERE user_id = ?', ['lifetime-inactive', 9999999998, req.session.discord_id]);
       await new Promise(resolve => setTimeout(resolve, 500));
       return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
     } else {

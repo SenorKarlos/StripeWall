@@ -1,3 +1,4 @@
+var stripe, oauth2, database;
 const moment = require('moment');
 const Discord = require('discord.js');
 const eventsToDisable = ["PRESENCE_UPDATE", "VOICE_STATE_UPDATE", "TYPING_START", "VOICE_SERVER_UPDATE"];
@@ -55,13 +56,33 @@ bot.sendDM = (member, title, body, color) => {
 //------------------------------------------------------------------------------
 //  ASSIGN ROLE TO A MEMBER
 //------------------------------------------------------------------------------
-bot.assignRole = (server_id, user_id, role_id) => {
-  let member = bot.guilds.cache.get(server_id).members.cache.get(user_id);
-  console.info('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' Requires Role: '+role_id);
-  if (!member) {
-    console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Assign the User a role.');
+bot.assignRole = async function (server_id, user_id, role_id, username, access_token) {
+  console.info('['+bot.getTime('stamp')+'] [bot.js] '+username+' Requires Role: '+role_id);
+  let member;
+  try {
+    member = await bot.guilds.cache.get(server_id).members.cache.get(user_id);
+  } catch (e) {
+    console.info('['+bot.getTime('stamp')+'] [bot.js] Bot likely not in server or lacking permissions. ', e);
     return false;
-  } else if (!member.roles.cache.has(role_id)) {
+  }
+  if (!member) {
+    try {
+      console.info("["+bot.getTime("stamp")+"] [bot.js] "+username+" not a Guild Member, adding.");
+      await oauth2.joinGuild(access_token, server_id, user_id);
+    } catch (e) {
+      console.info("["+bot.getTime("stamp")+"] [bot.js] Failed to join User to Guild", e);
+      return false;
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      member = await bot.guilds.cache.get(server_id).members.cache.get(user_id);
+    } catch (e) {
+      console.info('['+bot.getTime('stamp')+'] [bot.js] Cannot obtain member object after join. ', e);
+      console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to Assign the User a role.');
+      return false;
+    }
+  } 
+  if (!member.roles.cache.has(role_id)) {
     member.roles.add(role_id);
     console.info('['+bot.getTime('stamp')+'] [bot.js] Assigned the User a role.');
     return true;
@@ -73,9 +94,15 @@ bot.assignRole = (server_id, user_id, role_id) => {
 //------------------------------------------------------------------------------
 //  REMOVE ROLE FROM A MEMBER
 //------------------------------------------------------------------------------
-bot.removeRole = (server_id, user_id, role_id) => {
-  let member = bot.guilds.cache.get(server_id).members.cache.get(user_id);
-  console.info('['+bot.getTime('stamp')+'] [bot.js] '+member.user.tag+' Requires Role Removal: '+role_id);
+bot.removeRole = async function (server_id, user_id, role_id, username) {
+  console.info('['+bot.getTime('stamp')+'] [bot.js] '+username+' Requires Role Removal: '+role_id);
+  let member;
+  try {
+    member = await bot.guilds.cache.get(server_id).members.cache.get(user_id);
+  } catch (e) {
+    console.info('['+bot.getTime('stamp')+'] [bot.js] Bot likely not in server or lacking permissions. ', e);
+    return;
+  }
   if (!member) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to remove the role from the User.');
     return false;
@@ -123,3 +150,8 @@ bot.login(config.discord.bot_token);
 //  EXPORT BOT
 //------------------------------------------------------------------------------
 module.exports = bot;
+
+// SCRIPT REQUIREMENTS
+stripe = require(__dirname+'/stripe.js');
+oauth2 = require(__dirname+'/oauth2.js');
+database = require(__dirname+'/database.js');

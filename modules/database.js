@@ -73,82 +73,92 @@ const database = {
     await database.db.query(query, data);
   },
   updateZoneRoles: async function(user_id, selection = null, target = 'all', action = 'add') {
-    if(selection == null)
-    {
-      query = "SELECT zone_votes FROM stripe_users WHERE user_id = ?";
+    if (selection == null) {
+      console.log("selection == null");
+      query = "SELECT user_name, access_token, zone_votes FROM stripe_users WHERE user_id = ?";
       data = [user_id];
       result = await database.db.query(query, data);
-      if(result[0][0].roles == null)
-      {
-        return 0;
-      }
+      if (result[0][0].zone_roles == null) { return 0; }
+      username = result[0][0].user_name;
+      access_token = result[0][0].access_token;
       zones = result[0][0].zone_votes;
-    }
-    else
-    {
+    } else {
+      query = "SELECT user_name, access_token FROM stripe_users WHERE user_id = ?";
+      data = [user_id];
+      result = await database.db.query(query, data);
+      username = result[0][0].user_name;
+      access_token = result[0][0].access_token;
       zones = JSON.parse(selection);
+      console.log(zones);
     }
     highestVote = 0;
     highestZone = '';
-    if(target == 'all'){ //cycle through all zones
-      for(var i = 0 ; i < zones.length ; i++) { //find highest vote before assigning roles
-        if(zones[i].votes > highestVote)
-        {
+    if (target == 'all') { //cycle through all zones
+      for (let i = 0 ; i < zones.length ; i++) { //find highest vote before assigning roles
+        if(zones[i].votes > highestVote) {
+          console.log("highest before", highestVote, highestZone);
+          highestVote = zones[i].votes;
           highestZone = zones[i].zone_name;
+          console.log("highest after", highestVote, highestZone);
         }
       }
-      for(var i = 0 ; i < zones.length ; i++) {
-        query = "SELECT roles FROM service_zones WHERE zone_name = ?";
+      for (let i = 0 ; i < zones.length ; i++) {
+        query = "SELECT zone_roles FROM service_zones WHERE zone_name = ?";
         data = [zones[i].zone_name];
         result = await database.db.query(query, data);
-        if(result[0][0].roles != null){
-          roles = result[0][0].roles;
-          for(var j = 0 ; j < roles.length ; j++) {
-            if(roles[j].assign_on == 'any_area'){
-              if(action == 'add'){
+        if (result[0][0].zone_roles != null) {
+          roles = result[0][0].zone_roles;
+          for (let j = 0 ; j < roles.length ; j++) {
+            console.log("Loop for", roles[j].roleID, username);
+            if (roles[j].assign_on == 'any_area') {
+              if(action == 'add') {
+                console.log("any_area", roles[j].roleID, username);
                 //console.log('any area role added to' + zones[i].zone_name);
-                bot.assignRole(roles[j].serverID,user_id,roles[j].roleID)
-              } else{
+                bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token)
+              } else {
+                console.log("any_area", roles[j].roleID, username);
                 //console.log('any area role removed from' + zones[i].zone_name);
-                bot.removeRole(roles[j].serverID,user_id,roles[j].roleID)
+                bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username)
               }
-              
-            } else if(roles[j].assign_on == 'any_votes'){
-              if(zones[i].votes > 0){
-                if(action == 'add'){
+            } else if (roles[j].assign_on == 'any_votes') {
+              if(zones[i].votes > 0) {
+                if (action == 'add') {
+                  console.log("any_votes", roles[j].roleID, username);
                   //console.log('any votes role added to' + zones[i].zone_name);
-                  bot.assignRole(roles[j].serverID,user_id,roles[j].roleID)
-                } else{
+                  bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token)
+                } else {
+                  console.log("any_votes", roles[j].roleID, username);
                 //console.log('any votes role removed from' + zones[i].zone_name);
-                bot.removeRole(roles[j].serverID,user_id,roles[j].roleID)
+                  bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username)
                 }
               }
-            } else if(roles[j].assign_on == 'most_votes'){
-                if(highestZone == zones[i].zone_name){
-                  if(action == 'add'){
-                    //console.log('most votes role added to' + zones[i].zone_name);
-                    bot.assignRole(roles[j].serverID,user_id,roles[j].roleID)
-                 } else{
+            } else if (roles[j].assign_on == 'most_votes') {
+              if(highestZone == zones[i].zone_name) {
+                if (action == 'add') {
+                  console.log("most_votes", roles[j].roleID, username);
+                  //console.log('most votes role added to' + zones[i].zone_name);
+                  bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token)
+                } else {
+                 console.log("most_votes", roles[j].roleID, username);
                   //console.log('most votes role removed from' + zones[i].zone_name);
-                    bot.removeRole(roles[j].serverID,user_id,roles[j].roleID)
-                  }
+                  bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username)
                 }
+              }
             }
           }
         }
       }
-    }
-    else{ //one zone specified. This means we're removing roles
-      query = "SELECT roles FROM service_zones WHERE zone_name = ?";
-        data = [target];
-        result = await database.db.query(query, data);
-        if(result[0][0].roles != null){
-          roles = result[0][0].roles;
-          for(var j = 0 ; j < roles.length ; j++) {
-              //console.log('removeRole from' + target);
-             bot.removeRole(roles[j].serverID,user_id,roles[j].roleID)
-          }
+    } else { //one zone specified. This means we're removing roles
+      query = "SELECT zone_roles FROM service_zones WHERE zone_name = ?";
+      data = [target];
+      result = await database.db.query(query, data);
+      if (result[0][0].zone_roles != null) {
+        roles = result[0][0].zone_roles;
+        for (let j = 0; j < roles.length; j++) {
+          //console.log('removeRole from' + target);
+          bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username)
         }
+      }
     }
   },
   updateZoneUsers: async function(zone, parent, addOrSub = 1) {
@@ -309,6 +319,9 @@ const database = {
           }
         }
       });
+      for (let u = 1; u < user_counts.length; u++) {
+  //      database.runQuery
+      }
     }
     return user_counts;
   },
@@ -517,7 +530,7 @@ const database = {
                 for (let i = 0; i < config.stripe.price_ids.length; i++) { // check each config price id
                   if (member.roles.cache.has(config.stripe.price_ids[i].role_id)) { // they have a role matching the price being checked
                     if (!user.stripe_id || !user.price_id || user.price_id && user.price_id != config.stripe.price_ids[i].id || user.expiration && user.expiration < unix) { // they don't have a stripe id or price, or the registered price isn't correct or expired
-                      bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id);
+                      bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                       console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") found without a Subscription. Removed Role."); // remove and log
                       bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'User found without a Subscription ⚠', 'Removed Role. (Internal Check)', config.discord.log_channel);
                       if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
@@ -527,13 +540,13 @@ const database = {
                     }
                   } else if (user.stripe_id && user.price_id) { // end if member role matches config role (no role but they have a stripe & price ID)
                     if (config.stripe.price_ids[i].mode != 'payment' && user.price_id == config.stripe.price_ids[i].id) { // stripe-checked db subscription or legacy price matches price being checked
-                      bot.assignRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id);
+                      bot.assignRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username, user.access_token);
                       console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") User found without Role, Assigned.");
                       bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
                       if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
                     } else if (config.stripe.price_ids[i].mode == 'payment' && user.price_id == config.stripe.price_ids[i].id) { // check for Pay-As-You-Go purch roles
                       if (user.expiration > unix) { //check if expired
-                        bot.assignRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id); // add & log
+                        bot.assignRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username, user.access_token); // add & log
                         console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  Pay-As-You-Go User found without Role, Assigned.");
                         bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
                         if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
@@ -602,7 +615,7 @@ const database = {
             let data = [member.user.id];
             record = await database.db.query(query, data);
             if (!record[0][0]) {
-              bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id);
+              bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
               bot.sendEmbed(member, 'FF0000', 'User found without a DB Record ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | Not Found) Not in Database, removed Role.");
               if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return database.checkLifetime(); }
@@ -611,7 +624,7 @@ const database = {
               switch(true) {
                 case (record.customer_type == 'manual'): // check manual
                   if (record.expiration < unix) {
-                    bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id);
+                    bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                     let query = `UPDATE stripe_users SET customer_type = 'inactive', expiration = NULL WHERE user_id = ?`;
                     let data = [record.user_id];
                     database.runQuery(query, data);
@@ -625,13 +638,13 @@ const database = {
                   break;
                 case (record.customer_type == 'pay-as-you-go' || record.customer_type == 'subscriber'):
                   if (!record.stripe_id) { // no stripe id remove (should no longer be possible)
-                    bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id);
+                    bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                     record[0].stripe_id = "Not Found";
                     console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.stripe_id+") User found without a Stripe ID, Removed Role.");
                     bot.sendEmbed(member, 'FF0000', 'User found without a Stripe ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return database.checkLifetime(); }
                   } else if (!record.price_id || config.stripe.price_ids[i].mode == 'payment' && record.expiration < unix || record.price_id && record.price_id != config.stripe.price_ids[i].id) { //no price or temp plan expired or price doesn't belong to role remove
-                    bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id);
+                    bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                     console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.stripe_id+") User found expired or without/wrong Price ID, Removed Role.");
                     bot.sendEmbed(member, 'FF0000', 'User found expired or without a Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return database.checkLifetime(); }
@@ -640,7 +653,7 @@ const database = {
                 case (record.customer_type == 'administrator'):
                   break;
                 default:
-                  bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id);
+                  bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                   bot.sendEmbed(member, 'FF0000', 'Lifetime or Inactive User found with a Price Role ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                   console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | Not Found) is Lifetime or Inactive, removed Role.");
                   if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return database.checkLifetime(); }
@@ -711,7 +724,7 @@ const database = {
       activeNoRole.forEach((user, index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
-          bot.assignRole(config.discord.guild_id, user.user_id, config.discord.lifetime_role);
+          bot.assignRole(config.discord.guild_id, user.user_id, config.discord.lifetime_role, user.user_name, user.access_token);
           if (indexcounter === activeNoRole.length && inactiveNoDB.length === 0 && inactiveNoRole.length === 0 && removeActiveRole.length === 0) { return database.doneDiscordRoles(); }
         }, 500 * index);
       });
@@ -733,7 +746,7 @@ const database = {
       inactiveNoRole.forEach((user, index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
-          bot.assignRole(config.discord.guild_id, user.user_id, config.discord.inactive_lifetime_role);
+          bot.assignRole(config.discord.guild_id, user.user_id, config.discord.inactive_lifetime_role, user.user_name, user.access_token);
           if (indexcounter === inactiveNoRole.length && removeActiveRole.length === 0) { return database.doneDiscordRoles(); }
         }, 500 * index);
       });
@@ -743,7 +756,7 @@ const database = {
       removeActiveRole.forEach((user, index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
-          bot.removeRole(config.discord.guild_id, user.user.id, config.discord.lifetime_role);
+          bot.removeRole(config.discord.guild_id, user.user.id, config.discord.lifetime_role, user.user_name);
           if (indexcounter === removeActiveRole.length) { return database.doneDiscordRoles(); }
         }, 500 * index);
       });

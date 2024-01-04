@@ -1,1 +1,0 @@
-ALTER TABLE service_zones ADD COLUMN roles JSON DEFAULT NULL;

@@ -1,4 +1,4 @@
-var bot;
+var stripe, bot, database;
 const axios = require('axios');
 const moment = require('moment');
 const config = require("../config/config.json");
@@ -89,5 +89,6 @@ const oauth2 = {
 module.exports = oauth2;
 
 // SCRIPT REQUIREMENTS
-database = require(__dirname+'/database.js');
+stripe = require(__dirname+'/stripe.js');
 bot = require(__dirname+'/bot.js');
+database = require(__dirname+'/database.js');
