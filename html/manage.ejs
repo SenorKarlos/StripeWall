@@ -1,8 +1,21 @@
 <%- include('./includes/head.ejs') %>
 <% var available = total = user.total_votes;
+var percentage = 0;
 var zones = user.zone_votes;
+var allocations = user.allocations;
+var flag;  //used to determine if allocations was null on page load.
+if(allocations == null){
+    flag = true;
+    allocations = [];
+}
 for(var i=0; i < zones.length; i++) {
     available -= zones[i].votes;
+    if(!flag){
+         percentage += Number(allocations[i].percent);
+    }
+    else {
+        allocations[i] = JSON.parse('{"zone_name":"'+zones[i].zone_name+'","percent":"0"}');
+    }
 }
 
 %>
@@ -267,21 +280,25 @@ for(var i=0; i < zones.length; i++) {
         <div>
             <p><strong><font color="white">Total Fees and Donations to Date</font></strong></p>
             <p><strong><font size="20px" color="red">$<%= user.total_spend %></font></strong></p>
-            <p><strong><font color="white">At $<%= voteworth%> per vote, you have</font></strong></p>
-            <p><strong><font size="20px" color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
-            <p><strong><font size="5px"color="white">Unused Votes / Total Votes</font></strong></p>
+            <p><strong><font color="white">At $<%= voteworth %> per vote, you have this many votes:</font></strong></p>
+            <p class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>><strong><font size="20px" color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
+            <p class="format1" <% if(user.format == 0) { %>style="display:none" <% } %>><strong><font size="20px" color="red"><%= total %></font></strong></p>
+            <p><strong><font size="5px"color="white"><span class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>>Unused Votes / Total Votes</span><span class="format1" id="percent" <% if(user.format == 0) { %>style="display:none" <% } %>><%= percentage %> %</span></font></strong></p>
             <br>
-            <p><strong><font color="white"><u>Allocate your votes below</u></font></strong></p>
+            <p class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>><strong><font color="white"><u>Allocate your votes below</u></font></strong></p>
+            <p class="format1" <% if(user.format == 0) { %>style="display:none" <% } %>><strong><font color="white"><u>Distribute your votes below and votes will be totalled automatically</u></font></strong></p>
               
             <form method="POST" id="voteForm">   
                 <div>
                     <input type="radio" <% if(user.format == 0) { %>checked="checked" <% } %> onchange="changeFormat(0)" id="number" name="format" value="0">
-                    <label for="number"><font color="white"># Format</font></label>&nbsp;&nbsp;
+                    <label for="number"><font color="white">Manual</font></label>&nbsp;&nbsp;
                     <input type="radio" <% if(user.format == 1) { %>checked="checked" <% } %> onchange="changeFormat(1)" id="percentage" name="format" value="1">
-                    <label for="percentage"><font color="white">% Format</font></label>
+                    <label for="percentage"><font color="white">Automatic</font></label>
                 </div>
                 <input type="hidden" name='selection' id='selection' value="">          
+                <input type="hidden" name='allocations' id='allocations' value="">          
                 <input type="hidden" name='zonedifferences' id='zonedifferences' value="">          
+                <input type="hidden" name='percentage' id='percentage' value="0">          
                 <input type="hidden" name='userid' id='userid' value="<%= user.user_id %>">          
                 <input type="hidden" name='usertype' id='usertype' value="<%= user.customer_type %>">          
                 <input type="hidden" name='remZone' id='remZone' value="">          
@@ -291,7 +308,7 @@ for(var i=0; i < zones.length; i++) {
                         <p class="stretchedText"><%= zones[i].parent_name %></p><br>
                         <p class="stretchedText" style="font-size: 20px;"><%= zones[i].zone_name %></p><br><br>
                         <p style="font-size: 15px; line-height: 10%">Votes:</p>
-                        <p style="line-height: 10%"><span class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>id="zone0<%= zones[i].zone_name %>"><%= zones[i].votes %></span><span class="format1" <% if(user.format == 0) { %>style="display:none" <% } %>id="zone1<%= zones[i].zone_name %>"><%= (zones[i].votes/total)*100 %>%</span></p>
+                        <p style="line-height: 10%"><span class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>id="zone0<%= zones[i].zone_name %>"><%= zones[i].votes %></span><span class="format1" <% if(user.format == 0) { %>style="display:none" <% } %>id="zone1<%= zones[i].zone_name %>"><%= allocations[i].percent %>%</span></p>
                         <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','sub')">-</button>
                         <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','add')">+</button>
                         <br>
@@ -333,32 +350,65 @@ for(var i=0; i < zones.length; i++) {
   </div>
   <script>
     var available = <%= available %>;
+    var percentage = <%= percentage %>;
     var total = <%= total %>;
     var zones = [];
+    var allocations = [];
     var originalzones = [];
+    var format = <%= user.format %>;
+    
     
     <% for( var i=0; i < zones.length; i++) { %>
         zones['<%= zones[i].zone_name %>'] = <%= zones[i].votes %>;
         originalzones['<%= zones[i].zone_name %>'] = <%= zones[i].votes %>;
-    <% } %>
+        <% if(allocations != null){ %>
+            allocations['<%= zones[i].zone_name %>'] = <%= allocations[i].percent %>;
+       <% }
+        else { %>
+            allocations['<%= zones[i].name_name %>'] = 0;
+        <% }
+     } %>
     function updateVotes(id,operator)
     {
-        if(operator == 'add')
-        {
-            if(available > 0)
+        if(format == 0){
+            if(operator == 'add')
             {
-                document.getElementById('remainVotes').innerHTML = --available;
-                document.getElementById('zone0'+id).innerHTML = ++zones[id];
-                document.getElementById('zone1'+id).innerHTML = String((zones[id]/total)*100) + '%';
+                if(available > 0)
+                {
+                    document.getElementById('remainVotes').innerHTML = --available;
+                    document.getElementById('zone0'+id).innerHTML = ++zones[id];
+                }
+            }
+            else
+            {
+                if(available < total && zones[id] > 0)
+                {
+                    document.getElementById('remainVotes').innerHTML = ++available;
+                    document.getElementById('zone0'+id).innerHTML = --zones[id];
+                }
             }
         }
         else
         {
-            if(available < total && zones[id] > 0)
+            if(operator == 'add')
             {
-                document.getElementById('remainVotes').innerHTML = ++available;
-                document.getElementById('zone0'+id).innerHTML = --zones[id];
-                document.getElementById('zone1'+id).innerHTML = String((zones[id]/total)*100) + '%';
+                if(percentage < 100)
+                {
+                    percentage += 5;
+                    allocations[id] += 5;
+                    document.getElementById('percent').innerHTML = String(percentage) + '%';;
+                    document.getElementById('zone1'+id).innerHTML = String(allocations[id]) + '%';
+                }
+            }
+            else
+            {
+                if(percentage > 0 && allocations[id] > 0)
+                {
+                    percentage -= 5;
+                    allocations[id] -= 5;
+                    document.getElementById('percent').innerHTML = String(percentage) + '%';
+                    document.getElementById('zone1'+id).innerHTML = String(allocations[id]) + '%';
+                }
             }
         }
     }
@@ -368,11 +418,13 @@ for(var i=0; i < zones.length; i++) {
         if (confirm("Are you sure you want to remove this zone?") == true) 
         {
             jsonValue = '[';
+            ajson = '[';
             jsonDiff = '';
             <% for( var i=0; i < zones.length; i++) { %>
                 if(id != '<%= zones[i].zone_name %>')
                 {
                     jsonValue += '{"zone_name":"<%= zones[i].zone_name %>","parent_name":"<%= zones[i].parent_name %>","votes":"'+zones['<%= zones[i].zone_name %>']+'"},';
+                    ajson += '{"zone_name":"<%= zones[i].zone_name %>","percent":"'+allocations['<%= zones[i].zone_name %>']+'"},';
                 }
                 if(id == '<%= zones[i].zone_name %>')
                 {
@@ -384,9 +436,12 @@ for(var i=0; i < zones.length; i++) {
             <% } %>
             
             jsonValue = jsonValue.substring(jsonValue.length - 1, -1);
+            ajson = ajson.substring(ajson.length - 1, -1);
             jsonValue += ']';
+            ajson += ']';
             document.getElementById('zonedifferences').value = jsonDiff;
             document.getElementById('selection').value = jsonValue;
+            document.getElementById('allocations').value = ajson;
             document.getElementById('remZone').value = id;
             document.getElementById('remParentZone').value = parentZone;
             document.getElementById('voteForm').submit();
@@ -394,19 +449,39 @@ for(var i=0; i < zones.length; i++) {
     }
     function submitVotes()
     {
-        jsonValue = '[';
-        jsonDiff = '';
-        <% for( var i=0; i < zones.length; i++) { %>
-            jsonValue += '{"zone_name":"<%= zones[i].zone_name %>","parent_name":"<%= zones[i].parent_name %>","votes":"'+zones['<%= zones[i].zone_name %>']+'"},';
-            var difference = zones['<%= zones[i].zone_name %>'] - originalzones['<%= zones[i].zone_name %>'];
-            jsonDiff +='{"zone_name":"<%= zones[i].zone_name %>","parent_zone":"<%= zones[i].parent_name %>","difference":"'+difference+'"}|'
-            <% } %>
-        jsonValue = jsonValue.substring(jsonValue.length - 1, -1);
-        jsonDiff = jsonDiff.substring(jsonDiff.length - 1, -1);
-        jsonValue += ']';
-        document.getElementById('selection').value = jsonValue;
-        document.getElementById('zonedifferences').value = jsonDiff;
-        document.getElementById('voteForm').submit();
+
+            jsonValue = '[';
+            if(format == 0)
+            {
+                ajson = '[';
+                jsonDiff = '';
+                <% for( var i=0; i < zones.length; i++) { %>
+                    jsonValue += '{"zone_name":"<%= zones[i].zone_name %>","parent_name":"<%= zones[i].parent_name %>","votes":"'+zones['<%= zones[i].zone_name %>']+'"},';
+                    var difference = zones['<%= zones[i].zone_name %>'] - originalzones['<%= zones[i].zone_name %>'];
+                    jsonDiff +='{"zone_name":"<%= zones[i].zone_name %>","parent_zone":"<%= zones[i].parent_name %>","difference":"'+difference+'"}|'
+                    ajson +='{"zone_name":"<%= zones[i].zone_name %>","percent":"0"},';
+                    <% } %>
+                ajson = ajson.substring(ajson.length - 1, -1);
+                jsonValue = jsonValue.substring(jsonValue.length - 1, -1);
+                jsonDiff = jsonDiff.substring(jsonDiff.length - 1, -1);
+                jsonValue += ']';
+                ajson += ']';
+                document.getElementById('selection').value = jsonValue;
+                document.getElementById('allocations').value = ajson;
+                document.getElementById('percentage').value = percentage;
+                document.getElementById('zonedifferences').value = jsonDiff;
+            }
+            else {
+                <% for( var i=0; i < zones.length; i++) { %>
+                    jsonValue += '{"zone_name":"<%= zones[i].zone_name %>","percent":"'+String(allocations['<%= zones[i].zone_name %>'])+'"},';
+                <% } %>
+                jsonValue = jsonValue.substring(jsonValue.length - 1, -1);
+                jsonValue += ']';
+                document.getElementById('allocations').value = jsonValue;
+            }
+            
+            document.getElementById('voteForm').submit();
+        
     }
     function confirmToggle()
     {
@@ -415,9 +490,10 @@ for(var i=0; i < zones.length; i++) {
             document.getElementById('lifetimeForm').submit();
         }
     }
-    function changeFormat(format)
+    function changeFormat(f)
     {
-        if(format == 0)
+        format = f;
+        if(f == 0)
         {
             hide = 1;
         }

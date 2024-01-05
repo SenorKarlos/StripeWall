@@ -299,11 +299,13 @@ server.get("/zonemap", async function(req, res) {
 server.post("/zonemap", async function(req,res){
   const userid = req.body.userid;
   const usertype = req.body.userid;
+  const format = req.body.format;
   const newZone = req.body.newZone;
   const newParentZone = req.body.newParentZone;
   const selection = req.body.selection;
+  const allocations = req.body.allocations;
   const reviewed = req.body.zonesreviewed;
-  await database.updateZoneSelection(userid, selection);
+  await database.updateZoneSelection(userid, selection, allocations, format);
   if(usertype != 'inactive' && usertype != 'lifetime-inactive')  //add to total user count if active
   {
     await database.updateZoneUsers(newZone, newParentZone);
@@ -531,13 +533,18 @@ server.post("/manage", async function(req,res){
   const userid = req.body.userid;
   const usertype = req.body.usertype;
   const selection = req.body.selection;
+  const allocations = req.body.allocations;
+  const percentage = req.body.percentage;
   const removeZone = req.body.remZone;
   const removeParentZone = req.body.remParentZone;
   const format = req.body.format;
-
   var zonediff = req.body.zonedifferences;
   zonediff = zonediff.split('|')
-  await database.updateZoneSelection(userid, selection, format);
+  await database.updateZoneSelection(userid, selection, allocations, format);
+  if(format == 1) //if user's format is set to automatic, start allocating votes.
+  {
+    await database.allocateVotes(userid,allocations,percentage)
+  }
   if(usertype != 'inactive' && usertype != "lifetime-inactive") //adjust zone values only if active user
   {
     if(removeZone != '') //removing a zone. Decrease total users from zone.
@@ -549,11 +556,14 @@ server.post("/manage", async function(req,res){
     {
       await database.updateZoneRoles(userid,selection)
     }
+    if(format == 0 || removeZone != ''){
     for(var i = 0 ; i < zonediff.length ; i++) //adjusting vote counts
-    {
-      await database.updateTotalVotes(zonediff[i]);
-      await database.updateParentVotes(zonediff[i]);        
-    }
+      {
+        await database.updateTotalVotes(zonediff[i]);
+        await database.updateParentVotes(zonediff[i]);        
+      }
+     }
+   
   }
   await database.updateWorkerCalc(config.service_zones.workers);
   res.redirect('/manage');

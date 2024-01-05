@@ -67,18 +67,26 @@ const database = {
 //------------------------------------------------------------------------------
 //  ZONE VOTE/WORKER FUNCTIONS
 //------------------------------------------------------------------------------
-  updateZoneSelection: async function(user_id, selection, format) {
-    let query = `UPDATE stripe_users SET zone_votes = ? , zones_reviewed = ?, format = ? WHERE user_id = ?`;
-    let data = [selection, 'true', format, user_id];
-    await database.db.query(query, data);
+  updateZoneSelection: async function(user_id, selection, allocations, format) {
+    let query = '';
+    let data = [];
+    if(selection != '') //this happens when on $ mode. This will be set later.
+    {
+      query = `UPDATE stripe_users SET zone_votes = ?, allocations = ? , zones_reviewed = ?, format = ? WHERE user_id = ?`;
+      data = [selection, allocations, 'true', format, user_id];
+    } else {
+      query = `UPDATE stripe_users SET allocations = ? , zones_reviewed = ?, format = ? WHERE user_id = ?`;
+      data = [allocations, 'true', format, user_id];
+    }
+      await database.db.query(query, data);
   },
-  updateZoneRoles: async function(user_id, selection = null, target = 'all', action = 'add') {
-    if (selection == null) {
+  updateZoneRoles: async function(user_id, selection, target = 'all', action = 'add') {
+    if (selection == '') { //this kicks off if we're using % mode.
       console.log("selection == null");
       query = "SELECT user_name, access_token, zone_votes FROM stripe_users WHERE user_id = ?";
       data = [user_id];
       result = await database.db.query(query, data);
-      if (result[0][0].zone_roles == null) { return 0; }
+      if (result[0][0].zone_votes == null) { return 0; }
       username = result[0][0].user_name;
       access_token = result[0][0].access_token;
       zones = result[0][0].zone_votes;
@@ -215,6 +223,65 @@ const database = {
       }
       database.updateWorkerCalc(config.service_zones.workers);
     }
+  },
+  allocateVotes: async function(userid, allocations,percentage) {
+    var query = "SELECT customer_type, total_votes, zone_votes FROM stripe_users WHERE user_id = ?";
+    var data = [userid];
+    result = await database.db.query(query, data);
+    if(result[0][0].zone_votes != null)
+    {
+        allocations = JSON.parse(allocations)
+        zones = originals = result[0][0].zone_votes;
+        total = result[0][0].total_votes;
+        type = result[0][0].customer_type;
+        sum = 0;
+        originals = zones;
+        amortized = 0;
+        real = 0;
+        natural = 0;
+        var query2 = '';
+        var data2 = []
+        if(percentage == 100)
+        {
+          length = zones.length - 1;
+        }
+        else
+        {
+          length = zones.length;
+        }
+        for (i = 0; i < length; i++)
+        {
+          real = (Number(allocations[i].percent)/100) * total + amortized;
+          natural = Math.floor(real);
+          amortized = real - natural;
+          if(type != 'inactive' && type != 'lifetime-inactive')  //update zone counts if active
+          {
+            query2 = "UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?";
+            data2 = [Number(zones[i].votes) - natural, zones[i].zone_name];
+            await database.db.query(query2, data2);
+            data2 = [Number(zones[i].votes) - natural,zones[i].parent_name];
+            await database.db.query(query2, data2);
+          }
+          zones[i].votes = String(natural);
+          console.log(zones[i].zone_name + 'votes = '+natural)
+          sum += natural;
+        }
+        if(percentage == 100) {
+          if(type != 'inactive' && type != 'lifetime-inactive')  //update zone counts if active
+          {
+            query2 = "UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?";
+            data2 = [Number(zones[i].votes) - (total-sum), zones[i].zone_name];
+            await database.db.query(query2, data2);
+            data2 = [Number(zones[i].votes) -zones[i].parent_name];
+            await database.db.query(query2, data2);
+          }
+          zones[i].votes = String(total - sum);
+        }
+        zone_votes = JSON.stringify(zones);
+        let query = "UPDATE stripe_users SET zone_votes = ? WHERE user_id = ?";
+        let data = [zone_votes,userid];
+        await database.db.query(query, data);
+      }
   },
   updateParentVotes: async function(zonediff) {
     let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;

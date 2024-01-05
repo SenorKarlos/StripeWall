@@ -1,5 +1,6 @@
 <%- include('./includes/head.ejs') %>
 <% var zoneSelection = user.zone_votes;
+var allocations = user.allocations;
 var userzones = [];
 if(!!zoneSelection){
 	for(var i = 0 ; i < zoneSelection.length ; i++){
@@ -117,10 +118,12 @@ if(!!zoneSelection){
         <hr>
         <form id="zoneForm" method="POST">
             <input type="hidden" name='selection' id='selection' value="">          
+            <input type="hidden" name='allocations' id='allocations' value="">          
             <input type="hidden" name='newZone' id='newZone' value="">          
             <input type="hidden" name='newParentZone' id='newParentZone' value="">          
             <input type="hidden" name='userid' id='userid' value="<%= user.user_id %>">
             <input type="hidden" name='usertype' id='usertype' value="<%= user.customer_type %>">
+            <input type="hidden" name='format' id='format' value="<%= user.format %>">
             <input type="hidden" name='zonesreviewed' value="<%= user.zones_reviewed %>">
             <% for(var i=0; i < parentids.length; i++) { %>
             <div class="zones" id="zone<%= parentids[i] %>" style="display:none;">
@@ -166,14 +169,18 @@ if(!!zoneSelection){
         if (confirm("Are you sure you want to add this zone to your profile?") == true) 
         {
             jsonValue = '[';
+            ajson = '[';
 			<% if(!!zoneSelection)
             {
                 for( var i=0; i < zoneSelection.length; i++) { %>
                 jsonValue += '{"zone_name":"<%= zoneSelection[i].zone_name %>","parent_name":"<%= zoneSelection[i].parent_name %>","votes":"<%= zoneSelection[i].votes %>"},';
+                ajson += '{"zone_name":"<%= allocations[i].zone_name %>","percent":"<%= allocations[i].percent %>"},';
             <% }
             } %>
             jsonValue += '{"zone_name":"'+zoneName+'","parent_name":"'+parentName+'","votes":"0"}]';
+            ajson += '{"zone_name":"'+zoneName+'","percent":"0"}]';
             document.getElementById('selection').value = jsonValue;
+            document.getElementById('allocations').value = ajson;
             document.getElementById('newZone').value = zoneName;
             document.getElementById('newParentZone').value = parentName;
             document.getElementById('zoneForm').submit();
