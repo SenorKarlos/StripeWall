@@ -235,7 +235,12 @@ const stripe = {
 //  CHECKOUT
 //------------------------------------------------------------------------------
     checkout: async function(req, res) {
-      var values = req.body.checkout.split(":");
+      var values ;
+      if (req.body.checkout) {
+        values = req.body.checkout.split(":");
+      } else {
+        values = req.body.donate.split(":");
+      }
       const customerID = values[0];
       const priceID = values[1];
       const mode = values[2];
