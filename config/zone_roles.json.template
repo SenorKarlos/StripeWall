@@ -1,0 +1,17 @@
+[
+	{
+		"roleID": "",
+		"serverID": "",
+		"assign_on": "most_votes"
+	},
+	{
+		"roleID": "",
+		"serverID": "",
+		"assign_on": "any_votes"
+	},
+	{
+		"roleID": "",
+		"serverID": "",
+		"assign_on": "any_area"
+	}
+]

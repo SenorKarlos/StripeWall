@@ -317,9 +317,9 @@ const database = {
     result = await database.db.query(query, data);
     if (result[0]) {
       result=result[0];
-      result.sort(function(a, b){return a.total_votes - b.total_votes});
+      result.sort(function(a, b){return a.total_votes - b.total_votes}); // sort results in ascending vote order
       var totalVotes = 0, voteCalc = 0, assigned = 0, remaining = workers, parents = [], children = [];
-      for (let i = 0; i < result.length; i++) { //grab vote total first from parents and sort into arrays
+      for (let i = 0; i < result.length; i++) { //grab all zones vote total first from parents and sort into arrays, adding counters to parents
         if (result[i].parent_zone == null) {
           totalVotes += result[i].total_votes;
           result[i].calcWorkerCounter = 0;
@@ -329,20 +329,27 @@ const database = {
           children.push(result[i]);
         }
       }
-      if (totalVotes === 0) { return; }
       for (let i = 0; i < children.length; i++) { //loop children to update workers, respecting max
-        voteCalc = Math.round(children[i].total_votes * 100.0 / totalVotes) / 100;
-        voteCalc = Math.round(voteCalc * workers);
-        remaining = remaining - voteCalc;
-        if (i == children.length-1) {
-          voteCalc = voteCalc + remaining;
+        if (totalVotes === 0) { // if everything is empty, clear out variables so no workers are calced
+          voteCalc = 0;
+          remaining = 0;
+        } else if (children[i].total_votes === 0) { // zero out empty voted zones
+          voteCalc = 0;
+        } else { // we have votes, do work
+          voteCalc = Math.round(children[i].total_votes * 100.0 / totalVotes) / 100;
+          voteCalc = Math.round(voteCalc * workers);
+          if (voteCalc < 1) { voteCalc = 1; } // protect low votes from 0 workers
+          remaining = remaining - voteCalc; // reduce remaining workers by calced amount
+        }
+        if (i == children.length-1) { // on last child
+          voteCalc = voteCalc + remaining; // clear any +/- workers from rounding and low zone protection - will always be on highest vote due to sort earlier
         }
         assigned = voteCalc + children[i].admin_worker_override;
         query = 'UPDATE service_zones SET calc_workers = ? , assigned_workers = ? WHERE zone_name = ?';
         data = [voteCalc, assigned, children[i].zone_name];
         await database.db.query(query, data);
         for (let p = 0; p < parents.length; p++) {
-          if (children[i].parent_zone == parents[p].zone_name) {
+          if (children[i].parent_zone == parents[p].zone_name) { // push worker totals to parent counters
             parents[p].calcWorkerCounter = parents[p].calcWorkerCounter + voteCalc;
             parents[p].assignWorkerCounter = parents[p].assignWorkerCounter + assigned;
           }
@@ -365,9 +372,15 @@ const database = {
     if (result[0][0]) {
       result = result[0];
       for (let i = 0; i < result.length; i++) {
-        if (result[i].customer_type == 'administrator' || result[i].customer_type == 'lifetime-active' || result[i].customer_type == 'subscriber' || result[i].customer_type == 'pay-as-you-go' || result[i].customer_type == 'manual') {
+        if (result[i].customer_type != 'inactive' || result[i].customer_type != 'lifetime-inactive') {
           user_counts[0].count++
           for (let x = 0; x < result[i].zone_votes.length; x++) {
+            let existingZone = user_counts.find(item => item.zone_name === result[i].zone_votes[x].zone_name);
+            if (existingZone) {
+              existingZone.count++;
+            } else {
+              user_counts.push({ zone_name: result[i].zone_votes[x].zone_name, count: 1 });
+            }
             result[i].zone_votes[x].user_id = result[i].user_id;
             parent_counts.push(result[i].zone_votes[x]);
           }
@@ -386,9 +399,22 @@ const database = {
           }
         }
       });
-      for (let u = 1; u < user_counts.length; u++) {
-  //      database.runQuery
+    }
+    query = `SELECT zone_name FROM service_zones`;
+    zones = await database.db.query(query, data);
+    if (zones[0][0]) {
+      zones = zones[0];
+      for (let z = 0; z < zones.length; z++) {
+        let existingCount = user_counts.find(item => item.zone_name === zones[z].zone_name);
+        if (!existingCount) {
+          user_counts.push({ zone_name: zones[z].zone_name, count: 0 });
+        }
       }
+    }
+    for (let u = 1; u < user_counts.length; u++) {
+      query = 'UPDATE service_zones SET total_users = ? WHERE zone_name = ?';
+      data = [user_counts[u].count, user_counts[u].zone_name];
+      await database.db.query(query, data);
     }
     return user_counts;
   },
@@ -843,55 +869,42 @@ const database = {
     result = await database.db.query(query, data);
     if (result[0]) {
       totals = result[0];
-      var userTotal = [];
       var voteTotal = [];
       for(var i = 0 ; i < totals.length ; i++) {  //loop through users
-          if(!!totals[i].zone_votes) {
-            
-            votes = totals[i].zone_votes;
-            for(var j = 0 ; j < votes.length ; j++)  {//loop through zones users currently use
-              if(typeof voteTotal[votes[j].zone_name] === 'undefined')
-              {
-                userTotal[votes[j].zone_name] = 0;
-                voteTotal[votes[j].zone_name] = 0;
-              }
-              if(typeof voteTotal[votes[j].parent_name] === 'undefined')
-              {
-                userTotal[votes[j].parent_name] = 0;
-                voteTotal[votes[j].parent_name] = 0;
-              }
-              voteTotal[votes[j].zone_name] += Number(votes[j].votes);
-              voteTotal[votes[j].parent_name] += Number(votes[j].votes);
-              userTotal[votes[j].zone_name] += 1;
-              userTotal[votes[j].parent_name] += 1;
+        if(!!totals[i].zone_votes) {
+          votes = totals[i].zone_votes;
+          for(var j = 0 ; j < votes.length ; j++)  {//loop through zones users currently use
+            if(typeof voteTotal[votes[j].zone_name] === 'undefined')
+            {
+              voteTotal[votes[j].zone_name] = 0;
             }
+            if(typeof voteTotal[votes[j].parent_name] === 'undefined')
+            {
+              voteTotal[votes[j].parent_name] = 0;
+            }
+            voteTotal[votes[j].zone_name] += Number(votes[j].votes);
+            voteTotal[votes[j].parent_name] += Number(votes[j].votes);
           }
         }
-        query = "SELECT zone_name, total_users, total_votes FROM service_zones";
-        result = await database.db.query(query, data);
-        if (result[0]) {
-          zones = result[0];
-          for(var i = 0 ; i < zones.length ; i++) {  //loop through zones to compare them with data from above
-            if(userTotal[zones[i].zone_name] && zones[i].total_users != userTotal[zones[i].zone_name]){
-              console.log("["+bot.getTime("stamp")+"] [database.js] Mismatched user totals for zone: " + zones[i].zone_name + ". "+ zones[i].total_users + " vs " + userTotal[zones[i].zone_name] + ". Updating value");
-              query = 'UPDATE service_zones SET total_users = ? WHERE zone_name = ?';
-              data = [userTotal[zones[i].zone_name], zones[i].zone_name];
-              await database.db.query(query, data);
-            }
-            if(voteTotal[zones[i].zone_name] && zones[i].total_votes != voteTotal[zones[i].zone_name]){
-              console.log("["+bot.getTime("stamp")+"] [database.js] Mismatched user totals for zone: " + zones[i].zone_name + ". "+ zones[i].total_votes + " vs " + voteTotal[zones[i].zone_name] + ". Updating value");
-              query = 'UPDATE service_zones SET total_votes = ? WHERE zone_name = ?';
-              data = [voteTotal[zones[i].zone_name], zones[i].zone_name];
-              await database.db.query(query, data);
-            }
+      }
+      query = "SELECT zone_name, total_votes FROM service_zones";
+      result = await database.db.query(query, data);
+      if (result[0]) {
+        zones = result[0];
+        for(var i = 0 ; i < zones.length ; i++) {  //loop through zones to compare them with data from above
+          if(voteTotal[zones[i].zone_name] && zones[i].total_votes != voteTotal[zones[i].zone_name]){
+            console.log("["+bot.getTime("stamp")+"] [database.js] Mismatched user totals for zone: " + zones[i].zone_name + ". "+ zones[i].total_votes + " vs " + voteTotal[zones[i].zone_name] + ". Updating value");
+            query = 'UPDATE service_zones SET total_votes = ? WHERE zone_name = ?';
+            data = [voteTotal[zones[i].zone_name], zones[i].zone_name];
+            await database.db.query(query, data);
           }
         }
-        else
-        {
-            console.info("["+bot.getTime("stamp")+"] [database.js] No users found.");
-        }
+      } else {
+        console.info("["+bot.getTime("stamp")+"] [database.js] No users found.");
+      }
     }
-     console.info("["+bot.getTime("stamp")+"] [database.js] Zone sync complete.");
+    await database.calcZoneUsers();
+    console.info("["+bot.getTime("stamp")+"] [database.js] Zone sync complete.");
     return console.info("["+bot.getTime("stamp")+"] [database.js] Maintenance routines complete.");
   }  
 }

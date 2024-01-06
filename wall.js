@@ -329,9 +329,9 @@ server.get("/report", async function(req, res) {
    return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   }
   let radar_script = '';
-  let zones = await database.fetchZones();
   let user_totals = await database.calcZoneUsers();
   let allAreaTotal = user_totals[0].count;
+  let zones = await database.fetchZones();
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
   return res.render(__dirname+"/html/report.ejs", {
     terms: config.pages.general.terms,
