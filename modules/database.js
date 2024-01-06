@@ -81,35 +81,37 @@ const database = {
       await database.db.query(query, data);
   },
   updateZoneRoles: async function(user_id, selection, target = 'all', action = 'add') {
+console.log(user_id, selection, target, action);
+    query = "SELECT user_name, access_token, zone_votes FROM stripe_users WHERE user_id = ?";
+    data = [user_id];
+    result = await database.db.query(query, data);
+    username = result[0][0].user_name;
+    access_token = result[0][0].access_token;
     if (selection == '') { //this kicks off if we're using % mode.
-      console.log("selection == null");
-      query = "SELECT user_name, access_token, zone_votes FROM stripe_users WHERE user_id = ?";
-      data = [user_id];
-      result = await database.db.query(query, data);
+console.log("selection == null");
       if (result[0][0].zone_votes == null) { return 0; }
-      username = result[0][0].user_name;
-      access_token = result[0][0].access_token;
       zones = result[0][0].zone_votes;
     } else {
-      query = "SELECT user_name, access_token FROM stripe_users WHERE user_id = ?";
-      data = [user_id];
-      result = await database.db.query(query, data);
-      username = result[0][0].user_name;
-      access_token = result[0][0].access_token;
       zones = JSON.parse(selection);
-      console.log(zones);
     }
+console.log(zones);
     highestVote = 0;
     highestZone = '';
+    lastHighestZone = '';
     if (target == 'all') { //cycle through all zones
       for (let i = 0 ; i < zones.length ; i++) { //find highest vote before assigning roles
-        if(zones[i].votes > highestVote) {
-          console.log("highest before", highestVote, highestZone);
-          highestVote = zones[i].votes;
+console.log(zones[i].votes, typeof zones[i].votes);
+        if (Number(zones[i].votes) > highestVote) {
+console.log("highest before", highestVote, highestZone, lastHighestZone);
+          highestVote = Number(zones[i].votes);
           highestZone = zones[i].zone_name;
-          console.log("highest after", highestVote, highestZone);
         }
+        if (zones[i].highest_vote_role == true) {
+          lastHighestZone = zones[i].zone_name;
+        }
+console.log("highest after", highestVote, highestZone, lastHighestZone);
       }
+console.log("final highest", highestVote, highestZone, lastHighestZone);
       for (let i = 0 ; i < zones.length ; i++) {
         query = "SELECT zone_roles FROM service_zones WHERE zone_name = ?";
         data = [zones[i].zone_name];
@@ -117,40 +119,44 @@ const database = {
         if (result[0][0].zone_roles != null) {
           roles = result[0][0].zone_roles;
           for (let j = 0 ; j < roles.length ; j++) {
-            console.log("Loop for", roles[j].roleID, username);
+console.log("Loop for", roles[j].roleID, username);
             if (roles[j].assign_on == 'any_area') {
               if(action == 'add') {
-                console.log("any_area", roles[j].roleID, username);
-                //console.log('any area role added to' + zones[i].zone_name);
+console.log("added any_area", zones[i].zone_name, roles[j].roleID, username);
                 bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token)
               } else {
-                console.log("any_area", roles[j].roleID, username);
-                //console.log('any area role removed from' + zones[i].zone_name);
+console.log("removed any_area", zones[i].zone_name, roles[j].roleID, username);
                 bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username)
               }
             } else if (roles[j].assign_on == 'any_votes') {
               if(zones[i].votes > 0) {
                 if (action == 'add') {
-                  console.log("any_votes", roles[j].roleID, username);
-                  //console.log('any votes role added to' + zones[i].zone_name);
+console.log("added any_votes", zones[i].zone_name, roles[j].roleID, username);
                   bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token)
                 } else {
-                  console.log("any_votes", roles[j].roleID, username);
-                //console.log('any votes role removed from' + zones[i].zone_name);
+console.log("removed any_votes", zones[i].zone_name, roles[j].roleID, username);
                   bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username)
                 }
+              } else {
+console.log("removed any_votes",  zones[i].zone_name);
+                bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username)
               }
             } else if (roles[j].assign_on == 'most_votes') {
-              if(highestZone == zones[i].zone_name) {
-                if (action == 'add') {
-                  console.log("most_votes", roles[j].roleID, username);
-                  //console.log('most votes role added to' + zones[i].zone_name);
-                  bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token)
-                } else {
-                 console.log("most_votes", roles[j].roleID, username);
-                  //console.log('most votes role removed from' + zones[i].zone_name);
-                  bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username)
-                }
+              if(zones[i].votes > 0) {
+//                if (lastHighestZone != highestZone) dunno just started typin, gonna continue after I get it back.
+                  if(highestZone == zones[i].zone_name) {
+                    if (action == 'add') {
+console.log("added most_votes", zones[i].zone_name, roles[j].roleID, username);
+                      bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token)
+                    } else {
+console.log("removed most_votes", zones[i].zone_name, roles[j].roleID, username);
+                      bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username)
+                    }
+                  }
+                
+              } else {
+console.log("removed most_votes", zones[i].zone_name, roles[j].roleID, username);
+                bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username)
               }
             }
           }
@@ -163,8 +169,8 @@ const database = {
       if (result[0][0].zone_roles != null) {
         roles = result[0][0].zone_roles;
         for (let j = 0; j < roles.length; j++) {
-          //console.log('removeRole from' + target);
-          bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username)
+console.log('removeRole from', target, username, roles[j]);
+          bot.removeRole(roles[j].serverID, user_id,roles[j].roleID, username)
         }
       }
     }

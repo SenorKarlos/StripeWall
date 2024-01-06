@@ -298,7 +298,7 @@ server.get("/zonemap", async function(req, res) {
 
 server.post("/zonemap", async function(req,res){
   const userid = req.body.userid;
-  const usertype = req.body.userid;
+  const usertype = req.body.usertype;
   const format = req.body.format;
   const newZone = req.body.newZone;
   const newParentZone = req.body.newParentZone;
