@@ -151,7 +151,7 @@ const stripe = {
                       database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ? WHERE user_id = ?', ['subscriber', customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, customer.description]);
                       if (record[0].customer_type == 'inactive' || record[0].customer_type == 'lifetime-inactive') { 
                         await database.updateActiveVotes(customer.description, 1);
-                        await database.updateZoneRoles(customer.description);
+                        await database.updateZoneRoles(customer.description,'');
                       }
                       db_updated = true;
                     }
@@ -166,7 +166,7 @@ const stripe = {
                     database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = NULL, expiration = NULL WHERE user_id = ?', ['inactive', customer.description]);
                     if (record[0].customer_type == 'subscriber' || record[0].customer_type == 'pay-as-you-go' || record[0].customer_type == 'manual' || record[0].customer_type == 'lifetime-active') { 
                       await database.updateActiveVotes(customer.description, 0); 
-                      await database.updateZoneRoles(customer.description, null, 'all','remove');
+                      await database.updateZoneRoles(customer.description, '', 'all','remove');
                     }
                     db_updated = true;
                   /*} else {*/
@@ -406,7 +406,7 @@ const stripe = {
             let data = [];
             if (user.customer_type == 'subscriber' || user.customer_type == 'pay-as-you-go') {
               await database.updateActiveVotes(customer.description, 0);
-              await database.updateZoneRoles(customer.description, null, 'all','remove');              
+              await database.updateZoneRoles(customer.description, '', 'all','remove');              
               query = 'UPDATE stripe_users SET customer_type = ?, stripe_id = NULL, price_id = NULL, tax_rate = NULL, charge_id = NULL WHERE user_id = ?'
               data = ['inactive', user.user_id];
             } else { 
@@ -478,7 +478,7 @@ const stripe = {
                 let cx_type, type_text;
                 if (user.customer_type == 'inactive' || user.customer_type == 'lifetime-inactive') { 
                   await database.updateActiveVotes(customer.description, 1);
-                  await database.updateZoneRoles(customer.description);
+                  await database.updateZoneRoles(customer.description,'');
                 }
                 if (data.object.mode == 'subscription') {
                   cx_type = 'subscriber';
