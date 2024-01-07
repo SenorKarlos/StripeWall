@@ -121,52 +121,13 @@
         "role_id": "000000000000000000",
         "mode": "payment",
         "expiry": 2629743,
-        "title": "$7.50 One Month Access"
+        "title": "One Month Pay-As-You-Go Access"
       },
       {
         "id": "price_",
         "role_id": "000000000000000000",
         "mode": "subscription",
-        "title": "$6.00 Monthly Subscription"
-      },
-      {
-        "id": "price_",
-        "role_id": "000000000000000000",
-        "mode": "payment",
-        "expiry": 7889229,
-        "title": "$21.00 Three Month Access"
-      },
-      {
-        "id": "price_",
-        "role_id": "000000000000000000",
-        "mode": "subscription",
-        "title": "$17.25 Quarterly Subscription Access"
-      },
-      {
-        "id": "price_",
-        "role_id": "000000000000000000",
-        "mode": "payment",
-        "expiry": 15778458,
-        "title": "$39.00 Six Month Access"
-      },
-      {
-        "id": "price_",
-        "role_id": "000000000000000000",
-        "mode": "subscription",
-        "title": "$33.00 Semi-Annual Subscription"
-      },
-      {
-        "id": "price_",
-        "role_id": "000000000000000000",
-        "mode": "payment",
-        "expiry": 31556926,
-        "title": "$72.00 One Year Access"
-      },
-      {
-        "id": "price_",
-        "role_id": "000000000000000000",
-        "mode": "subscription",
-        "title": "$60.00 Annual Subscription Access"
+        "title": "Monthly Subscription"
       },
       {
         "id": "price_",

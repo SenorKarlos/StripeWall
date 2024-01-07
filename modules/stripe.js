@@ -575,12 +575,14 @@ const stripe = {
           case !user: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
           case !member: return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has left Guild');
           default:
+            let customer_type = user.customer_type;
             for (let i = 0; i < config.stripe.price_ids.length; i++) {
               if (data.object.items.data[0].price.id == config.stripe.price_ids[i].id) {
                 bot.sendDM(member,'Subscription Record Deleted! ⚰', 'If you did not cancel, your payment has failed. Please log in and select a new plan','FF0000');
                 bot.removeRole(config.discord.guild_id, customer.description, config.stripe.price_ids[i].role_id, customer.name);
                 bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Subscription Record Deleted! ⚰', '', config.discord.log_channel);
-                return database.runQuery('UPDATE stripe_users SET price_id = NULL, tax_rate = NULL, charge_id = NULL WHERE user_id = ?', [customer.description]);
+                if (user.customer_type == 'subscriber') { customer_type = 'inactive'; }
+                return database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = NULL, expiration = NULL, tax_rate = NULL, charge_id = NULL WHERE user_id = ?', [customer_type, customer.description]);
               }
             }
         } return;
