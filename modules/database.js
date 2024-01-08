@@ -97,8 +97,8 @@ const database = {
     lastHighestZone = '';
     if (target == 'all') { //cycle through all zones
       for (let i = 0 ; i < zones.length ; i++) { //find highest vote before assigning roles
-        if (Number(zones[i].votes) > highestVote) {
-          highestVote = Number(zones[i].votes);
+        if (zones[i].votes > highestVote) {
+          highestVote = zones[i].votes;
           highestZone = zones[i].zone_name;
         }
         if (zones[i].role_level == 3) {
@@ -208,8 +208,8 @@ const database = {
           highest = 0;
           selection = -1;
           for (let i = 0 ; i < zones.length ; i++) { //find highest vote before assigning roles
-            if (Number(zones[i].votes) > highest) {
-              highest = Number(zones[i].votes);
+            if (zones[i].votes > highest) {
+              highest = zones[i].votes;
               selection = i;
             }
           }
@@ -231,61 +231,6 @@ const database = {
           }
         }
       }
-    }
-  },
-  updateZoneUsers: async function(zone, parent, addOrSub = 1) {
-    let query = '';
-    if(addOrSub == 1){
-      query = `UPDATE service_zones SET total_users = total_users + 1 WHERE zone_name = ?`;
-    }
-    else
-    {
-      query = `UPDATE service_zones SET total_users = total_users - 1 WHERE zone_name = ?`;
-    }
-
-    let data = [zone];
-    await database.db.query(query, data);
-    data = [parent];
-    await database.db.query(query, data);
-  },
-  updateTotalVotes: async function(zonediff) {
-    let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
-    zonediff = JSON.parse(zonediff)
-    let data = [zonediff.difference, zonediff.zone_name];
-    result = await database.db.query(query, data);
-    if(result[0][0]) {
-      return result[0][0];
-    }
-    else{
-      return false;
-    }
-  },
-  updateActiveVotes: async function(userid, status, lifetimeToggle = false) {
-    let query = "SELECT zone_votes FROM stripe_users WHERE user_id = ?";
-    let data = [userid];
-    let lifetime = ''
-    result = await database.db.query(query, data);
-    if (result[0][0]) {
-      var votes = result[0][0].zone_votes;
-      for(var i = 0 ; i < votes.length ; i++) {
-        if(status == 0) {
-          lifetime = 'lifetime-inactive'
-          query = `UPDATE service_zones SET total_votes = total_votes - ?, total_users = total_users - 1 WHERE zone_name = ?`;
-        } else {
-          lifetime = 'lifetime-active'
-          query = `UPDATE service_zones SET total_votes = total_votes + ? , total_users = total_users + 1 WHERE zone_name = ?`;
-        }
-        data = [votes[i].votes, votes[i].zone_name];
-        database.runQuery(query, data);
-        data = [votes[i].votes, votes[i].parent_name];
-        database.runQuery(query, data);
-      }
-      if (lifetimeToggle != false) { //only for lifetime users.
-        query = `UPDATE stripe_users SET customer_type = ? WHERE user_id = ?`;
-        data = [lifetime, userid];
-        database.runQuery(query, data);
-      }
-      database.updateWorkerCalc(config.service_zones.workers);
     }
   },
   allocateVotes: async function(userid, allocations, percentage) {
@@ -315,47 +260,36 @@ const database = {
         }
         for (i = 0; i < length; i++)
         {
-          real = (Number(allocations[i].percent)/100) * total + amortized;
+          real = (allocations[i].percent/100) * total + amortized;
           natural = Math.floor(real);
           amortized = real - natural;
           if(type != 'inactive' && type != 'lifetime-inactive')  //update zone counts if active
           {
             query2 = "UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?";
-            data2 = [Number(zones[i].votes) - natural, zones[i].zone_name];
+            data2 = [zones[i].votes - natural, zones[i].zone_name];
             await database.db.query(query2, data2);
-            data2 = [Number(zones[i].votes) - natural,zones[i].parent_name];
+            data2 = [zones[i].votes - natural,zones[i].parent_name];
             await database.db.query(query2, data2);
           }
-          zones[i].votes = String(natural);
+          zones[i].votes = natural;
           sum += natural;
         }
         if(percentage == 100) {
           if(type != 'inactive' && type != 'lifetime-inactive')  //update zone counts if active
           {
             query2 = "UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?";
-            data2 = [Number(zones[i].votes) - (total-sum), zones[i].zone_name];
+            data2 = [zones[i].votes - (total-sum), zones[i].zone_name];
             await database.db.query(query2, data2);
-            data2 = [Number(zones[i].votes) -zones[i].parent_name];
+            data2 = [zones[i].votes -zones[i].parent_name];
             await database.db.query(query2, data2);
           }
-          zones[i].votes = String(total - sum);
+          zones[i].votes = total - sum;
         }
         zone_votes = JSON.stringify(zones);
         let query = "UPDATE stripe_users SET zone_votes = ? WHERE user_id = ?";
         let data = [zone_votes,userid];
         await database.db.query(query, data);
       }
-  },
-  updateParentVotes: async function(zonediff) {
-    let query = `UPDATE service_zones SET total_votes = total_votes + ? WHERE zone_name = ?`;
-    zonediff = JSON.parse(zonediff)
-    let data = [zonediff.difference, zonediff.parent_zone];
-    result = await database.db.query(query, data);
-    if(result[0][0]) {
-      return result[0][0];
-    } else {
-      return false;
-    }
   },
   updateZoneOverride: async function(value,zone) {
     if (value == '') {
@@ -438,7 +372,6 @@ const database = {
         if (result[i].customer_type != 'inactive' && result[i].customer_type != 'lifetime-inactive') {
           user_counts[0].count++
           for (let x = 0; x < result[i].zone_votes.length; x++) {
-            result[i].zone_votes[x].votes = Number(result[i].zone_votes[x].votes);
             user_counts[0].votes = user_counts[0].votes + result[i].zone_votes[x].votes;
             let existingZone = user_counts.find(item => item.zone_name === result[i].zone_votes[x].zone_name);
             if (existingZone) {
@@ -537,7 +470,7 @@ const database = {
               let data = [cx_type, user.user_id];
               database.runQuery(query, data);
               if (user.customer_type != 'inactive' && user.customer_type != 'lifetime-inactive' && user.customer_type != 'administrator' && user.zone_votes) { 
-                await database.updateActiveVotes(user.user_id, 0);
+                await database.calcZones();
                 await database.updateZoneRoles(user.user_id, '', 'all','remove');
               }
               db_updated = true;
@@ -569,7 +502,7 @@ const database = {
               let query = `UPDATE stripe_users SET customer_type = 'inactive', price_id = NULL, expiration = NULL, charge_id = NULL WHERE user_id = ?`;
               let data = [user.user_id];
               await database.runQuery(query, data);
-              await database.updateActiveVotes(user.user_id, 0);
+              await database.calcZones();
               await database.updateZoneRoles(user.user_id, '', 'all','remove');
               db_updated = true;
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Cancelled Subscriptions/Access.");
@@ -579,7 +512,7 @@ const database = {
               let query = `UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, customer_type = 'lifetime-inactive', expiration = ? WHERE user_id = ?`;
               let data = [user.user_id, 9999999998];
               await database.runQuery(query, data);
-              await database.updateActiveVotes(user.user_id, 0);
+              await database.calcZones();
               await database.updateZoneRoles(user.user_id, '', 'all','remove');
               db_updated = true;
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Lifetime Member Left Guild. Set inactive.");
@@ -792,7 +725,7 @@ const database = {
                     let query = `UPDATE stripe_users SET customer_type = 'inactive', expiration = NULL WHERE user_id = ?`;
                     let data = [record.user_id];
                     database.runQuery(query, data);
-                    database.updateActiveVotes(record[0].user_id, 0);
+                    await database.calcZones();
                     await database.updateZoneRoles(record[0].user_id, '', 'all','remove');
                     console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.stripe_id+") Manually Tracked User Expired, Removing Role & Flags.");
                     bot.sendDM(member, 'Subscription Ended', 'Your subscription has expired. Please sign up again to continue.', 'FFFF00');

@@ -202,7 +202,7 @@ server.get("/login", async (req, res) => {
         if (dbuser.expiration && dbuser.expiration < unix) {
           try {
             await database.runQuery(`UPDATE stripe_users SET customer_type = 'inactive', price_id = NULL, expiration = NULL WHERE user_id = ?`, [dbuser.user_id]);
-            await database.updateActiveVotes(dbuser.user_id, 0);
+            await database.calcZones();
             await database.updateZoneRoles(dbuser.user_id, '', 'all','remove');
           } catch (e) {
             req.session = null;
@@ -301,15 +301,13 @@ server.post("/zonemap", async function(req,res){
   const userid = req.body.userid;
   const usertype = req.body.usertype;
   const format = req.body.format;
-  const newZone = req.body.newZone;
-  const newParentZone = req.body.newParentZone;
   const selection = req.body.selection;
   const allocations = req.body.allocations;
   const reviewed = req.body.zonesreviewed;
   await database.updateZoneSelection(userid, selection, allocations, format);
+  await database.calcZones();
   if(usertype != 'inactive' && usertype != 'lifetime-inactive')  //add to total user count if active
   {
-    await database.updateZoneUsers(newZone, newParentZone);
     await database.updateZoneRoles(userid, selection);
 
   }
@@ -387,17 +385,17 @@ server.post("/lifetime-toggle", async (req, res) => {
     if (req.body.action == "activate") {
       bot.assignRole(config.discord.guild_id, req.session.discord_id, config.discord.lifetime_role, dbuser.user_name, dbuser.access_token);
       bot.removeRole(config.discord.guild_id, req.session.discord_id, config.discord.inactive_lifetime_role, dbuser.user_name);
-      await database.updateActiveVotes(req.session.discord_id, 1);
-      await database.updateZoneRoles(req.session.discord_id,'');
       database.runQuery('UPDATE stripe_users SET customer_type = ?, expiration = ? WHERE user_id = ?', ['lifetime-active', 9999999999, req.session.discord_id]);
+      await database.calcZones();
+      await database.updateZoneRoles(req.session.discord_id,'');
       await new Promise(resolve => setTimeout(resolve, 500));
       return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
     } else if (req.body.action == "deactivate") {
       bot.assignRole(config.discord.guild_id, req.session.discord_id, config.discord.inactive_lifetime_role, dbuser.user_name, dbuser.access_token);
-      bot.removeRole(config.discord.guild_id, req.session.discord_id, config.discord.lifetime_role, dbuser.user_name);
-      await database.updateActiveVotes(req.session.discord_id, 0);
-      await database.updateZoneRoles(req.session.discord_id,'');
+      bot.removeRole(config.discord.guild_id, req.session.discord_id, config.discord.lifetime_role, dbuser.user_name); 
       database.runQuery('UPDATE stripe_users SET customer_type = ?, expiration = ? WHERE user_id = ?', ['lifetime-inactive', 9999999998, req.session.discord_id]);
+      await database.calcZones();
+      await database.updateZoneRoles(req.session.discord_id,'','remove');
       await new Promise(resolve => setTimeout(resolve, 500));
       return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
     } else {
@@ -538,12 +536,11 @@ server.post("/manage", async function(req,res){
   const allocations = req.body.allocations;
   const percentage = req.body.percentage;
   const removeZone = req.body.remZone;
-  const removeParentZone = req.body.remParentZone;
   const removeRoleLevel = req.body.remRoleLevel;
   const format = req.body.format;
-  var zonediff = req.body.zonedifferences;
-  zonediff = zonediff.split('|')
+
   await database.updateZoneSelection(userid, selection, allocations, format);
+  await database.calcZones();
   if(format == 1) //if user's format is set to automatic, start allocating votes.
   {
     await database.allocateVotes(userid,allocations,percentage)
@@ -552,21 +549,12 @@ server.post("/manage", async function(req,res){
   {
     if(removeZone != '') //removing a zone. Decrease total users from zone.
     {
-      await database.updateZoneUsers(removeZone,removeParentZone,0);
       await database.updateZoneRoles(userid,selection,removeZone, 'remove',removeRoleLevel)
     }
     else
     {
       await database.updateZoneRoles(userid,selection)
-    }
-    if(format == 0 || removeZone != ''){
-    for(var i = 0 ; i < zonediff.length ; i++) //adjusting vote counts
-      {
-        await database.updateTotalVotes(zonediff[i]);
-        await database.updateParentVotes(zonediff[i]);        
-      }
-     }
-   
+    }   
   }
   await database.updateWorkerCalc(config.service_zones.workers);
   res.redirect('/manage');

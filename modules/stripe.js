@@ -150,7 +150,7 @@ const stripe = {
                     if (customer.subscriptions.data[x].items.data[0].price.id != record[0].price_id && customer.subscriptions.data[x].status == 'active') {
                       database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ? WHERE user_id = ?', ['subscriber', customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, customer.description]);
                       if (record[0].customer_type == 'inactive' || record[0].customer_type == 'lifetime-inactive') { 
-                        await database.updateActiveVotes(customer.description, 1);
+                        await database.calcZones();
                         await database.updateZoneRoles(customer.description,'');
                       }
                       db_updated = true;
@@ -165,7 +165,7 @@ const stripe = {
                   if (config.stripe.price_ids[i].mode == "subscription" || record[0].expiration < unix) {
                     database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = NULL, expiration = NULL WHERE user_id = ?', ['inactive', customer.description]);
                     if (record[0].customer_type == 'subscriber' || record[0].customer_type == 'pay-as-you-go' || record[0].customer_type == 'manual' || record[0].customer_type == 'lifetime-active') { 
-                      await database.updateActiveVotes(customer.description, 0); 
+                      await database.calcZones();
                       await database.updateZoneRoles(customer.description, '', 'all','remove');
                     }
                     db_updated = true;
@@ -405,7 +405,6 @@ const stripe = {
             let query = ''
             let data = [];
             if (user.customer_type == 'subscriber' || user.customer_type == 'pay-as-you-go') {
-              await database.updateActiveVotes(customer.description, 0);
               await database.updateZoneRoles(customer.description, '', 'all','remove');              
               query = 'UPDATE stripe_users SET customer_type = ?, stripe_id = NULL, price_id = NULL, tax_rate = NULL, charge_id = NULL WHERE user_id = ?'
               data = ['inactive', user.user_id];
@@ -414,6 +413,7 @@ const stripe = {
               data = [user.user_id];
             }
             database.runQuery(query, data);
+            await database.calcZones();
             return bot.sendEmbed(user.user_name, user.user_id, 'FF0000', '📋 Stripe Customer Deleted.', 'Deleted Stripe information.', config.discord.log_channel);
         }
 //------------------------------------------------------------------------------
@@ -477,7 +477,6 @@ const stripe = {
                 chargecounter++;
                 let cx_type, type_text;
                 if (user.customer_type == 'inactive' || user.customer_type == 'lifetime-inactive') { 
-                  await database.updateActiveVotes(customer.description, 1);
                   await database.updateZoneRoles(customer.description,'');
                 }
                 if (data.object.mode == 'subscription') {
@@ -489,7 +488,9 @@ const stripe = {
                 }
                 bot.sendDM(member, type_text+' '+config.server.site_name+' Successful! 💰', 'Amount: **$'+gt_amount+'** '+tax_info,'00FF00');
                 bot.sendEmbed(user.user_name, user.user_id, '00FF00', type_text+' '+config.server.site_name+' Successful! 💰', 'Amount: **$'+gt_amount+'** '+tax_info, config.discord.log_channel);
-                return database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ?, total_spend = ?, tax_rate = ?, charge_id = ?, charges = ? WHERE user_id = ?', [cx_type, checkout.line_items.data[0].price.id, expiry, total_spend, tax_rate, charge_id, chargecounter, member.user.id]);
+                await database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ?, total_spend = ?, tax_rate = ?, charge_id = ?, charges = ? WHERE user_id = ?', [cx_type, checkout.line_items.data[0].price.id, expiry, total_spend, tax_rate, charge_id, chargecounter, member.user.id]);
+                await database.calcZones();
+                return;
               }
             }
         } return;

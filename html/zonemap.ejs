@@ -173,12 +173,12 @@ if(!!zoneSelection){
 			<% if(!!zoneSelection)
             {
                 for( var i=0; i < zoneSelection.length; i++) { %>
-                jsonValue += '{"zone_name":"<%= zoneSelection[i].zone_name %>","parent_name":"<%= zoneSelection[i].parent_name %>","votes":"<%= zoneSelection[i].votes %>","role_level":<%= zoneSelection[i].role_level %>},';
-                ajson += '{"zone_name":"<%= allocations[i].zone_name %>","percent":"<%= allocations[i].percent %>"},';
+                jsonValue += '{"zone_name":"<%= zoneSelection[i].zone_name %>","parent_name":"<%= zoneSelection[i].parent_name %>","votes":<%= zoneSelection[i].votes %>,"role_level":<%= zoneSelection[i].role_level %>},';
+                ajson += '{"zone_name":"<%= allocations[i].zone_name %>","percent":<%= allocations[i].percent %>},';
             <% }
             } %>
-            jsonValue += '{"zone_name":"'+zoneName+'","parent_name":"'+parentName+'","votes":"0","role_level":0}]';
-            ajson += '{"zone_name":"'+zoneName+'","percent":"0"}]';
+            jsonValue += '{"zone_name":"'+zoneName+'","parent_name":"'+parentName+'","votes":0,"role_level":0}]';
+            ajson += '{"zone_name":"'+zoneName+'","percent":0}]';
             document.getElementById('selection').value = jsonValue;
             document.getElementById('allocations').value = ajson;
             document.getElementById('newZone').value = zoneName;
