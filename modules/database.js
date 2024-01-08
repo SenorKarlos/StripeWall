@@ -240,11 +240,10 @@ const database = {
     if(result[0][0].zone_votes != null)
     {
         allocations = JSON.parse(allocations)
-        zones = originals = result[0][0].zone_votes;
+        zones = result[0][0].zone_votes;
         total = result[0][0].total_votes;
         type = result[0][0].customer_type;
         sum = 0;
-        originals = zones;
         amortized = 0;
         real = 0;
         natural = 0;

@@ -281,11 +281,11 @@ for(var i=0; i < zones.length; i++) {
         <hr>
         <div>
             <p><strong><font color="white">Total Fees and Donations to Date:</font></strong></p>
-            <p><strong><font size="20px" color="red">$<%= user.total_spend %></font></strong></p>
+            <p><strong><font style="line-height: 80%;" size="20px" color="red">$<%= user.total_spend %></font></strong></p>
             <p><strong><font color="white">At $<%= voteworth %> per vote, you have:</font></strong></p>
-            <p class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>><strong><font size="20px" color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
-            <p class="format1" <% if(user.format == 0) { %>style="display:none" <% } %>><strong><font size="20px" color="red"><%= total %></font></strong></p>
-            <p><strong><font size="5px"color="white"><span class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>>Open Votes / Total Votes</span><span class="format1" id="percent" <% if(user.format == 0) { %>style="display:none" <% } %>><%= percentage %> %</span></font></strong></p>
+            <p class="format0" style="margin-top:30px; line-height: 80%; <% if(user.format == 1) { %>display:none; <% } %>"><strong><font size="20px" color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
+            <p class="format1" style="margin-top:30px; line-height: 80%; <% if(user.format == 0) { %>display:none; <% } %>"><strong><font size="20px" color="red"><%= total %></font></strong></p>
+            <p><strong><font size="5px"color="white"><span class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>>Open Votes / Total Votes</span><span class="format1"<% if(user.format == 0) { %>style="display:none" <% } %>>Total Votes: <span id="percent"><%= percentage %></span>% Set</span></font></strong></p>
             <br>
             <p class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>><strong><font color="white"><u>Allocate your votes below</u></font></strong></p>
             <p class="format1" <% if(user.format == 0) { %>style="display:none" <% } %>><strong><font color="white"><u>Distribute your votes below and votes will be totalled automatically</u></font></strong></p>
@@ -395,7 +395,7 @@ for(var i=0; i < zones.length; i++) {
                 {
                     percentage += 5;
                     allocations[id] += 5;
-                    document.getElementById('percent').innerHTML = String(percentage) + '%';;
+                    document.getElementById('percent').innerHTML = percentage;;
                     document.getElementById('zone1'+id).innerHTML = String(allocations[id]) + '%';
                 }
             }
