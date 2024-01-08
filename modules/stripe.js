@@ -125,18 +125,8 @@ const stripe = {
                 if (indexcounter === parse.length) { return stripe.customer.doneParse(); }
               }
             }
-            if (!record[0].charges) {
-              let hasHistory = [];
-              for await (const charges of stripe_js.charges.list({ customer: customer.id, limit: 100 })) {
-                hasHistory.push(charges);
-              }
-              if (hasHistory[0]) {
-                database.runQuery('UPDATE stripe_users SET charges = ? WHERE user_id = ?', [hasHistory.length, customer.description]);
-                db_updated = true;
-              }
-            }
             if (customer.name != record[0].user_name || customer.email != record[0].email) {
-              stripe.customer.update(customer.id, record[0].email, record[0].user_name);
+              await stripe.customer.update(customer.id, record[0].email, record[0].user_name);
               stripe_updated = true;
             }
             if (customer.id != record[0].stripe_id) {
@@ -212,19 +202,22 @@ const stripe = {
 //------------------------------------------------------------------------------
 //  CANCEL A SUSBCRIPTION
 //------------------------------------------------------------------------------
-    cancel: async function(username, user_id, subscription_id){
+    cancel: function(username, user_id, subscription_id){
+      return new Promise(function(resolve) {
         stripe_js.subscriptions.del(
           subscription_id,
           function(err, confirmation) {
-            if(err){
+            if(err) {
               console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Canceling Subscription.', err.message);
-              return null;
-            } else{
+              return resolve(null);
+            } else {
               bot.sendEmbed(username, user_id, 'FF0000', 'Subscription Cancellation', '', config.discord.log_channel);
               console.info("["+bot.getTime("stamp")+"] [stripe.js] "+username+"'s subscription has been cancelled due to leaving the Server.");
-              return confirmation;
+              return resolve(confirmation);
             }
-        });
+          }
+        );
+      });
     }
   },
 //------------------------------------------------------------------------------
@@ -354,7 +347,7 @@ const stripe = {
     return stripe.webhookParse(data, eventType);
   },
   webhookParse: async function(data, eventType) {
-    let customer = '', user = '', member = '', checkout = '', tax_info = ' ', gt_amount, st_amount, tax_amount, tax_rate, expiry;
+    let customer = '', user = '', member = '', checkout = '', tax_info = ' ', gt_amount = 0, st_amount = 0, tax_amount = 0, tax_rate = 0, expiry;
     switch(eventType){
 //------------------------------------------------------------------------------
 //   CUSTOMER CREATED
@@ -432,13 +425,10 @@ const stripe = {
         gt_amount = data.object.amount_total/100;
         st_amount = data.object.amount_subtotal/100;
         total_spend = user.total_spend+st_amount;
-        if (config.service_zones) {
-          total_votes = parseFloat(total_spend/config.service_zones.vote_worth).toFixed(0)+1;
-          if (user.total_votes < total_votes) {}
-        }
+        if (config.service_zones) { total_votes = parseFloat(total_spend/config.service_zones.vote_worth).toFixed(0)+1; }
         if (config.stripe.taxes.active) {
           if (data.object.total_details.amount_tax > 0) {
-            tax_amount = parseFloat(data.object.total_details.amount_tax/100).toFixed(2);
+            tax_amount = data.object.total_details.amount_tax/100;
             tax_rate = parseFloat(data.object.total_details.amount_tax/data.object.amount_subtotal).toFixed(2);
           } else {
             tax_amount = 0;
@@ -472,9 +462,6 @@ const stripe = {
                     expiry = user.expiration + config.stripe.price_ids[i].expiry;
                   }
                 }
-                let chargecounter = 0;
-                if (user.charges) { chargecounter = user.charges; }
-                chargecounter++;
                 let cx_type, type_text;
                 if (user.customer_type == 'inactive' || user.customer_type == 'lifetime-inactive') { 
                   await database.updateZoneRoles(customer.description,'');
@@ -488,7 +475,14 @@ const stripe = {
                 }
                 bot.sendDM(member, type_text+' '+config.server.site_name+' Successful! 💰', 'Amount: **$'+gt_amount+'** '+tax_info,'00FF00');
                 bot.sendEmbed(user.user_name, user.user_id, '00FF00', type_text+' '+config.server.site_name+' Successful! 💰', 'Amount: **$'+gt_amount+'** '+tax_info, config.discord.log_channel);
-                await database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ?, total_spend = ?, tax_rate = ?, charge_id = ?, charges = ? WHERE user_id = ?', [cx_type, checkout.line_items.data[0].price.id, expiry, total_spend, tax_rate, charge_id, chargecounter, member.user.id]);
+                await database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ?, total_spend = ?, total_votes = ?, tax_rate = ?, charge_id = ? WHERE user_id = ?', [cx_type, checkout.line_items.data[0].price.id, expiry, total_spend, total_votes, tax_rate, charge_id, member.user.id]);
+                if (user.total_votes < total_votes) {
+                  if (user.format === 1) {
+                    
+                  } else {
+                    
+                  }
+                }
                 await database.calcZones();
                 return;
               }
@@ -508,9 +502,6 @@ const stripe = {
             case !member: return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has left Guild');
             case (!user.price_id || user.charge_id && data.object.id == user.charge_id): return console.info('['+bot.getTime('stamp')+'] [stripe.js] Initial charge handled by checkout webhook.');
             default:
-              let chargecounter = 0;
-              if (user.charges) { chargecounter = user.charges; }
-              chargecounter++;
               if (data.object.calculated_statement_descriptor == config.stripe.calculated_statement_descriptor) {
                 if (config.stripe.taxes.active && user.tax_rate) {
                   let fee_amount = parseFloat(data.object.amount/(user.tax_rate+1));
@@ -519,11 +510,10 @@ const stripe = {
                 } else if (config.stripe.taxes.active) {
                   tax_info = '**(Applicable Fees and Taxes Included)**';
                 }
-                database.runQuery('UPDATE stripe_users SET charge_id = ?, charges = ? WHERE user_id = ?', [data.object.id, chargecounter, user.user_id]);
+                database.runQuery('UPDATE stripe_users SET charge_id = ? WHERE user_id = ?', [data.object.id, user.user_id]);
                 bot.sendDM(member,'✅ Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'** '+tax_info,'00FF00');
                 return bot.sendEmbed(user.user_name, user.user_id, '00FF00', '✅ Payment to '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
               } else {
-                database.runQuery('UPDATE stripe_users SET charges = ? WHERE user_id = ?', [chargecounter, user.user_id]);
                 bot.sendDM(member, config.stripe.alt_charge_text, 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'**','00FF00');
                 return bot.sendEmbed(user.user_name, user.user_id, '00FF00', config.stripe.alt_charge_text, 'Amount: **$'+parseFloat(data.object.amount/100).toFixed(2)+'**', config.discord.log_channel);
               }
