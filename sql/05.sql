@@ -1,1 +1,0 @@
-ALTER TABLE `service_zones`	ADD COLUMN `zone_roles` JSON NULL DEFAULT NULL AFTER `img_url`;

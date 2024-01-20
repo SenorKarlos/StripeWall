@@ -1,4 +1,5 @@
-var stripe, oauth2, database;
+var database, oauth, qbo, stripe;
+const axios = require('axios');
 const moment = require('moment');
 const Discord = require('discord.js');
 const eventsToDisable = ["PRESENCE_UPDATE", "VOICE_STATE_UPDATE", "TYPING_START", "VOICE_SERVER_UPDATE"];
@@ -152,6 +153,8 @@ bot.login(config.discord.bot_token);
 module.exports = bot;
 
 // SCRIPT REQUIREMENTS
-stripe = require(__dirname+'/stripe.js');
-oauth2 = require(__dirname+'/oauth2.js');
 database = require(__dirname+'/database.js');
+oauth2 = require(__dirname+'/oauth2.js');
+qbo = require(__dirname+'/qbo.js');
+qbo_oauth = require(__dirname+'/qbo.js');
+stripe = require(__dirname+'/stripe.js');

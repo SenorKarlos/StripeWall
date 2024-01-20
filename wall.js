@@ -7,9 +7,10 @@ const discord = require("discord.js");
 const bodyParser = require("body-parser");
 const cookieSession = require("cookie-session");
 const bot = require(__dirname+"/modules/bot.js");
-const oauth2 = require(__dirname+"/modules/oauth2.js");
-const stripe = require(__dirname+"/modules/stripe.js");
 const database = require(__dirname+"/modules/database.js");
+const oauth2 = require(__dirname+"/modules/oauth2.js");
+const qbo = require(__dirname+"/modules/qbo.js");
+const stripe = require(__dirname+"/modules/stripe.js");
 const config = require(__dirname+"/config/config.json");
 
 //------------------------------------------------------------------------------
@@ -176,20 +177,27 @@ server.get("/login", async (req, res) => {
           return res.redirect(`/error`);
         }
       }
+      let cx_type = dbuser.customer_type;
       if (customer.subscriptions && customer.subscriptions.total_count > 0) {
         for (let i = 0; i < config.stripe.price_ids.length; i++) {
           for (let x = 0; x < customer.subscriptions.data.length; x++) {
             if (customer.subscriptions.data[x].status == 'active' && customer.subscriptions.data[x].items.data[0].price.id && customer.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
               if (!dbuser.price_id || dbuser.price_id && dbuser.price_id != customer.subscriptions.data[x].items.data[0].price.id || !dbuser.expiration || dbuser.expiration && dbuser.expiration != customer.subscriptions.data[x].current_period_end) {
+                if (cx_type = 'administrator') {
+                  cx_type = 'administrator';
+                } else {
+                  cx_type = 'subscriber';
+                }
                 try {
-                  await database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ? WHERE user_id = ?', ['subscriber', customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, dbuser.user_id]);
-                  
+                  await database.runQuery('UPDATE stripe_users SET customer_type = ?, price_id = ?, expiration = ? WHERE user_id = ?', [cx_type, customer.subscriptions.data[x].items.data[0].price.id, customer.subscriptions.data[x].current_period_end, dbuser.user_id]);
+                  await database.calcZones();
+                  await database.updateZoneRoles(dbuser.user_id, '');
                 } catch (e) {
                   req.session = null;
                   console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Subscription Price Record", e);
                   return res.redirect(`/error`);
                 }
-                dbuser.customer_type = 'subscriber'
+                dbuser.customer_type = cx_type;
                 dbuser.price_id = customer.subscriptions.data[x].items.data[0].price.id;
                 dbuser.expiration = customer.subscriptions.data[x].current_period_end;
                 console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+dbuser.user_name+ ","+dbuser.user_id+"(Invalid/Missing Plan Updated)");
@@ -200,8 +208,13 @@ server.get("/login", async (req, res) => {
       }
       if (dbuser.price_id || dbuser.expiration) {
         if (dbuser.expiration && dbuser.expiration < unix) {
+          if (cx_type = 'administrator') {
+            cx_type = 'administrator';
+          } else {
+            cx_type = 'inactive';
+          }
           try {
-            await database.runQuery(`UPDATE stripe_users SET customer_type = 'inactive', price_id = NULL, expiration = NULL WHERE user_id = ?`, [dbuser.user_id]);
+            await database.runQuery(`UPDATE stripe_users SET customer_type = ?, price_id = NULL, expiration = NULL WHERE user_id = ?`, [cx_type, dbuser.user_id]);
             await database.calcZones();
             await database.updateZoneRoles(dbuser.user_id, '', 'all','remove');
           } catch (e) {
@@ -209,7 +222,7 @@ server.get("/login", async (req, res) => {
             console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Temp Access Price Record", e);
             return res.redirect(`/error`);
           }
-          dbuser.customer_type = 'inactive';
+          dbuser.customer_type = cx_type;
           dbuser.price_id = null;
           dbuser.expiration = null;
           console.info("["+bot.getTime("stamp")+"] [wall.js] Updated DB Info for User "+dbuser.user_name+ ","+dbuser.user_id+"(Invalid Plan Deleted)");
@@ -276,7 +289,7 @@ server.get("/zonemap", async function(req, res) {
   }
   let radar_script = '';
   await database.calcZones();
-  await database.updateWorkerCalc(config.service_zones.workers);
+  await database.updateWorkerCalc();
   let zones = await database.fetchZones();
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
   return res.render(__dirname+"/html/zonemap.ejs", {
@@ -293,7 +306,6 @@ server.get("/zonemap", async function(req, res) {
     radar_script: radar_script,
     user: dbuser,
     zones: zones
-
   });
 });
 
@@ -309,13 +321,12 @@ server.post("/zonemap", async function(req,res){
   if(usertype != 'inactive' && usertype != 'lifetime-inactive')  //add to total user count if active
   {
     await database.updateZoneRoles(userid, selection);
-
   }
   if(reviewed == 'true')
     res.redirect('/zonemap');
   else
     res.redirect('/manage');
-})
+});
 
 //------------------------------------------------------------------------------
 //  ZONE REPORT PAGE
@@ -330,7 +341,7 @@ server.get("/report", async function(req, res) {
   let radar_script = '';
   let user_totals = await database.calcZones();
   let allAreaTotal = user_totals[0].count;
-  await database.updateWorkerCalc(config.service_zones.workers);
+  await database.updateWorkerCalc();
   let zones = await database.fetchZones();
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
   return res.render(__dirname+"/html/report.ejs", {
@@ -357,7 +368,7 @@ server.post("/report", async function(req,res){
   for(var i = 0 ; i < overrides.zone.length ; i++){
     await database.updateZoneOverride(overrides.overrides[i], overrides.zone[i]);
   }
-  await database.updateWorkerCalc(config.service_zones.workers);
+  //await database.updateWorkerCalc();
   res.redirect('/report');
 })
 //------------------------------------------------------------------------------
@@ -385,19 +396,17 @@ server.post("/lifetime-toggle", async (req, res) => {
     if (req.body.action == "activate") {
       bot.assignRole(config.discord.guild_id, req.session.discord_id, config.discord.lifetime_role, dbuser.user_name, dbuser.access_token);
       bot.removeRole(config.discord.guild_id, req.session.discord_id, config.discord.inactive_lifetime_role, dbuser.user_name);
-      database.runQuery('UPDATE stripe_users SET customer_type = ?, expiration = ? WHERE user_id = ?', ['lifetime-active', 9999999999, req.session.discord_id]);
-      await database.calcZones();
+      database.runQuery('UPDATE stripe_users SET customer_type = ? WHERE user_id = ?', ['lifetime-active', req.session.discord_id]);
       await database.updateZoneRoles(req.session.discord_id,'');
       await new Promise(resolve => setTimeout(resolve, 500));
-      return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+      return res.redirect(`/manage`);
     } else if (req.body.action == "deactivate") {
       bot.assignRole(config.discord.guild_id, req.session.discord_id, config.discord.inactive_lifetime_role, dbuser.user_name, dbuser.access_token);
       bot.removeRole(config.discord.guild_id, req.session.discord_id, config.discord.lifetime_role, dbuser.user_name); 
-      database.runQuery('UPDATE stripe_users SET customer_type = ?, expiration = ? WHERE user_id = ?', ['lifetime-inactive', 9999999998, req.session.discord_id]);
-      await database.calcZones();
-      await database.updateZoneRoles(req.session.discord_id,'','remove');
+      database.runQuery('UPDATE stripe_users SET customer_type = ? WHERE user_id = ?', ['lifetime-inactive', req.session.discord_id]);
+      await database.updateZoneRoles(req.session.discord_id, '', 'all', 'remove');
       await new Promise(resolve => setTimeout(resolve, 500));
-      return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
+      return res.redirect(`/manage`);
     } else {
       return res.redirect(`/error`);
     }
@@ -520,10 +529,14 @@ server.get("/manage", async function(req, res) {
       site_name: config.server.site_name,
       site_url: config.server.site_url,
       radar_script: radar_script,
+      tz_locale: config.server.tz_locale,
+      time_zone: config.server.time_zone,
+      lifetime_role: config.discord.lifetime_role,
+      inactive_lifetime_role: config.discord.inactive_lifetime_role,
+      tz_text: config.server.tz_text,
       plans: config.stripe.price_ids,
       donations: config.stripe.donation_ids,
       voteworth: config.service_zones.vote_worth,
-      discord: config.discord,
       user: dbuser
     });
 });
@@ -540,23 +553,23 @@ server.post("/manage", async function(req,res){
   const format = req.body.format;
 
   await database.updateZoneSelection(userid, selection, allocations, format);
-  await database.calcZones();
   if(format == 1) //if user's format is set to automatic, start allocating votes.
   {
-    await database.allocateVotes(userid,allocations,percentage)
+    await database.allocateVotes(userid, allocations, percentage)
   }
   if(usertype != 'inactive' && usertype != "lifetime-inactive") //adjust zone values only if active user
   {
     if(removeZone != '') //removing a zone. Decrease total users from zone.
     {
-      await database.updateZoneRoles(userid,selection,removeZone, 'remove',removeRoleLevel)
+      await database.updateZoneRoles(userid, selection, removeZone, 'remove', removeRoleLevel)
     }
     else
     {
-      await database.updateZoneRoles(userid,selection)
+      await database.updateZoneRoles(userid, selection);
     }   
   }
-  await database.updateWorkerCalc(config.service_zones.workers);
+  await database.calcZones();
+  await database.updateWorkerCalc();
   res.redirect('/manage');
 })
 //------------------------------------------------------------------------------

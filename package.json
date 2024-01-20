@@ -15,6 +15,7 @@
     "loader": "^2.1.1",
     "moment": "^2.29.4",
     "mysql2": "^3.6.5",
+    "node-quickbooks": "^2.0.43",
     "ontime": "^0.0.6",
     "path": "^0.12.7",
     "stripe": "^11.4.0"

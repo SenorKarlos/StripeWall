@@ -21,7 +21,15 @@
     "password": "",
     "name": "stripewall"
   },
-  
+
+  "qbo": {
+    "consumerKey": "",
+    "consumerSecret": "",
+    "oauthToken": "",
+    "realmId": "",
+    "refreshToken": ""
+  },
+
   "discord": {
     "client_id": "000000000000000000",
     "client_secret": "your client secret",
@@ -32,7 +40,8 @@
     "inactive_lifetime_role": "",
     "log_channel": "000000000000000000",
     "welcome_channel": "000000000000000000",
-    "welcome_content": "Thank You For Your Purchase, %usertag%! Please visit the <#000000000000000000> channel to activate your services!",
+    "welcome_content": "Thank You For Your Purchase, %usertag%! First Time User? Return to your browser and vote for your service zones to gain full access! If you have closed it, [Click Here](%site_url%) and log in again!",
+    "donation_content": "Thank You For Your Generous Donation, %usertag%! Check your DM's for any vote updates or just [Log In Here!](%site_url%)",
     "status_type": "WATCHING",
     "status_text": "for subscribers",
     "fetch_bans": true,
@@ -40,6 +49,7 @@
   },
 
   "service_zones": {
+    "zones_enabled": true,
     "init_source": "geofence.json",
     "roles_enabled": false,
     "votes_enabled": false,
@@ -60,8 +70,8 @@
     },
     "checkout": {
       "welcome": "Choose your preferred billing frequency and commitment below to get started. A Valid <Country> address & payment method are required. Applicable taxes will be calculated and added during checkout. Thank you for your support!",
-      "success_url": "https://yourdomain.site/success",
-      "cancel_url": "https://yourdomain.site/cancel"
+      "success_url": "https://yourdomain.site/manage",
+      "cancel_url": "https://yourdomain.site/manage"
     },
     "lifetime": {
       "active_life_intro": "Your services are currently activated. Please visit the #setup-instructions channel in Discord to ensure all required steps have been completed.",
@@ -85,21 +95,18 @@
     "live_pk": "your live keys",
     "live_sk": "your live keys",
     "wh_secret": "",
-    "calculated_statement_descriptor": "YOUR-DESCRIPTOR",
-    "alt_charge_text": "✅ General Payment Successful! 💰",
-    "alt_refund_text": "General Payment Refunded. 🏧",
-    "rem_role_full_refund": false,
-    "rem_role_any_refund": false,
+    "service_product_descriptor": "YOUR-SERVICE-DESCRIPTOR",
+    "donation_product_descriptor": "YOUR-DONATION-DESCRIPTOR",
     "radar_script": false,
     "addresses": {
       "billing": false,
-      "shipping": ["2 Letter Codes","delete array and set false if not using"]
+      "shipping": ["2 Letter Codes","empty array if not using"]
     },
     "taxes": {
       "active": false,
       "automatic": false,
       "dynamic": false,
-      "rate_ids": ["txr_","empty if not using"],
+      "rate_ids": ["txr_","empty array if not using"],
       "rate_maps": [
         {
           "jurisdiction": ["NB","NL","NS","PE"],

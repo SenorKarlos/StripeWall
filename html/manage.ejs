@@ -175,8 +175,7 @@ for(var i=0; i < zones.length; i++) {
             var expireDate = '';
             if(!!user.expiration)
             {
-                expireDate = new Date(user.expiration * 1000)
-                expireDate = expireDate.toDateString();
+                expireDate = new Date(user.expiration * 1000).toLocaleString(tz_locale, { timeZone: time_zone })+' '+tz_text;
             } 
             else 
             {
@@ -234,7 +233,7 @@ for(var i=0; i < zones.length; i++) {
                 <option selected disabled>See plans</option>
                 <% for(var i=0; i < plans.length; i++) { %>
                     <% if(plans[i].mode != 'legacy') { %>
-                    <option value="<%= user.stripe_id + ':' + plans[i].id + ':' + plans[i].mode %>"><%= plans[i].title %></option>
+                    <option value="<%= user.stripe_id + ':' + plans[i].id + ':' + plans[i].mode + ':services' %>"><%= plans[i].title %></option>
                     <% }
                 } %>
                 </select>
@@ -245,8 +244,8 @@ for(var i=0; i < zones.length; i++) {
             <br>
             <br>
         </div>
-         <% }  else if(discord.lifetime_role != '') {
-            if(discord.inactive_lifetime_role != '') {
+         <% }  else if(lifetime_role != '') {
+            if(inactive_lifetime_role != '') {
                 if(user.customer_type == 'lifetime-inactive') { %>
                 <div>
                     <form action="/lifetime-toggle" method="POST" id="lifetimeForm">
@@ -286,7 +285,8 @@ for(var i=0; i < zones.length; i++) {
         <div>
             <p><strong><font color="white">Total Fees and Donations to Date:</font></strong></p>
             <p><strong><font style="line-height: 80%;" size="20px" color="red">$<%= user.total_spend.toFixed(2); %></font></strong></p>
-            <p><strong><font color="white">At $<%= voteworth %> per vote, you have:</font></strong></p>
+			<p><strong><font color="white">All users get one vote by default!</font></strong></p>
+            <p><strong><font color="white">At $<%= voteworth %> per extra vote, you have:</font></strong></p>
             <p class="format0" style="margin-top:30px; line-height: 80%; <% if(user.format == 1) { %>display:none; <% } %>"><strong><font size="20px" color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
             <p class="format1" style="margin-top:30px; line-height: 80%; <% if(user.format == 0) { %>display:none; <% } %>"><strong><font size="20px" color="red"><%= total %></font></strong></p>
             <p><strong><font size="5px"color="white"><span class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>>Open Votes / Total Votes</span><span class="format1"<% if(user.format == 0) { %>style="display:none" <% } %>>Total Votes: <span id="percent"><%= percentage %></span>% Set</span></font></strong></p>
@@ -354,7 +354,7 @@ for(var i=0; i < zones.length; i++) {
                 <select class="donateSelect" name="donate">
                    <option selected disabled>See donations</option>
                    <% for(var i=0; i < donations.length; i++) { %>
-                       <option value="<%= user.stripe_id + ':' + donations[i].id + ':' + donations[i].mode %>"><%= donations[i].title %></option>
+                       <option value="<%= user.stripe_id + ':' + donations[i].id + ':' + donations[i].mode + ':donation' %>"><%= donations[i].title %></option>
                <% } %>
                    </select>
                    <br>

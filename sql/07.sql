@@ -1,1 +1,0 @@
-ALTER TABLE `stripe_users` DROP COLUMN `charges`;

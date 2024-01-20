@@ -1,4 +1,4 @@
-var stripe, bot, oauth2;
+var bot, oauth, qbo, stripe;
 const mysql = require('mysql2');
 const moment = require('moment');
 const config = require("../config/config.json");
@@ -307,7 +307,68 @@ const database = {
     data = [value, zone]
     await database.db.query(query, data);
   },
-  updateWorkerCalc: async function(workers) {
+  calcZones: async function() {
+    let query = `SELECT user_id, customer_type, zone_votes FROM stripe_users WHERE zone_votes IS NOT NULL AND customer_type <> ? AND customer_type <> ?`;
+    let data = ['inactive', 'lifetime-inactive'];
+    let user_counts = [];
+    user_counts[0] = { zone_name: "all_zones", count: 0, votes: 0 };
+    let parent_counts = [];
+    result = await database.db.query(query, data);
+    if (result[0][0]) {
+      result = result[0];
+      for (let i = 0; i < result.length; i++) {
+        user_counts[0].count++
+        for (let x = 0; x < result[i].zone_votes.length; x++) {
+          user_counts[0].votes = user_counts[0].votes + result[i].zone_votes[x].votes;
+          let existingZone = user_counts.find(item => item.zone_name === result[i].zone_votes[x].zone_name);
+          if (existingZone) {
+            existingZone.count++;
+            existingZone.votes = existingZone.votes + result[i].zone_votes[x].votes;
+          } else {
+            user_counts.push({ zone_name: result[i].zone_votes[x].zone_name, count: 1, votes:result[i].zone_votes[x].votes  });
+          }
+          result[i].zone_votes[x].user_id = result[i].user_id;
+          parent_counts.push(result[i].zone_votes[x]);
+        }
+      }
+      let uniqueUsersMap = new Map();
+      parent_counts.forEach(parent => {
+        let key = `${parent.parent_name}_${parent.user_id}`;
+        if (!uniqueUsersMap.has(key)) {
+          uniqueUsersMap.set(key, true);
+          let existingParent = user_counts.find(item => item.zone_name === parent.parent_name);
+          if (existingParent) {
+            existingParent.count++;
+          } else {
+            user_counts.push({ zone_name: parent.parent_name, count: 1, votes: 0 });
+          }
+        }
+        user_counts.forEach(zone => {
+          if (parent.parent_name == zone.zone_name) {
+            zone.votes = zone.votes + parent.votes;
+          }
+        });
+      });
+    }
+    query = `SELECT zone_name FROM service_zones`;
+    zones = await database.db.query(query, []);
+    if (zones[0][0]) {
+      zones = zones[0];
+      for (let z = 0; z < zones.length; z++) {
+        let existingCount = user_counts.find(item => item.zone_name === zones[z].zone_name);
+        if (!existingCount) {
+          user_counts.push({ zone_name: zones[z].zone_name, count: 0, votes: 0 });
+        }
+      }
+    }
+    for (let u = 1; u < user_counts.length; u++) {
+      query = 'UPDATE service_zones SET total_users = ?, total_votes = ? WHERE zone_name = ?';
+      data = [user_counts[u].count, user_counts[u].votes, user_counts[u].zone_name];
+      await database.db.query(query, data);
+    }
+    return user_counts;
+  },
+  updateWorkerCalc: async function(workers = config.service_zones.workers) {
     var query = 'SELECT * FROM service_zones';
     var data = [];
     result = await database.db.query(query, data);
@@ -358,69 +419,6 @@ const database = {
       }
     }
   },
-  calcZones: async function() {
-    let query = `SELECT user_id, customer_type, zone_votes FROM stripe_users WHERE zone_votes IS NOT NULL`;
-    let data = [];
-    let user_counts = [];
-    user_counts[0] = { zone_name: "all_zones", count: 0, votes: 0 };
-    let parent_counts = [];
-    result = await database.db.query(query, data);
-    if (result[0][0]) {
-      result = result[0];
-      for (let i = 0; i < result.length; i++) {
-        if (result[i].customer_type != 'inactive' && result[i].customer_type != 'lifetime-inactive') {
-          user_counts[0].count++
-          for (let x = 0; x < result[i].zone_votes.length; x++) {
-            user_counts[0].votes = user_counts[0].votes + result[i].zone_votes[x].votes;
-            let existingZone = user_counts.find(item => item.zone_name === result[i].zone_votes[x].zone_name);
-            if (existingZone) {
-              existingZone.count++;
-              existingZone.votes = existingZone.votes + result[i].zone_votes[x].votes;
-            } else {
-              user_counts.push({ zone_name: result[i].zone_votes[x].zone_name, count: 1, votes:result[i].zone_votes[x].votes  });
-            }
-            result[i].zone_votes[x].user_id = result[i].user_id;
-            parent_counts.push(result[i].zone_votes[x]);
-          }
-        }
-      }
-      let uniqueUsersMap = new Map();
-      parent_counts.forEach(parent => {
-        let key = `${parent.parent_name}_${parent.user_id}`;
-        if (!uniqueUsersMap.has(key)) {
-          uniqueUsersMap.set(key, true);
-          let existingParent = user_counts.find(item => item.zone_name === parent.parent_name);
-          if (existingParent) {
-            existingParent.count++;
-          } else {
-            user_counts.push({ zone_name: parent.parent_name, count: 1, votes: 0 });
-          }
-        }
-        user_counts.forEach(zone => {
-          if (parent.parent_name == zone.zone_name) {
-            zone.votes = zone.votes + parent.votes;
-          }
-        });
-      });
-    }
-    query = `SELECT zone_name FROM service_zones`;
-    zones = await database.db.query(query, data);
-    if (zones[0][0]) {
-      zones = zones[0];
-      for (let z = 0; z < zones.length; z++) {
-        let existingCount = user_counts.find(item => item.zone_name === zones[z].zone_name);
-        if (!existingCount) {
-          user_counts.push({ zone_name: zones[z].zone_name, count: 0, votes: 0 });
-        }
-      }
-    }
-    for (let u = 1; u < user_counts.length; u++) {
-      query = 'UPDATE service_zones SET total_users = ?, total_votes = ? WHERE zone_name = ?';
-      data = [user_counts[u].count, user_counts[u].votes, user_counts[u].zone_name];
-      await database.db.query(query, data);
-    }
-    return user_counts;
-  },
 //------------------------------------------------------------------------------
 //  ZONE FETCH TABLE FETCH
 //------------------------------------------------------------------------------
@@ -465,11 +463,10 @@ const database = {
               let cx_type = 'inactive';
               if (user.customer_type == 'administrator') { cx_type = 'administrator' }
               if (user.customer_type == 'lifetime-active') { cx_type = 'lifetime-inactive' }
-              let query = `UPDATE stripe_users SET customer_type = ?, stripe_id = NULL, price_id = NULL, expiration = NULL, charge_id = NULL WHERE user_id = ?`;
+              let query = `UPDATE stripe_users SET customer_type = ?, stripe_id = NULL, price_id = NULL, expiration = NULL WHERE user_id = ?`;
               let data = [cx_type, user.user_id];
               database.runQuery(query, data);
-              if (user.customer_type != 'inactive' && user.customer_type != 'lifetime-inactive' && user.customer_type != 'administrator' && user.zone_votes) { 
-                await database.calcZones();
+              if (config.service_zones.roles_enabled && user.customer_type != 'inactive' && user.customer_type != 'lifetime-inactive' && user.customer_type != 'administrator' && user.zone_votes) {
                 await database.updateZoneRoles(user.user_id, '', 'all','remove');
               }
               db_updated = true;
@@ -498,20 +495,14 @@ const database = {
                   await stripe.subscription.cancel(user.user_name, user.user_id, customer.subscriptions.data[x].id); //cancel each sub
                 }
               }
-              let query = `UPDATE stripe_users SET customer_type = 'inactive', price_id = NULL, expiration = NULL, charge_id = NULL WHERE user_id = ?`;
-              let data = [user.user_id];
-              await database.runQuery(query, data);
-              await database.calcZones();
+              await database.runQuery(`UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, customer_type = 'inactive', price_id = NULL, expiration = NULL WHERE user_id = ?`, [user.user_id]);
               await database.updateZoneRoles(user.user_id, '', 'all','remove');
               db_updated = true;
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Member Left Guild. Cancelled Subscriptions/Access.");
               bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Cancelled Subscriptions/Access.', config.discord.log_channel);
               if (indexcounter === records.length) { return database.doneDetails(); }
             } else if (user.customer_type == "lifetime-active" || user.customer_type == "lifetime-inactive" && user.access_token != 'Left Guild') {
-              let query = `UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, customer_type = 'lifetime-inactive', expiration = ? WHERE user_id = ?`;
-              let data = [user.user_id, 9999999998];
-              await database.runQuery(query, data);
-              await database.calcZones();
+              await database.runQuery(`UPDATE stripe_users SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, customer_type = 'lifetime-inactive' WHERE user_id = ?`, [user.user_id]);
               await database.updateZoneRoles(user.user_id, '', 'all','remove');
               db_updated = true;
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") Lifetime Member Left Guild. Set inactive.");
@@ -608,8 +599,8 @@ const database = {
   checkDatabaseRoles: async function() {
     console.info("["+bot.getTime("stamp")+"] [database.js] Starting Role Database Checks.");
     let unix = moment().unix();
-    let query = `SELECT * FROM stripe_users WHERE user_id != ?`;
-    let data = ['NULL'];
+    let query = `SELECT * FROM stripe_users`;
+    let data = [];
     records = await database.db.query(query, data);
     if (!records[0]) {
       console.info('Empty database for role check');
@@ -629,23 +620,23 @@ const database = {
                       bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                       console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") found without a Subscription. Removed Role."); // remove and log
                       bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'User found without a Subscription ⚠', 'Removed Role. (Internal Check)', config.discord.log_channel);
-                      if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
+                      if (indexcounter === records.length) { return database.doneDatabaseRoles(); } else { return;}
                     } else {
                       console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") is Verified in Discord Role.");
-                      if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
+                      if (indexcounter === records.length) { return database.doneDatabaseRoles(); } else { return;}
                     }
                   } else if (user.stripe_id && user.price_id) { // end if member role matches config role (no role but they have a stripe & price ID)
                     if (config.stripe.price_ids[i].mode != 'payment' && user.price_id == config.stripe.price_ids[i].id) { // stripe-checked db subscription or legacy price matches price being checked
                       bot.assignRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username, user.access_token);
                       console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") User found without Role, Assigned.");
                       bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
-                      if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
+                      if (indexcounter === records.length) { return database.doneDatabaseRoles(); } else { return;}
                     } else if (config.stripe.price_ids[i].mode == 'payment' && user.price_id == config.stripe.price_ids[i].id) { // check for Pay-As-You-Go purch roles
                       if (user.expiration > unix) { //check if expired
                         bot.assignRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username, user.access_token); // add & log
                         console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  Pay-As-You-Go User found without Role, Assigned.");
                         bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
-                        if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
+                        if (indexcounter === records.length) { return database.doneDatabaseRoles(); } else { return;}
                       } else { // give role if clear, remove price and expiry if not
                         let query = `UPDATE stripe_users SET customer_type = 'inactive', price_id = NULL, expiration = NULL WHERE user_id = ?`;
                         let data = [member.user.id];
@@ -653,20 +644,19 @@ const database = {
                         await database.updateTotalVote(user.user_id, 0);
                         console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  Pay-As-You-Go User expired, cleared price and expiry.");
                         bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'User found without Role ⚠', 'Assigned Role. (Stripe Check)', config.discord.log_channel);
-                        if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
+                        if (indexcounter === records.length) { return database.doneDatabaseRoles(); } else { return;}
                       } // end expiry check
                     } // end check Pay-As-You-Go purch record
                   } // end if user has stripe & price id
                 } // end for each price in config
                 console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+") doesn't need and has no Discord Role.");
-                if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
+                if (indexcounter === records.length) { return database.doneDatabaseRoles(); } else { return;}
               } // end guild member
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  User left guild mid-maintenance, will be corrected next run.");
-              if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
-              break;
+              if (indexcounter === records.length) { return database.doneDatabaseRoles(); } else { return;}
             default:
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_id+")  User is Inactive, Manually Administered, Lifetime or Admin and handled in Discord Role Check.");
-              if (indexcounter === records.length) { return database.doneDatabaseRoles(); }
+              if (indexcounter === records.length) { return database.doneDatabaseRoles(); } else { return;}
           }
         }, 1000 * index);
       }); //end for each user record
@@ -712,7 +702,7 @@ const database = {
             record = await database.db.query(query, data);
             if (!record[0][0]) {
               bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
-              bot.sendEmbed(member, 'FF0000', 'User found without a DB Record ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
+              bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'User found without a DB Record ⚠', 'Removed Donor Role. (Member Check)', config.discord.log_channel);
               console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | Not Found) Not in Database, removed Role.");
               if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return database.checkLifetime(); }
             } else { //record found
@@ -737,12 +727,12 @@ const database = {
                     bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                     record[0].stripe_id = "Not Found";
                     console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.stripe_id+") User found without a Stripe ID, Removed Role.");
-                    bot.sendEmbed(member, 'FF0000', 'User found without a Stripe ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                    bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'User found without a Stripe ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return database.checkLifetime(); }
                   } else if (!record.price_id || config.stripe.price_ids[i].mode == 'payment' && record.expiration < unix || record.price_id && record.price_id != config.stripe.price_ids[i].id) { //no price or temp plan expired or price doesn't belong to role remove
                     bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                     console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.stripe_id+") User found expired or without/wrong Price ID, Removed Role.");
-                    bot.sendEmbed(member, 'FF0000', 'User found expired or without a Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                    bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'User found expired or without a Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return database.checkLifetime(); }
                   }
                   break;
@@ -750,7 +740,7 @@ const database = {
                   break;
                 default:
                   bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
-                  bot.sendEmbed(member, 'FF0000', 'Lifetime or Inactive User found with a Price Role ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                  bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Lifetime or Inactive User found with a Price Role ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                   console.info("["+bot.getTime("stamp")+"] [database.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | Not Found) is Lifetime or Inactive, removed Role.");
                   if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return database.checkLifetime(); }
               }
@@ -775,17 +765,17 @@ const database = {
       }
       let activeUsers = [];
       let inactiveUsers = [];
-      let query = `SELECT * FROM stripe_users WHERE expiration > ?`;
-      let data = [9999999997];
-      records = await database.db.query(query, data)
+      let query = `SELECT * FROM stripe_users WHERE customer_type = 'lifetime-active' OR customer_type = 'lifetime-inactive'`;
+      let data = [];
+      records = await database.db.query(query, data);
       if (!records[0]) {
         console.info('No stripe lifetime users');
         return database.doneDiscordRoles();
       } else {
         records[0].forEach((user, index) => {
-          if (user.expiration == 9999999999) {
+          if (user.customer_type == 'lifetime-active') {
             activeUsers.push(user);
-          } else if (user.expiration == 9999999998 && user.access_token != 'Left Guild') {
+          } else if (user.customer_type == 'lifetime-inactive' && user.access_token != 'Left Guild') {
             inactiveUsers.push(user);
           }
         });
@@ -808,9 +798,10 @@ const database = {
       activeNoDB.forEach((member, index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
-          let query = `INSERT INTO stripe_users (user_id, user_name, customer_type, expiration) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), customer_type=VALUES(customer_type), price_id = NULL, expiration=VALUES(expiration), charge_id = NULL`;
-          let data = [member.user.id, member.user.username, 'lifetime-active', 9999999999];
+          let query = `INSERT INTO stripe_users (user_id, user_name, customer_type) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), customer_type=VALUES(customer_type), price_id = NULL`;
+          let data = [member.user.id, member.user.username, 'lifetime-active'];
           database.runQuery(query, data);
+          if (config.service_zones.roles_enabled) { database.updateZoneRoles(member.user.id,''); }
           if (indexcounter === activeNoDB.length && activeNoRole.length === 0 && inactiveNoDB.length === 0 && inactiveNoRole.length === 0 && removeActiveRole.length === 0) { return database.doneDiscordRoles(); }
         }, 500 * index);
       });
@@ -821,6 +812,7 @@ const database = {
         let indexcounter = index + 1;
         setTimeout(function() {
           bot.assignRole(config.discord.guild_id, user.user_id, config.discord.lifetime_role, user.user_name, user.access_token);
+          if (config.service_zones.roles_enabled) { database.updateZoneRoles(user.user_id, ''); }
           if (indexcounter === activeNoRole.length && inactiveNoDB.length === 0 && inactiveNoRole.length === 0 && removeActiveRole.length === 0) { return database.doneDiscordRoles(); }
         }, 500 * index);
       });
@@ -830,9 +822,10 @@ const database = {
       inactiveNoDB.forEach((member, index) => {
         let indexcounter = index + 1;
         setTimeout(function() {
-          let query = `INSERT INTO stripe_users (user_id, user_name, customer_type, expiration) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), customer_type=VALUES(customer_type), price_id = NULL, expiration=VALUES(expiration), charge_id = NULL`;
-          let data = [member.user.id, member.user.username, 'lifetime-inactive', 9999999998];
+          let query = `INSERT INTO stripe_users (user_id, user_name, customer_type) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE user_name=VALUES(user_name), customer_type=VALUES(customer_type), price_id = NULL`;
+          let data = [member.user.id, member.user.username, 'lifetime-inactive'];
           database.runQuery(query, data);
+          if (config.service_zones.roles_enabled) { database.updateZoneRoles(member.user.id, '', 'all', 'remove'); }
           if (indexcounter === inactiveNoDB.length && inactiveNoRole.length === 0 && removeActiveRole.length === 0) { return database.doneDiscordRoles(); }
         }, 500 * index);
       });
@@ -843,6 +836,7 @@ const database = {
         let indexcounter = index + 1;
         setTimeout(function() {
           bot.assignRole(config.discord.guild_id, user.user_id, config.discord.inactive_lifetime_role, user.user_name, user.access_token);
+          if (config.service_zones.roles_enabled) { database.updateZoneRoles(user.user_id, '', 'all', 'remove'); }
           if (indexcounter === inactiveNoRole.length && removeActiveRole.length === 0) { return database.doneDiscordRoles(); }
         }, 500 * index);
       });
@@ -853,6 +847,7 @@ const database = {
         let indexcounter = index + 1;
         setTimeout(function() {
           bot.removeRole(config.discord.guild_id, user.user.id, config.discord.lifetime_role, user.user_name);
+          if (config.service_zones.roles_enabled) { database.updateZoneRoles(user.user_id, '', 'all', 'remove'); }
           if (indexcounter === removeActiveRole.length) { return database.doneDiscordRoles(); }
         }, 500 * index);
       });
@@ -865,7 +860,7 @@ const database = {
   doneDiscordRoles: async function() {
     console.info("["+bot.getTime("stamp")+"] [database.js] Role checks complete. Starting to sync users and votes for zones");
     await database.calcZones();
-    await database.updateWorkerCalc(config.service_zones.workers);
+    await database.updateWorkerCalc();
     console.info("["+bot.getTime("stamp")+"] [database.js] Zone sync complete.");
     return console.info("["+bot.getTime("stamp")+"] [database.js] Maintenance routines complete.");
   }  
@@ -875,6 +870,7 @@ const database = {
 module.exports = database;
 
 // SCRIPT REQUIREMENTS
-stripe = require(__dirname+'/stripe.js');
 bot = require(__dirname+'/bot.js');
 oauth2 = require(__dirname+'/oauth2.js');
+qbo = require(__dirname+'/qbo.js');
+stripe = require(__dirname+'/stripe.js');
