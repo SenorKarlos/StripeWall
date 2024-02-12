@@ -9,8 +9,9 @@
     "tz_locale": "en-US"
   },
   
-  "sync": {
+  "maintenance": {
     "on_startup": false,
+    "timeout": 250,
     "times": ["00:05:00", "06:05:00", "12:05:00", "18:05:00"]
   },
 
@@ -23,11 +24,12 @@
   },
 
   "qbo": {
-    "consumerKey": "",
-    "consumerSecret": "",
-    "oauthToken": "",
-    "realmId": "",
-    "refreshToken": ""
+    "enabled": true,
+    "consumerKey": "alphanumeric Key",
+    "consumerSecret": "alphanumeric Key",
+    "realmId": "numeric ID",
+    "sandbox": false,
+    "debug": false
   },
 
   "discord": {
@@ -40,8 +42,8 @@
     "inactive_lifetime_role": "",
     "log_channel": "000000000000000000",
     "welcome_channel": "000000000000000000",
-    "welcome_content": "Thank You For Your Purchase, %usertag%! First Time User? Return to your browser and vote for your service zones to gain full access! If you have closed it, [Click Here](%site_url%) and log in again!",
-    "donation_content": "Thank You For Your Generous Donation, %usertag%! Check your DM's for any vote updates or just [Log In Here!](%site_url%)",
+    "purchase_welcome": "Thank You For Your Purchase, %usertag%! First Time User? Return to your browser and vote for your service zones to gain full access! If you have closed it, [Click Here](%site_url%) and log in again!",
+    "donation_welcome": "Thank You For Your Donation, %usertag%! Check your DM's for any vote updates or just [Log In Here](%site_url%) if you closed the page!",
     "status_type": "WATCHING",
     "status_text": "for subscribers",
     "fetch_bans": true,
@@ -51,6 +53,7 @@
   "service_zones": {
     "zones_enabled": true,
     "init_source": "geofence.json",
+    "new_zone_form": "",
     "roles_enabled": false,
     "votes_enabled": false,
     "vote_worth": 0,
@@ -86,7 +89,7 @@
       "outer_background": "white",
       "border_color": "000000",
       "title_color": "black",
-      "button_link": "https://lmgtfy.app/?q=a+map+you+didn%27t+piss+off",
+      "button_link": "https://letmegooglethat.com/?q=a+map+you+didn%27t+piss+off",
       "button_text": "Good Luck!"
     }
   },

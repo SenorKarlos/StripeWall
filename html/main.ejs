@@ -1,30 +1,44 @@
 <%- include('./includes/head.ejs') %>
 
 <header id="header" class="rcorners1">
-    <div class="header-content">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-6">
-                    <div class="text-container"><font color="white">
-                        <h1>POKEMON GO LIVE <br /><span id="">MAPS & ALERTS</span></h1>
-                        <h3>Features:</h3>
-                        <ul style="float:left;">
-                            <li>1st feature</li>
-                            <li>2nd feature</li>
-                            <li>And so on</li>
-                        </ul>
-                        <div style="clear: both;"></div>
-                        <p>Log in with Discord to view all details, service areas & plans and start or manage your services</p>
-                        <a href="<%= login_url %>"><img src="https://poke-map.ca/images/discordbutton.png" style="width: 200px;"></a>
-                    </font>
-                    </div>
-                </div> 
-                <div class="col-lg-6">
-                    <div class="image-container">
-                        <img class="img-fluid" src="https://poke-map.ca/images/header-iphone.png" alt="alternative">
-                    </div>
-                </div>
-            </div>
+  <div class="header-content">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-6">
+          <div class="text-container">
+            <font color="white">
+              <h1>POKEMON GO LIVE <br /><span id="">MAPS & ALERTS</span></h1>
+              <h3>Features:</h3>
+              <ul style="float:left;">
+                <li>1st feature</li>
+                <li>2nd feature</li>
+                <li>And so on</li>
+              </ul>
+              <div style="clear: both;"></div>
+              <p>Log in with Discord to view all details, service areas & plans and start or manage your services</p>
+              <a href="<%= login_url %>"><img src="https://poke-map.ca/images/discordbutton.png" style="width: 200px;"></a>
+          </font>
         </div>
+      </div> 
+      <div class="col-lg-6">
+        <div class="image-container">
+          <img class="img-fluid" src="https://poke-map.ca/images/header-iphone.png" alt="alternative">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="content">
+      <div class="fineprint">
+        <p><font color="<%= text_color %>">We NEVER receive or store any sensitive customer credit card information.  All of our credit card processing is managed directly and solely by Stripe, a PCI Level 1 Compliant Service Provider.</font></p>
+        <a href=https://stripe.com/docs/security/stripe>https://stripe.com/docs/security/stripe</a>
+        <p><font color="<%= text_color %>"><%= terms %></font></p>
+        <p><font color="<%= text_color %>"><%= disclaimer %></font></p>
+        <p><strong><font color="<%= text_color %>"><%= warning %></font></strong></p>
+        <a href=<%= site_url %>/discord><%= site_url %>/discord</a>
+        <br>
+      </div>
+    </div>
+  </div>
 </header> 
 <%- include('./includes/end.ejs') %>

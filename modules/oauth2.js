@@ -1,10 +1,8 @@
-var bot, database, qbo, stripe;
+var bot, database, maintenance, qbo, qboData, stripe;
 const axios = require('axios');
 const moment = require('moment');
 const config = require("../config/config.json");
-//------------------------------------------------------------------------------
-//  VARIABLES
-//------------------------------------------------------------------------------
+
 const oauth2 = {
   "client_id": config.discord.client_id,
   "client_secret": config.discord.client_secret,
@@ -44,7 +42,7 @@ const oauth2 = {
       }).then(async function(response) {
         console.info('['+bot.getTime('stamp')+'] [oauth2.js] Successfully Refreshed a Token', response.data);
         let token_expiration = (unix+response.data.expires_in);
-        database.runQuery('UPDATE stripe_users SET access_token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?', [response.data.access_token, response.data.refresh_token, token_expiration, user.user_id]);
+        database.runQuery(`UPDATE customers SET access_token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?`, [response.data.access_token, response.data.refresh_token, token_expiration, user.user_id]);
         console.info('['+bot.getTime('stamp')+'] [oauth2.js] '+user.user_name+' ('+user.user_id+') Updated Discord OAuth2 info in Database.');
         return resolve(response.data);
       }).catch(error => {
@@ -91,5 +89,7 @@ module.exports = oauth2;
 // SCRIPT REQUIREMENTS
 bot = require(__dirname+'/bot.js');
 database = require(__dirname+'/database.js');
+maintenance = require(__dirname+'/maintenance.js');
 qbo = require(__dirname+'/qbo.js');
+qboData = require(__dirname+'/qboData.js');
 stripe = require(__dirname+'/stripe.js');

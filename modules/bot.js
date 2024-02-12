@@ -1,4 +1,4 @@
-var database, oauth, qbo, stripe;
+var database, maintenance, oauth, qbo, qboData, stripe;
 const axios = require('axios');
 const moment = require('moment');
 const Discord = require('discord.js');
@@ -87,7 +87,8 @@ bot.assignRole = async function (server_id, user_id, role_id, username, access_t
     member.roles.add(role_id);
     console.info('['+bot.getTime('stamp')+'] [bot.js] Assigned the User a role.');
     return true;
-  } else {
+  }
+  else {
     console.info('['+bot.getTime('stamp')+'] [bot.js] User already has role.');
     return false;
   }
@@ -107,11 +108,13 @@ bot.removeRole = async function (server_id, user_id, role_id, username) {
   if (!member) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to remove the role from the User.');
     return false;
-  } else if (member.roles.cache.has(role_id)) {
+  }
+  else if (member.roles.cache.has(role_id)) {
     member.roles.remove(role_id);
     console.info('['+bot.getTime('stamp')+'] [bot.js] Removed the role from the User.');
     return true;
-  } else {
+  }
+  else {
     console.info('['+bot.getTime('stamp')+'] [bot.js] User does not have role.');
     return false;
   }
@@ -134,9 +137,9 @@ bot.on('ready', () => {
       });
     }).catch(console.info);
   }
-  if (config.sync.on_startup) {
+  if (config.maintenance.on_startup) {
     console.info("["+bot.getTime("stamp")+"] [bot.js] Starting Maintenance Routines.");
-    database.checkDetails();
+    maintenance.checkDetails();
   }
   return bot.user.setActivity(config.discord.status_text, {
     type: config.discord.status_type
@@ -154,7 +157,8 @@ module.exports = bot;
 
 // SCRIPT REQUIREMENTS
 database = require(__dirname+'/database.js');
+maintenance = require(__dirname+'/maintenance.js');
 oauth2 = require(__dirname+'/oauth2.js');
 qbo = require(__dirname+'/qbo.js');
-qbo_oauth = require(__dirname+'/qbo.js');
+qboData = require(__dirname+'/qboData.js');
 stripe = require(__dirname+'/stripe.js');

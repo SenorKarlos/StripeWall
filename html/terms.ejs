@@ -1,36 +1,38 @@
 <%- include('./includes/head.ejs') %>
 
 <div class="rcorners1 background">
-    <center>
+  <center>
+    <div>
       <div>
-        <div>
-            <br>
-          <h1><font color="white">Welcome <%= username %> </font></h1>
-          <p><strong><font color="white">Description of services</font></strong></p>
-        </div>
-        <div>
-            <form method="POST">
-                <input name="userid" type="hidden" value="<%= userid %>">
-                <h2><font color="white">Review Terms of Service</font></h2>
-                <div>
-                    <p id="termtext" <strong><font color="white">Terms of service text</font></u></strong></p>
-                    <input type="checkbox" onclick="agreeButton()" id="terms" name="agree" value="1">
-                    <label><strong><font color="white">I have read the <b>terms of service</b></font></strong></label>               
-                </div>
-                <br>
-                <input name="agree" id="agreebtn" disabled type="submit" value="I Agree">
-            </form>
-        </div>
-    </center>
+        <br>
+        <h1><font color="white">Welcome <%= username %> </font></h1>
+        <p><strong><font color="white">Description of services</font></strong></p>
+      </div>
+      <div>
+        <form method="POST">
+          <input name="userid" type="hidden" value="<%= userid %>">
+          <h2><font color="white">Review Terms of Service</font></h2>
+          <div>
+            <p id="termtext" <strong><font color="white">Terms of service text</font></u></strong></p>
+            <input type="checkbox" onclick="agreeButton()" id="terms" name="agree" value="1">
+            <label><strong><font color="white">I have read the <b>terms of service</b></font></strong></label>
+          </div>
+          <br>
+          <input name="agree" id="agreebtn" disabled type="submit" value="I Agree">
+        </form>
+      </div>
+    </div>
+  </center>
 </div>
+
 <script>
-    function agreeButton()
-    {
-        if (document.getElementById('terms').checked) {
-            document.getElementById('agreebtn').disabled = false;
-        } else {
-            document.getElementById('agreebtn').disabled = true;
-        }
+  function agreeButton() {
+    if (document.getElementById('terms').checked) {
+      document.getElementById('agreebtn').disabled = false;
     }
+    else {
+      document.getElementById('agreebtn').disabled = true;
+    }
+  }
 </script>
 <%- include('./includes/end.ejs') %>

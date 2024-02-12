@@ -1,538 +1,520 @@
 <%- include('./includes/head.ejs') %>
-<% var available = total = user.total_votes;
+<% var total = available;
 var percentage = 0;
-var zones = user.zone_votes;
-var allocations = user.allocations;
-var flag;  //used to determine if allocations was null on page load.
-if(allocations == null){
-    flag = true;
-    allocations = [];
+var flag; // used to determine if allocations was null on page load.
+if (allocations == null) {
+  flag = true;
+  allocations = [];
 }
-for(var i=0; i < zones.length; i++) {
-    available -= zones[i].votes;
-    if(!flag){
-         percentage += allocations[i].percent;
-    }
-    else {
-        allocations[i] = JSON.parse('{"zone_name":"'+zones[i].zone_name+'","percent":0}');
-    }
-}
+for (let i = 0; i < zones.length; i++) {
+  available -= zones[i].votes;
+  if (!flag) {
+    percentage += allocations[i].percent;
+  }
+  else {
+    allocations[i] = JSON.parse('{"zone_name":"'+zones[i].zone_name+'","percent":0}');
+  }
+} %>
 
-%>
 <style>
-    @media (min-width: 320px) and (max-width: 599px) { 
+  @media (min-width: 320px) and (max-width: 599px) { 
     .column-4 {
-        float: left;
-        display: inline;
-        width: 80%;
-        height: 300px;
-        padding: 10px;
-        margin:5px;
-        border-color: black;
-        border-style: solid;
-        background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
-        word-wrap: break-word;
-        overflow-y: auto;
-        overflow-x: auto;
-        text-overflow: inherit;
-        white-space: normal;
-        text-align: left;
-        cursor: pointer;
-        }
+      float: left;
+      display: inline;
+      width: 80%;
+      height: 300px;
+      padding: 10px;
+      margin:5px;
+      border-color: black;
+      border-style: solid;
+      background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
+      word-wrap: break-word;
+      overflow-y: auto;
+      overflow-x: auto;
+      text-overflow: inherit;
+      white-space: normal;
+      text-align: left;
+      cursor: pointer;
+    }
     .column-new {
-        float: left;
-        display: inline;
-        width: 80%;
-        height: 300px;
-        margin:5px;
-        padding: 10px;
-        border-style: solid;
-        background-color: grey;
-        word-wrap: break-word;
-        overflow:auto;
-        cursor: pointer;
-        background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
-     }
+      float: left;
+      display: inline;
+      width: 80%;
+      height: 300px;
+      margin:5px;
+      padding: 10px;
+      border-style: solid;
+      background-color: grey;
+      word-wrap: break-word;
+      overflow:auto;
+      cursor: pointer;
+      background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
+    }
     .planSelect {
-        height:50px;
-        max-width: 200px;
+      height:50px;
+      max-width: 200px;
     }
     .btn {
-        width:70%;
-        margin-bottom: 10px;
-
+      width:70%;
+      margin-bottom: 10px;
     }
-    }
-    @media (min-width: 600px) and (max-width: 1024px) { 
+  }
+  @media (min-width: 600px) and (max-width: 1024px) { 
     .column-4 {
-        float: left;
-        display: inline;
-        width: 40%;
-        height: 300px;
-        padding: 10px;
-        margin:5px;
-        border-color: black;
-        border-style: solid;
-        background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
-        word-wrap: break-word;
-        overflow-y: auto;
-        overflow-x: auto;
-        text-overflow: inherit;
-        white-space: normal;
-        text-align: left;
-        cursor: pointer;
-        }
+      float: left;
+      display: inline;
+      width: 40%;
+      height: 300px;
+      padding: 10px;
+      margin:5px;
+      border-color: black;
+      border-style: solid;
+      background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
+      word-wrap: break-word;
+      overflow-y: auto;
+      overflow-x: auto;
+      text-overflow: inherit;
+      white-space: normal;
+      text-align: left;
+      cursor: pointer;
+    }
     .column-new {
-        float: left;
-        display: inline;
-        width: 40%;
-        height: 300px;
-        margin:5px;
-        padding: 10px;
-        border-style: solid;
-        background-color: grey;
-        word-wrap: break-word;
-        overflow:auto;
-        cursor: pointer;
-        background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
-     }
+      float: left;
+      display: inline;
+      width: 40%;
+      height: 300px;
+      margin:5px;
+      padding: 10px;
+      border-style: solid;
+      background-color: grey;
+      word-wrap: break-word;
+      overflow:auto;
+      cursor: pointer;
+      background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
+    }
     .planSelect {
-        height:50px;
-        max-width: 200px;
+      height:50px;
+      max-width: 200px;
     }
     .btn {
-        width:150px;
-        margin-right: 10px; 
-        float:right;
+      width:150px;
+      margin-right: 10px; 
+      float:right;
     }
-    }
-    @media (min-width: 1025px) and (max-width: 5000px) {
+  }
+  @media (min-width: 1025px) and (max-width: 5000px) {
     .column-4 {
-        float: left;
-        display: inline;
-        width: 21%;
-        height: 250px;
-        padding: 10px;
-        margin:5px;
-        border-color: black;
-        border-style: solid;
-        background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
-        word-wrap: break-word;
-        cursor: pointer;
-        overflow-y: auto;
-        overflow-x: auto;
-        text-overflow: inherit;
-        white-space: normal;
-        text-align: left;
-        }
-     .column-new {
-        float: left;
-        display: inline;
-        width: 21%;
-        height: 250px;
-        margin:5px;
-        border-style: solid;
-        background-color: grey;
-        word-wrap: break-word;
-        overflow:auto;
-        cursor: pointer;
-        background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
-     }
-        .planSelect {
-            height:50px;
-        }
-        .btn {
-        width:150px;
-        margin-right: 10px; 
-        float:right;
+      float: left;
+      display: inline;
+      width: 21%;
+      height: 250px;
+      padding: 10px;
+      margin:5px;
+      border-color: black;
+      border-style: solid;
+      background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
+      word-wrap: break-word;
+      cursor: pointer;
+      overflow-y: auto;
+      overflow-x: auto;
+      text-overflow: inherit;
+      white-space: normal;
+      text-align: left;
     }
+   .column-new {
+      float: left;
+      display: inline;
+      width: 21%;
+      height: 250px;
+      margin:5px;
+      border-style: solid;
+      background-color: grey;
+      word-wrap: break-word;
+      overflow:auto;
+      cursor: pointer;
+      background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
     }
-        .stretchedText {
-        display: inline-block;
-        transform: scaleY(0.9);
-        transform-origin: 0 0;
-        margin-bottom: -50%;
-        line-height: 70%;
-        font-size: 25px;
-        line-height: 120%;
-        }
+    .planSelect {
+      height:50px;
+    }
+    .btn {
+      width:150px;
+      margin-right: 10px; 
+      float:right;
+    }
+  }
+  .stretchedText {
+    display: inline-block;
+    transform: scaleY(0.9);
+    transform-origin: 0 0;
+    margin-bottom: -50%;
+    line-height: 70%;
+    font-size: 25px;
+    line-height: 120%;
+  }
 </style>
-<script type="text/javascript" src="./files/config.json"></script>
+
 <div class="rcorners1">
-    <button type="button" class="btn" style="background-color: white;" onclick="window.location='/zonemap'">Zone Map</button>
-    <button type="button" class="btn" style="background-color: white; " onclick="window.location='/report'">Zone Report</button>
-    <div style="clear: both;"></div>
-    <center>
-      <div>
-        <h1 style="color:white">Hello <%= user.user_name %></h1>  
-        <% if(user.customer_type == 'inactive' || user.customer_type == 'inactive-lifetime') {  %>       
-            <h2 style="color:white">You currently have no access to services</h1>
-        <% } else { %>
-             <h2 style="color:white">You currently have <u><%= user.customer_type %></u> access</h1>
-        <% } %>
-        <br>
-        <% if(user.customer_type == 'subscriber') { 
-            var expireDate = '';
-            if(!!user.expiration)
-            {
-                expireDate = new Date(user.expiration * 1000).toLocaleString(tz_locale, { timeZone: time_zone })+' '+tz_text;
-            } 
-            else 
-            {
-                expireDate = 'N/A'
-            }
-        %>
+  <button type="button" class="btn" style="background-color: white;" onclick="window.location='/zonemap'">Zone Map</button>
+  <button type="button" class="btn" style="background-color: white; " onclick="window.location='/report'">Zone Report</button>
+  <div style="clear: both;"></div>
+  <center>
+    <div>
+      <h1 style="color:white">Hello <%= user_name %></h1>  
+      <% if (cx_type == 'inactive' || cx_type == 'inactive-lifetime') { %>       
+        <h2 style="color:white">You currently have no access to services</h1>
+      <% }
+      else { %>
+        <h2 style="color:white">You currently have <u><%= cx_type %></u> access</h1>
+      <% } %>
+      <br>
+      <% if(cx_type == 'subscriber') {
+        var expireDate = '';
+        if (expiration) {
+          expireDate = new Date(expiration * 1000).toLocaleString(tz_locale, { timeZone: time_zone })+' '+tz_text;
+        } 
+        else {
+          expireDate = 'N/A'
+        } %>
         <div>
           <p><strong><font color="white">Your current subscription renews on <b><%= expireDate %></b></font></strong></p>
           <p><strong><font color="white">Manage your subscription using the customer portal below</font></strong></p>
           <form action="/create-customer-portal-session" method="POST">
-             <input type="hidden" name="customerID" value="<%= user.stripe_id %>">
-             <input type="submit" value="Customer Portal">
+            <input type="hidden" name="customerID" value="<%= stripe_id %>">
+            <input type="submit" value="Customer Portal">
           </form>
           <br>
           <br>
         </div>
-        <% } else if(user.customer_type == 'pay-as-you-go' || user.customer_type == 'manual') {
-            var expireDate = '';
-             if(!!user.expiration)
-            {
-                var currentDate = new Date();
-                var currentTime = currentDate.getTime();
-                expireDate = new Date(user.expiration * 1000)
-                expireDate = expireDate.toDateString();
-            } 
-            else 
-            {
-                expireDate = 'N/A'
-            }
-         %>
-        <div>
-            <p><strong><font color="white">Your Pay-As-You-Go access purchase expires on <b><%= expireDate %></b></font></strong></p>
-            <p><strong><font color="white">Top up or subscribe during the last 48 hours using the checkout below</font></strong></p>
-            <form action="/create-checkout-session" method="POST">
-            <select class="planSelect" name="checkout">
-                <option selected disabled>See plans</option>
-             <% for(var i=0; i < plans.length; i++) { %>
-                <% if(plans[i].mode != 'legacy') { %>
-                 <option value="<%= user.stripe_id + ':' + plans[i].id  + ':' + plans[i].mode %>"><%= plans[i].title %></option>
-                    <% }
-                } %>
-              </select>
-                <br>
-                <br>
-                <input type="submit" <% if(user.expiration - currentTime < 172800) { %>disabled <% } %> value="Checkout">
-            </form>
-            <br>
-            <br>
-        </div>
-        <% } else if(user.customer_type == 'inactive') { %>
-        <div>
-            <p><strong><font color="white">To have access to services and have your votes counted to the pool, choose one of the plans below.</b></font></strong></p>
-            <form action="/create-checkout-session" method="POST">
-             <select class="planSelect" name="checkout">
-                <option selected disabled>See plans</option>
-                <% for(var i=0; i < plans.length; i++) { %>
-                    <% if(plans[i].mode != 'legacy') { %>
-                    <option value="<%= user.stripe_id + ':' + plans[i].id + ':' + plans[i].mode + ':services' %>"><%= plans[i].title %></option>
-                    <% }
-                } %>
-                </select>
-                <br>
-                <br>
-                <input type="submit" value="Checkout">
-            </form>
-            <br>
-            <br>
-        </div>
-         <% }  else if(lifetime_role != '') {
-            if(inactive_lifetime_role != '') {
-                if(user.customer_type == 'lifetime-inactive') { %>
-                <div>
-                    <form action="/lifetime-toggle" method="POST" id="lifetimeForm">
-                        <input name="action" type="hidden" value ="activate">
-                        <p><strong><font color="white">Your services are currently deactivated. Press the button below to reactivate services</b></font></strong></p>
-                        <br>
-                        <br>
-                        <button type="button" onclick="confirmToggle()">Switch to active</button>
-                        <br>
-                        <br>
-                    </form>
-                </div>
-             <% } else if(user.customer_type == 'lifetime-active') { %>
-                <div>
-                    <form action="/lifetime-toggle" method="POST" id="lifetimeForm">
-                        <input name="action" type="hidden" value ="deactivate">
-                        <p><strong><font color="white"> Your services are currently activated. Please visit the #setup-instructions channel in Discord to ensure all required steps have been completed.</b></font></strong></p>
-                        <p><strong><font color="white">To disable services and remove your votes from the pool, press the button below.</b></font></strong></p>
-                        <br>
-                        <br>
-                        <button type="button" onclick="confirmToggle()">Switch to inactive</button>
-                        <br>
-                        <br>
-                    </form>
-                </div>
-             <% } 
-            } else { %>
-            <p><strong><font color="white"> Your services are currently activated. Please visit the #setup-instructions channel in Discord to ensure all required steps have been completed.</b></font></strong></p>
-            <% }
+      <% }
+      else if (cx_type == 'pay-as-you-go' || cx_type == 'manual') {
+        var expireDate = '';
+         if (expiration) {
+          expireDate = new Date(expiration * 1000).toLocaleString(tz_locale, { timeZone: time_zone })+' '+tz_text;
+        } 
+        else {
+          expireDate = 'N/A'
         } %>
-           
-
-                <!--  <p><strong><font color="black">Questions? Tips? Issues? Check out our FAQ <a href="#">here</a> or support chat <a href="#">here</a>. Travelling? Join other Alert servers <a href="#">here</a> and get alerts by setting temporary zones <a href="#">here</a></font> -->
-
-        <br>
-        <hr>
         <div>
-            <p><strong><font color="white">Total Fees and Donations to Date:</font></strong></p>
-            <p><strong><font style="line-height: 80%;" size="20px" color="red">$<%= user.total_spend.toFixed(2); %></font></strong></p>
-			<p><strong><font color="white">All users get one vote by default!</font></strong></p>
-            <p><strong><font color="white">At $<%= voteworth %> per extra vote, you have:</font></strong></p>
-            <p class="format0" style="margin-top:30px; line-height: 80%; <% if(user.format == 1) { %>display:none; <% } %>"><strong><font size="20px" color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
-            <p class="format1" style="margin-top:30px; line-height: 80%; <% if(user.format == 0) { %>display:none; <% } %>"><strong><font size="20px" color="red"><%= total %></font></strong></p>
-            <p><strong><font size="5px"color="white"><span class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>>Open Votes / Total Votes</span><span class="format1"<% if(user.format == 0) { %>style="display:none" <% } %>>Total Votes: <span id="percent"><%= percentage %></span>% Set</span></font></strong></p>
+          <p><strong><font color="white">Your Pay-As-You-Go access purchase expires on <b><%= expireDate %></b></font></strong></p>
+          <p><strong><font color="white">Top up or subscribe during the last 48 hours using the checkout below</font></strong></p>
+          <form action="/create-checkout-session" method="POST">
+            <select class="planSelect" name="checkout">
+              <option selected disabled>See plans</option>
+              <% for (let i = 0; i < plans.length; i++) { %>
+                <% if (plans[i].mode != 'legacy') { %>
+                  <option value="<%= stripe_id + ':' + plans[i].id  + ':' + plans[i].mode %>"><%= plans[i].title %></option>
+                <% }
+              } %>
+            </select>
             <br>
-            <p class="format0" <% if(user.format == 1) { %>style="display:none" <% } %>><strong><font color="white"><u>Allocate your votes below</u></font></strong></p>
-            <p class="format1" <% if(user.format == 0) { %>style="display:none" <% } %>><strong><font color="white"><u>Distribute your votes below and votes will be totalled automatically</u></font></strong></p>
             <br>
-            <p class="format1" <% if(user.format == 0) { %>style="display:none" <% } %>><strong><font color="red">Note: Vote counts here will not update until percentages are submitted.</font></strong></p>
-              
-            <form method="POST" id="voteForm">   
-                <div>
-                    <input type="radio" <% if(user.format == 0) { %>checked="checked" <% } %> onchange="changeFormat(0)" id="number" name="format" value="0">
-                    <label for="number"><font color="white">Manual</font></label>&nbsp;&nbsp;
-                    <input type="radio" <% if(user.format == 1) { %>checked="checked" <% } %> onchange="changeFormat(1)" id="percentage" name="format" value="1">
-                    <label for="percentage"><font color="white">Automatic</font></label>
-                </div>
-                <input type="hidden" name='selection' id='selection' value="">          
-                <input type="hidden" name='allocations' id='allocations' value="">          
-                <input type="hidden" name='zonedifferences' id='zonedifferences' value="">          
-                <input type="hidden" name='percentage' id='percentage' value="0">          
-                <input type="hidden" name='userid' id='userid' value="<%= user.user_id %>">          
-                <input type="hidden" name='usertype' id='usertype' value="<%= user.customer_type %>">          
-                <input type="hidden" name='remZone' id='remZone' value="">                   
-                <input type="hidden" name='remRoleLevel' id='remRoleLevel' value="">          
-                <% for(var i=0; i<zones.length; i++) { %>
-                    <div class="column-4" style="font-stretch: expanded;">
-                        <p class="stretchedText"><%= zones[i].parent_name %></p><br>
-                        <p class="stretchedText" style="font-size: 20px;"><%= zones[i].zone_name %></p><br><br>
-                        <p style="font-size: 15px; line-height: 10%">Votes:</p>
-                        <p style="line-height: 120%">
-                            <span id="zone0<%= zones[i].zone_name %>"><%= zones[i].votes %></span>
-                            <span class="format0" style="margin-left: 20px; <% if(user.format == 1) { %>display:none; <% } %>">
-                                <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','sub')">-</button>
-                                <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','add')">+</button>
-                            </span>     
-                        </p>
-                        <p style="line-height: 120%">
-                            <span id="zone1<%= zones[i].zone_name %>"><%= (user.format == 1 ? allocations[i].percent : ((zones[i].votes / total) * 100).toFixed(2) ) %></span>%
-                            <span class="format1" style="margin-left: 20px; <% if(user.format == 0) { %>display:none; <% } %>">
-                                <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','sub')">-</button>
-                                <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','add')">+</button>
-                            </span>   
-                        </p>
-                        <% if (zones.length > 1) { %>
-                        <button type='button' onclick="removeZone('<%= zones[i].zone_name %>','add')">Remove Zone</button>
-                        <% } %>
-                    </div>
-                <% } %>
-            <div onclick="window.location='/zonemap'"class="column-new">
-                <p style="font-size: 70px;">+</p>
-                <p style="font-size: 20px;">Add New Zone</p>
+            <input type="submit" <% if (expiration - currentTime > 172800) { %> disabled <% } %> value="Checkout">
+          </form>
+          <br>
+          <br>
+        </div>
+      <% }
+      else if (cx_type == 'inactive') { %>
+        <div>
+          <p><strong><font color="white">To have access to services and have your votes counted to the pool, choose one of the plans below.</b></font></strong></p>
+          <form action="/create-checkout-session" method="POST">
+            <select class="planSelect" name="checkout">
+              <option selected disabled>See plans</option>
+              <% for (let i = 0; i < plans.length; i++) { %>
+                <% if (plans[i].mode != 'legacy') { %>
+                  <option value="<%= stripe_id + ':' + plans[i].id + ':' + plans[i].mode + ':services' %>"><%= plans[i].title %></option>
+                <% }
+              } %>
+            </select>
+            <br>
+            <br>
+            <input type="submit" value="Checkout">
+          </form>
+          <br>
+          <br>
+        </div>
+      <% }
+      else if (lifetime_role != '') {
+        if (inactive_lifetime_role != '') {
+          if (cx_type == 'lifetime-inactive') { %>
+            <div>
+              <form action="/lifetime-toggle" method="POST" id="lifetimeForm">
+                <input name="action" type="hidden" value ="activate">
+                <p><strong><font color="white">Your services are currently deactivated. Press the button below to reactivate services</b></font></strong></p>
+                <br>
+                <br>
+                <button type="button" onclick="confirmToggle()">Switch to active</button>
+                <br>
+                <br>
+              </form>
             </div>
-            </form>
-        </div>
-        <br>
-        <br>
-        
-        <div style="float:left; width: 100%">
-            <button onclick="submitVotes()">Confirm Votes</button>
-            <br>
-            <br>
-           <% if(user.customer_type != 'lifetime-inactive' && user.customer_type != 'inactive') { %>
-            <p><strong><font color="white">Donate below to increase votes and help maintain and improve services!</font></strong></p>
-            <form action="/create-checkout-session" method="POST">
-                <select class="donateSelect" name="donate">
-                   <option selected disabled>See donations</option>
-                   <% for(var i=0; i < donations.length; i++) { %>
-                       <option value="<%= user.stripe_id + ':' + donations[i].id + ':' + donations[i].mode + ':donation' %>"><%= donations[i].title %></option>
-               <% } %>
-                   </select>
-                   <br>
-                   <br>
-                   <input type="submit" value="Donate">
-               </form>
-            <% } %>
-        </div>
-        <div style="clear: both;"></div> 
-    </div></center>
-  </div>
-  <script>
-    var available = <%= available %>;
-    var percentage = <%= percentage %>;
-    var total = <%= total %>;
-    var zones = [];
-    var originals = [];
-    var manualPercent = [];
-    var allocations = [];
-    var format = <%= user.format %>;
-      
-    <% for( var i=0; i < zones.length; i++) { %>
-        zones['<%= zones[i].zone_name %>'] = <%= zones[i].votes %>;
-        originals['<%= zones[i].zone_name %>'] = <%= zones[i].votes %>;
-        manualPercent['<%= zones[i].zone_name %>'] = (<%= zones[i].votes / total %>) * 100;
-        <% if(allocations != null){ %>
-            allocations['<%= zones[i].zone_name %>'] = <%= allocations[i].percent %>;
-       <% }
+          <% }
+          else if (cx_type == 'lifetime-active') { %>
+            <div>
+              <form action="/lifetime-toggle" method="POST" id="lifetimeForm">
+                <input name="action" type="hidden" value ="deactivate">
+                <p><strong><font color="white"> Your services are currently activated. Please visit the #setup-instructions channel in Discord to ensure all required steps have been completed.</b></font></strong></p>
+                <p><strong><font color="white">To disable services and remove your votes from the pool, press the button below.</b></font></strong></p>
+                <br>
+                <br>
+                <button type="button" onclick="confirmToggle()">Switch to inactive</button>
+                <br>
+                <br>
+              </form>
+            </div>
+          <% } 
+        }
         else { %>
-            allocations['<%= zones[i].name_name %>'] = 0;
+          <p><strong><font color="white"> Your services are currently activated. Please visit the #setup-instructions channel in Discord to ensure all required steps have been completed.</b></font></strong></p>
         <% }
-     } %>
+      } %>
+      <p><strong><font color="black">Questions? Tips? Issues? Check out our FAQ <a href="#">here</a> or support chat <a href="#">here</a>. Travelling? Join other Alert servers by setting temporary zones with no votes on your profile!</font>
+      <br>
+      <hr>
+      <div>
+        <p><strong><font color="white">Total Fees and Donations to Date:</font></strong></p>
+        <p><strong><font style="line-height: 80%;" size="20px" color="red">$<%= total_spend.toFixed(2); %></font></strong></p>
+        <p><strong><font color="white">All users get one vote by default!</font></strong></p>
+        <p><strong><font color="white">At $<%= voteworth %> per extra vote, you have:</font></strong></p>
+        <p class="format0" style="margin-top:30px; line-height: 80%; <% if (vote_format == 1) { %>display:none; <% } %>"><strong><font size="20px" color="red"><span id="remainVotes"><%= available %></span> / <%= total %></font></strong></p>
+        <p class="format1" style="margin-top:30px; line-height: 80%; <% if (vote_format == 0) { %>display:none; <% } %>"><strong><font size="20px" color="red"><%= total %></font></strong></p>
+        <p><strong><font size="5px"color="white"><span class="format0" <% if (vote_format == 1) { %>style="display:none" <% } %>>Open Votes / Total Votes</span><span class="format1"<% if (vote_format == 0) { %>style="display:none" <% } %>>Total Votes: <span id="percent"><%= percentage %></span>% Set</span></font></strong></p>
+        <br>
+        <p class="format0" <% if (vote_format == 1) { %>style="display:none" <% } %>><strong><font color="white"><u>Allocate your votes below</u></font></strong></p>
+        <p class="format1" <% if (vote_format == 0) { %>style="display:none" <% } %>><strong><font color="white"><u>Distribute your votes below and votes will be totalled automatically</u></font></strong></p>
+        <br>
+        <p class="format1" <% if (vote_format == 0) { %>style="display:none" <% } %>><strong><font color="red">Note: Vote counts here will not update until percentages are submitted.</font></strong></p>            
+        <form method="POST" id="voteForm">   
+          <div>
+            <input type="radio" <% if (vote_format == 0) { %>checked="checked" <% } %> onchange="changeFormat(0)" id="number" name="format" value="0">
+            <label for="number"><font color="white">Manual</font></label>&nbsp;&nbsp;
+            <input type="radio" <% if (vote_format == 1) { %>checked="checked" <% } %> onchange="changeFormat(1)" id="percentage" name="format" value="1">
+            <label for="percentage"><font color="white">Automatic</font></label>
+          </div>
+          <input type="hidden" name='selection' id='selection' value="">
+          <input type="hidden" name='allocations' id='allocations' value="">
+          <input type="hidden" name='zonedifferences' id='zonedifferences' value="">
+          <input type="hidden" name='percentage' id='percentage' value="0">
+          <input type="hidden" name='userid' id='userid' value="<%= user_id %>">
+          <input type="hidden" name='usertype' id='usertype' value="<%= cx_type %>">
+          <input type="hidden" name='remZone' id='remZone' value="">
+          <input type="hidden" name='remRoleLevel' id='remRoleLevel' value="">
+          <% for (let i = 0; i < zones.length; i++) { %>
+            <div class="column-4" style="font-stretch: expanded;">
+              <p class="stretchedText"><%= zones[i].parent_name %></p>
+              <br>
+              <p class="stretchedText" style="font-size: 20px;"><%= zones[i].zone_name %></p>
+              <br>
+              <br>
+              <p style="font-size: 15px; line-height: 10%">Votes:</p>
+              <p style="line-height: 120%">
+                <span id="zone0<%= zones[i].zone_name %>"><%= zones[i].votes %></span>
+                <span class="format0" style="margin-left: 20px; <% if(vote_format == 1) { %>display:none; <% } %>">
+                  <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','sub')">-</button>
+                  <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','add')">+</button>
+                </span>     
+              </p>
+              <p style="line-height: 120%">
+                <span id="zone1<%= zones[i].zone_name %>"><%= (vote_format == 1 ? allocations[i].percent : ((zones[i].votes / total) * 100).toFixed(2) ) %></span>%
+                <span class="format1" style="margin-left: 20px; <% if(vote_format == 0) { %>display:none; <% } %>">
+                  <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','sub')">-</button>
+                  <button type='button' onclick="updateVotes('<%= zones[i].zone_name %>','add')">+</button>
+                </span>   
+              </p>
+              <% if (zones.length > 1) { %>
+                <button type='button' onclick="removeZone('<%= zones[i].zone_name %>','add')">Remove Zone</button>
+              <% } %>
+            </div>
+          <% } %>
+          <div onclick="window.location='/zonemap'"class="column-new">
+            <p style="font-size: 70px;">+</p>
+            <p style="font-size: 20px;">Add New Zone</p>
+          </div>
+        </form>
+      </div>
+      <br>
+      <br>      
+      <div style="float:left; width: 100%">
+        <button onclick="submitVotes()">Confirm Votes</button>
+        <br>
+        <br>
+        <% if (cx_type != 'lifetime-inactive' && cx_type != 'inactive') { %>
+          <p><strong><font color="white">Donate below to increase votes and help maintain and improve services!</font></strong></p>
+          <form action="/create-checkout-session" method="POST">
+            <select class="donateSelect" name="donate">
+              <option selected disabled>See donations</option>
+              <% for (let i = 0; i < donations.length; i++) { %>
+                <option value="<%= stripe_id + ':' + donations[i].id + ':' + donations[i].mode + ':donation' %>"><%= donations[i].title %></option>
+              <% } %>
+            </select>
+           <br>
+           <br>
+           <input type="submit" value="Donate">
+          </form>
+        <% } %>
+      </div>
+      <div style="clear: both;"></div> 
+    </div>
+    <div>
+      <div class="content">
+        <div class="fineprint">
+          <p><font color="<%= text_color %>">We NEVER receive or store any sensitive customer credit card information.  All of our credit card processing is managed directly and solely by Stripe, a PCI Level 1 Compliant Service Provider.</font></p>
+          <a href=https://stripe.com/docs/security/stripe>https://stripe.com/docs/security/stripe</a>
+          <p><font color="<%= text_color %>"><%= terms %></font></p>
+          <p><font color="<%= text_color %>"><%= disclaimer %></font></p>
+          <p><strong><font color="<%= text_color %>"><%= warning %></font></strong></p>
+          <a href=<%= site_url %>/discord><%= site_url %>/discord</a>
+          <br>
+        </div>
+      </div>
+    </div>
+  </center>
+</div>
 
-    function updateVotes(id,operator)
-    {
-        if(format == 0){
-            if(operator == 'add')
-            {
-                if(available > 0)
-                {
-                    document.getElementById('remainVotes').innerHTML = --available;
-                    document.getElementById('zone0'+id).innerHTML = ++zones[id];
-                    manualPercent[id] = (zones[id] / total) * 100;
-                    document.getElementById('zone1'+id).innerHTML = manualPercent[id].toFixed(2);
-                }
-            }
-            else
-            {
-                if(available < total && zones[id] > 0)
-                {
-                    document.getElementById('remainVotes').innerHTML = ++available;
-                    document.getElementById('zone0'+id).innerHTML = --zones[id];
-                    manualPercent[id] = (zones[id] / total) * 100;
-                    document.getElementById('zone1'+id).innerHTML = manualPercent[id].toFixed(2);
-                }
-            }
-        }
-        else
-        {
-            if(operator == 'add')
-            {
-                if(percentage < 100)
-                {
-                    percentage += 5;
-                    allocations[id] += 5;
-                    document.getElementById('percent').innerHTML = percentage;
-                    document.getElementById('zone1'+id).innerHTML = allocations[id];
-                }
-            }
-            else
-            {
-                if(percentage > 0 && allocations[id] > 0)
-                {
-                    percentage -= 5;
-                    allocations[id] -= 5;
-                    document.getElementById('percent').innerHTML = percentage;
-                    document.getElementById('zone1'+id).innerHTML = allocations[id];
-                }
-            }
-        }
-    }
+<script>
+  var available = <%= available %>;
+  var percentage = <%= percentage %>;
+  var total = <%= total %>;
+  var zones = [];
+  var originals = [];
+  var manualPercent = [];
+  var allocations = [];
+  var format = <%= vote_format %>;
+    
+  <% for (let i = 0; i < zones.length; i++) { %>
+    zones['<%= zones[i].zone_name %>'] = <%= zones[i].votes %>;
+    originals['<%= zones[i].zone_name %>'] = <%= zones[i].votes %>;
+    manualPercent['<%= zones[i].zone_name %>'] = (<%= zones[i].votes / total %>) * 100;
+    <% if (allocations != null) { %>
+      allocations['<%= zones[i].zone_name %>'] = <%= allocations[i].percent %>;
+   <% }
+    else { %>
+      allocations['<%= zones[i].name_name %>'] = 0;
+    <% }
+  } %>
 
-    function removeZone(id)
-    {
-        if (confirm("Are you sure you want to remove this zone?") == true) 
-        {
-            jsonValue = '[';
-            ajson = '[';
-            <% for( var i=0; i < zones.length; i++) { %>
-                if(id != '<%= zones[i].zone_name %>')
-                {
-                    jsonValue += '{"zone_name":"<%= zones[i].zone_name %>","parent_name":"<%= zones[i].parent_name %>","votes":'+zones['<%= zones[i].zone_name %>']+',"role_level":<%= zones[i].role_level %>},';
-                    ajson += '{"zone_name":"<%= zones[i].zone_name %>","percent":'+allocations['<%= zones[i].zone_name %>']+'},';
-                }
-                else {
-                    roleLevel = '<%= zones[i].role_level %>';
-                }
+  function updateVotes(id,operator) {
+    if (format == 0) {
+      if (operator == 'add') {
+        if (available > 0) {
+          document.getElementById('remainVotes').innerHTML = --available;
+          document.getElementById('zone0'+id).innerHTML = ++zones[id];
+          manualPercent[id] = (zones[id] / total) * 100;
+          document.getElementById('zone1'+id).innerHTML = manualPercent[id].toFixed(2);
+        }
+      }
+      else {
+        if (available < total && zones[id] > 0) {
+          document.getElementById('remainVotes').innerHTML = ++available;
+          document.getElementById('zone0'+id).innerHTML = --zones[id];
+          manualPercent[id] = (zones[id] / total) * 100;
+          document.getElementById('zone1'+id).innerHTML = manualPercent[id].toFixed(2);
+        }
+      }
+    }
+    else {
+      if (operator == 'add') {
+        if (percentage < 100) {
+          percentage += 5;
+          allocations[id] += 5;
+          document.getElementById('percent').innerHTML = percentage;
+          document.getElementById('zone1'+id).innerHTML = allocations[id];
+        }
+      }
+      else {
+        if (percentage > 0 && allocations[id] > 0) {
+          percentage -= 5;
+          allocations[id] -= 5;
+          document.getElementById('percent').innerHTML = percentage;
+          document.getElementById('zone1'+id).innerHTML = allocations[id];
+        }
+      }
+    }
+  }
 
-            <% } %>
-            
-            jsonValue = jsonValue.substring(jsonValue.length - 1, -1);
-            ajson = ajson.substring(ajson.length - 1, -1);
-            jsonValue += ']';
-            ajson += ']';
-            document.getElementById('selection').value = jsonValue;
-            document.getElementById('allocations').value = ajson;
-            document.getElementById('remZone').value = id;
-            document.getElementById('remRoleLevel').value = roleLevel;
-            document.getElementById('voteForm').submit();
+  function removeZone(id) {
+    if (confirm("Are you sure you want to remove this zone?") == true) {
+      jsonValue = '[';
+      ajson = '[';
+      <% for (let i = 0; i < zones.length; i++) { %>
+        if (id != '<%= zones[i].zone_name %>') {
+          jsonValue += '{"zone_name":"<%= zones[i].zone_name %>","parent_name":"<%= zones[i].parent_name %>","votes":'+zones['<%= zones[i].zone_name %>']+',"role_level":<%= zones[i].role_level %>},';
+          ajson += '{"zone_name":"<%= zones[i].zone_name %>","percent":'+allocations['<%= zones[i].zone_name %>']+'},';
         }
+        else {
+          roleLevel = '<%= zones[i].role_level %>';
+        }
+      <% } %>      
+      jsonValue = jsonValue.substring(jsonValue.length - 1, -1);
+      ajson = ajson.substring(ajson.length - 1, -1);
+      jsonValue += ']';
+      ajson += ']';
+      document.getElementById('selection').value = jsonValue;
+      document.getElementById('allocations').value = ajson;
+      document.getElementById('remZone').value = id;
+      document.getElementById('remRoleLevel').value = roleLevel;
+      document.getElementById('voteForm').submit();
     }
-    function submitVotes()
-    {
+  }
 
-            jsonValue = '[';
-            if(format == 0)
-            {
-                ajson = '[';
-                <% for( var i=0; i < zones.length; i++) { %>
-                    jsonValue += '{"zone_name":"<%= zones[i].zone_name %>","parent_name":"<%= zones[i].parent_name %>","votes":'+zones['<%= zones[i].zone_name %>']+',"role_level":<%= zones[i].role_level %>},';
-                    ajson +='{"zone_name":"<%= zones[i].zone_name %>","percent":0},';
-                    <% } %>
-                ajson = ajson.substring(ajson.length - 1, -1);
-                jsonValue = jsonValue.substring(jsonValue.length - 1, -1);
-                jsonValue += ']';
-                ajson += ']';
-                document.getElementById('selection').value = jsonValue;
-                document.getElementById('allocations').value = ajson;
-                document.getElementById('percentage').value = percentage;
+  function submitVotes() {
+    jsonValue = '[';
+    if (format == 0) {
+      ajson = '[';
+      <% for (let i = 0; i < zones.length; i++) { %>
+        jsonValue += '{"zone_name":"<%= zones[i].zone_name %>","parent_name":"<%= zones[i].parent_name %>","votes":'+zones['<%= zones[i].zone_name %>']+',"role_level":<%= zones[i].role_level %>},';
+        ajson +='{"zone_name":"<%= zones[i].zone_name %>","percent":0},';
+      <% } %>
+      ajson = ajson.substring(ajson.length - 1, -1);
+      jsonValue = jsonValue.substring(jsonValue.length - 1, -1);
+      jsonValue += ']';
+      ajson += ']';
+      document.getElementById('selection').value = jsonValue;
+      document.getElementById('allocations').value = ajson;
+      document.getElementById('percentage').value = percentage;
+    }
+    else {
+      <% for (let i = 0; i < zones.length; i++) { %>
+        jsonValue += '{"zone_name":"<%= zones[i].zone_name %>","percent":'+allocations['<%= zones[i].zone_name %>']+'},';
+      <% } %>
+      jsonValue = jsonValue.substring(jsonValue.length - 1, -1);
+      jsonValue += ']';
+      document.getElementById('allocations').value = jsonValue;
+    }          
+    document.getElementById('voteForm').submit();
+  }
 
-            }
-            else {
-                <% for( var i=0; i < zones.length; i++) { %>
-                    jsonValue += '{"zone_name":"<%= zones[i].zone_name %>","percent":'+allocations['<%= zones[i].zone_name %>']+'},';
-                <% } %>
-                jsonValue = jsonValue.substring(jsonValue.length - 1, -1);
-                jsonValue += ']';
-                document.getElementById('allocations').value = jsonValue;
-            }
-            
-            document.getElementById('voteForm').submit();
-        
+  function confirmToggle() {
+    if (confirm("Are you sure you want to change your lifetime status?") == true) {
+      document.getElementById('lifetimeForm').submit();
     }
-    function confirmToggle()
-    {
-        if (confirm("Are you sure you want to change your lifetime status?") == true) 
-        {
-            document.getElementById('lifetimeForm').submit();
-        }
+  }
+
+  function changeFormat(f) {
+    format = f;
+    if (f == 0) {
+      hide = 1;
+      <% for (let i = 0; i < zones.length; i++) { %>
+        document.getElementById('zone0<%= zones[i].zone_name %>').innerHTML = zones['<%= zones[i].zone_name %>'];
+        document.getElementById('zone1<%= zones[i].zone_name %>').innerHTML = manualPercent['<%= zones[i].zone_name %>'].toFixed(2);
+      <% } %>
     }
-    function changeFormat(f)
-    {
-        format = f;
-        if(f == 0)
-        {
-            hide = 1;
-            <% for( var i=0; i < zones.length; i++) { %>
-                document.getElementById('zone0<%= zones[i].zone_name %>').innerHTML = zones['<%= zones[i].zone_name %>'];
-                document.getElementById('zone1<%= zones[i].zone_name %>').innerHTML = manualPercent['<%= zones[i].zone_name %>'].toFixed(2);
-            <% } %>
-        }
-        else
-        {
-            hide = 0;
-            <% for( var i=0; i < zones.length; i++) { %>
-                document.getElementById('zone0<%= zones[i].zone_name %>').innerHTML = originals['<%= zones[i].zone_name %>'];
-                document.getElementById('zone1<%= zones[i].zone_name %>').innerHTML = allocations['<%= zones[i].zone_name %>'];
-            <% } %>
-        }
-        var spanHide = document.getElementsByClassName("format"+hide);
-        for(var i = 0; i < spanHide.length; i++){
-            spanHide[i].style.display = "none"; 
-        }
-        var spanShow = document.getElementsByClassName("format"+format);
-        for(var i = 0; i < spanShow.length; i++){
-            spanShow[i].style.display = "inline-block"; 
-        }
-        
+    else {
+      hide = 0;
+      <% for (let i = 0; i < zones.length; i++) { %>
+        document.getElementById('zone0<%= zones[i].zone_name %>').innerHTML = originals['<%= zones[i].zone_name %>'];
+        document.getElementById('zone1<%= zones[i].zone_name %>').innerHTML = allocations['<%= zones[i].zone_name %>'];
+      <% } %>
     }
-  </script>
-  <%- include('./includes/end.ejs') %>
+    var spanHide = document.getElementsByClassName("format"+hide);
+    for (let i = 0; i < spanHide.length; i++) {
+      spanHide[i].style.display = "none"; 
+    }
+    var spanShow = document.getElementsByClassName("format"+format);
+    for (let i = 0; i < spanShow.length; i++) {
+      spanShow[i].style.display = "inline-block"; 
+    }      
+  }
+</script>
+<%- include('./includes/end.ejs') %>

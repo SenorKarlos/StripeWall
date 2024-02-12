@@ -18,6 +18,7 @@
     "node-quickbooks": "^2.0.43",
     "ontime": "^0.0.6",
     "path": "^0.12.7",
+    "request": "^2.88.2",
     "stripe": "^11.4.0"
   },
   "scripts": {

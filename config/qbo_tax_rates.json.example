@@ -1,0 +1,37 @@
+[
+ {
+  "Name": "Exempt",
+  "Id": "4",
+  "Jurisdiction": ["Exempt"]
+ },
+ {
+  "Name": "GST",
+  "Id": "8",
+  "Jurisdiction": ["AB","BC","MB","NT","NU","QC","SK","YT"]
+ },
+ {
+  "Name": "HST ON",
+  "Id": "7",
+  "Jurisdiction": ["ON"]
+ },
+ {
+  "Name": "HST PE 2016",
+  "Id": "15",
+  "Jurisdiction": ["PE"]
+ },
+ {
+  "Name": "HST NL 2016",
+  "Id": "13",
+  "Jurisdiction": ["NL"]
+ },
+ {
+  "Name": "HST NB 2016",
+  "Id": "11",
+  "Jurisdiction": ["NB"]
+ },
+ {
+  "Name": "HST NS",
+  "Id": "9",
+  "Jurisdiction": ["NS"]
+ }
+]
