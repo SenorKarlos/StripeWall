@@ -74,7 +74,7 @@ bot.assignRole = async function (server_id, user_id, role_id, username, access_t
       console.info("["+bot.getTime("stamp")+"] [bot.js] Failed to join User to Guild", e);
       return false;
     }
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     try {
       member = await bot.guilds.cache.get(server_id).members.cache.get(user_id);
     } catch (e) {

@@ -203,7 +203,7 @@ for (let i = 0; i < zones.length; i++) {
               <option selected disabled>See plans</option>
               <% for (let i = 0; i < plans.length; i++) { %>
                 <% if (plans[i].mode != 'legacy') { %>
-                  <option value="<%= stripe_id + ':' + plans[i].id  + ':' + plans[i].mode %>"><%= plans[i].title %></option>
+                  <option value="<%= stripe_id + ':' + plans[i].id  + ':' + plans[i].mode + ':services' %>"><%= plans[i].title %></option>
                 <% }
               } %>
             </select>
@@ -284,7 +284,8 @@ for (let i = 0; i < zones.length; i++) {
         <p class="format0" <% if (vote_format == 1) { %>style="display:none" <% } %>><strong><font color="white"><u>Allocate your votes below</u></font></strong></p>
         <p class="format1" <% if (vote_format == 0) { %>style="display:none" <% } %>><strong><font color="white"><u>Distribute your votes below and votes will be totalled automatically</u></font></strong></p>
         <br>
-        <p class="format1" <% if (vote_format == 0) { %>style="display:none" <% } %>><strong><font color="red">Note: Vote counts here will not update until percentages are submitted.</font></strong></p>            
+        <p class="format1" <% if (vote_format == 0) { %>style="display:none" <% } %>><strong><font color="red">Note: Vote counts here will not update until percentages are submitted.</font></strong></p>
+        <p class="format1" <% if (vote_format == 0) { %>style="display:none" <% } %>><strong><font color="red">If you have only one vote, it will be ALWAYS automatically assigned to your first zone.</font></strong></p>
         <form method="POST" id="voteForm">   
           <div>
             <input type="radio" <% if (vote_format == 0) { %>checked="checked" <% } %> onchange="changeFormat(0)" id="number" name="format" value="0">

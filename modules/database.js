@@ -58,11 +58,11 @@ const database = {
     let query = '';
     let data = [];
     if (selection != '') {
-      query = `UPDATE customers SET zone_votes = ?, allocations = ? , zones_reviewed = ?, format = ? WHERE user_id = ?`;
+      query = `UPDATE customers SET zone_votes = ?, allocations = ?, zones_reviewed = ?, format = ? WHERE user_id = ?`;
       data = [selection, allocations, 'true', format, user_id];
     }
     else {
-      query = `UPDATE customers SET allocations = ? , zones_reviewed = ?, format = ? WHERE user_id = ?`;
+      query = `UPDATE customers SET allocations = ?, zones_reviewed = ?, format = ? WHERE user_id = ?`;
       data = [allocations, 'true', format, user_id];
     }
       await database.db.query(query, data);
@@ -120,8 +120,8 @@ const database = {
               }
             }
             else if (roles[j].assign_on == 'any_votes') {
-              if(action == 'remove') {
-                if(zones[i].role_level > 1) { //this triggers when user is going inactive
+              if (action == 'remove') {
+                if (zones[i].role_level > 1) { //this triggers when user is going inactive
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed any_votes role:", zones[i].zone_name, roles[j].roleID, username);
                   bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
                   temp_level = 0;
@@ -132,18 +132,18 @@ const database = {
                 if (zones[i].votes > 0 && zones[i].role_level < 2) {
                   console.info("["+bot.getTime("stamp")+"] [database.js] Added any_votes role:", zones[i].zone_name, roles[j].roleID, username);
                   bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token)
-                  if(temp_level < 2) { temp_level = 2; }
+                  if (temp_level < 2) { temp_level = 2; }
                 }
                 else if (zones[i].votes == 0 && zones[i].role_level > 1) { //votes went from non-zero to zero. Remove role.
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed any_votes role:", zones[i].zone_name, roles[j].roleID, username);
                   bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
-                  if(temp_level == 0) { temp_level = 1; }
+                  if (temp_level == 0) { temp_level = 1; }
                 }
               }
             }
             else if (roles[j].assign_on == 'most_votes') {
-              if(action == 'remove') {
-                if(zones[i].role_level > 2) { //this triggers when user is going inactive
+              if (action == 'remove') {
+                if (zones[i].role_level > 2) { //this triggers when user is going inactive
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed most_votes role:", zones[i].zone_name, roles[j].roleID, username);
                   bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
                   temp_level = 0;
@@ -153,7 +153,7 @@ const database = {
                 if (lastHighestZone == zones[i].zone_name && lastHighestZone != highestZone) { //previous highest vote has been outvoted. Remove role
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed most_votes role:", zones[i].zone_name, roles[j].roleID, username);
                   bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
-                  if(zones[i].votes == 0) {
+                  if (zones[i].votes == 0) {
                     temp_level = 1;
                   }
                   else {
@@ -242,37 +242,38 @@ const database = {
       amortized = 0;
       real = 0;
       natural = 0;
-      let query2 = '';
-      let data2 = []
-      if(percentage == 100) {
-        length = zones.length - 1;
+      if (total === 1) {
+        if (zones.length > 1) {
+          for (let i = 0; i < zones.length; i++) {
+            if (i === 0) {
+              zones[i].votes = 1;
+            }
+            else {
+              zones[i].votes = 0;
+            }
+          }
+        }
+        else {
+          zones[0].votes = 1;
+        }
       }
       else {
-        length = zones.length;
-      }
-      for (i = 0; i < length; i++) {
-        real = (allocations[i].percent/100) * total + amortized;
-        natural = Math.floor(real);
-        amortized = real - natural;
-        if(type != 'inactive' && type != 'lifetime-inactive') { //update zone counts if active
-          query2 = `UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?`;
-          data2 = [zones[i].votes - natural, zones[i].zone_name];
-          await database.db.query(query2, data2);
-          data2 = [zones[i].votes - natural,zones[i].parent_name];
-          await database.db.query(query2, data2);
+        if(percentage == 100) {
+          length = zones.length - 1;
         }
-        zones[i].votes = natural;
-        sum += natural;
-      }
-      if(percentage == 100) {
-        if(type != 'inactive' && type != 'lifetime-inactive') { //update zone counts if active
-          query2 = `UPDATE service_zones SET total_votes = total_votes - ? WHERE zone_name = ?`;
-          data2 = [zones[i].votes - (total-sum), zones[i].zone_name];
-          await database.db.query(query2, data2);
-          data2 = [zones[i].votes - zones[i].parent_name];
-          await database.db.query(query2, data2);
+        else {
+          length = zones.length;
         }
-        zones[i].votes = total - sum;
+        for (let i = 0; i < length; i++) {
+          real = (allocations[i].percent/100) * total + amortized;
+          natural = Math.floor(real);
+          amortized = real - natural;
+          zones[i].votes = natural;
+          sum += natural;        
+          if(percentage == 100) {
+            zones[i].votes = total - sum;
+          }
+        }
       }
       zone_votes = JSON.stringify(zones);
       query = `UPDATE customers SET zone_votes = ? WHERE user_id = ?`;

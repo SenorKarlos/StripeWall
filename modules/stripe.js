@@ -402,8 +402,8 @@ const stripe = {
                   if (user.stripe_data.metadata.expiration != '0' && Number(user.stripe_data.metadata.expiration) > checkout.payment_intent.latest_charge.created) {
                     expiry = Number(user.stripe_data.metadata.expiration) + config.stripe.price_ids[i].expiry;
                   }
-                  else if (user.manual_data && user.manual_data.expiration && user.manual_data.expiration > checkout.payment_intent.latest_charge.created) {
-                    expiry = user.manual_data.expiration + config.stripe.price_ids[i].expiry;
+                  else if (user.paygo_data && user.paygo_data.expiration && user.paygo_data.expiration > checkout.payment_intent.latest_charge.created) {
+                    expiry = user.paygo_data.expiration + config.stripe.price_ids[i].expiry;
                   }
                   else {
                     expiry = checkout.payment_intent.latest_charge.created + config.stripe.price_ids[i].expiry;
@@ -432,7 +432,7 @@ const stripe = {
                 if (user.customer_type == 'administrator') { cx_type = 'administrator'; }
                 bot.sendDM(member, type_text+' '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, '00FF00');
                 bot.sendEmbed(user.user_name, user.user_id, '00FF00', type_text+' '+config.server.site_name+' Successful! 💰', 'Amount: **$'+parseFloat(data.object.amount_total/100).toFixed(2)+'** '+tax_info, config.discord.log_channel);
-                await database.runQuery(`UPDATE customers SET customer_type = ?, stripe_data = ?, manual_data = NULL, total_spend = ?, total_votes = ?, tax_rate = ?, charge_list = ? WHERE user_id = ?`, [cx_type, JSON.stringify(customer), total_spend, total_votes, tax_rate, JSON.stringify(charge_list), member.user.id]);
+                await database.runQuery(`UPDATE customers SET customer_type = ?, stripe_data = ?, paygo_data = NULL, total_spend = ?, total_votes = ?, tax_rate = ?, charge_list = ? WHERE user_id = ?`, [cx_type, JSON.stringify(customer), total_spend, total_votes, tax_rate, JSON.stringify(charge_list), member.user.id]);
                 if (user.total_votes < total_votes) {
                   if (user.format === 1) {
                     for (let a = 0; a < user.allocations.length; a++) {

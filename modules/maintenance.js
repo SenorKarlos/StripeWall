@@ -336,7 +336,7 @@ const maintenance = {
               }
             };
             await stripe.customer.update(user.stripe_data.id, body);
-            await database.runQuery(`UPDATE customers SET access_token = NULL, refresh_token = NULL, token_expiration = NULL, customer_type = 'inactive', manual_data = NULL WHERE user_id = ?`, [user.user_id]);
+            await database.runQuery(`UPDATE customers SET access_token = NULL, refresh_token = NULL, token_expiration = NULL, customer_type = 'inactive', paygo_data = NULL WHERE user_id = ?`, [user.user_id]);
             if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, '', 'all', 'remove'); }
             db_updated = true;
             console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") Member Left Guild. Cancelled Subscriptions/Access.");
@@ -366,7 +366,7 @@ const maintenance = {
               await bot.removeRole(config.discord.guild_id, user.user_id, config.discord.lifetime_role, user.user_name);
               if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, '', 'all', 'remove'); }
             }
-            else {        
+            else if (user.customer_type == 'lifetime-active') {        
               await bot.assignRole(config.discord.guild_id, user.user_id, config.discord.lifetime_role, user.user_name);
               await bot.removeRole(config.discord.guild_id, user.user_id, config.discord.inactive_lifetime_role, user.user_name);
               if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
@@ -421,11 +421,11 @@ const maintenance = {
             }
           }
           else if (user.customer_type == 'manual') {
-            if (user.manual_data && user.manual_data.expiration) {
-              if (user.manual_data.expiration > unix) {
+            if (user.paygo_data && user.paygo_data.expiration) {
+              if (user.paygo_data.expiration > unix) {
                 verified = true;
-                if (user.manual_data.role_id) {
-                  await bot.assignRole(config.discord.guild_id, user.user_id, user.manual_data.role_id, user.user_name);
+                if (user.paygo_data.role_id) {
+                  await bot.assignRole(config.discord.guild_id, user.user_id, user.paygo_data.role_id, user.user_name);
                   if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
                 }
                 else {
@@ -436,8 +436,8 @@ const maintenance = {
               }
             }
             if (!verified) {
-              if (user.manual_data.role_id) {
-                await bot.removeRole(config.discord.guild_id, user.user_id, user.manual_data.role_id, user.user_name);
+              if (user.paygo_data.role_id) {
+                await bot.removeRole(config.discord.guild_id, user.user_id, user.paygo_data.role_id, user.user_name);
               }
               else {
                 for (let i = 0; i < config.stripe.price_ids.length; i++) {
@@ -446,7 +446,7 @@ const maintenance = {
               }
               if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, '', 'all', 'remove'); }
               user.customer_type = 'inactive';
-              user.manual_data = null;
+              user.paygo_data = null;
             }
           }
           if (user.customer_type == 'inactive') {
@@ -488,11 +488,11 @@ const maintenance = {
                 return res.redirect(`/error`);
               }
             }
-            if (user.manual_data) {
-              if (user.manual_data.expiration && user.manual_data.expiration > unix) {
+            if (user.paygo_data) {
+              if (user.paygo_data.expiration && user.paygo_data.expiration > unix) {
                 user.customer_type = 'manual';
-                if (user.manual_data.role_id) {
-                  await bot.assignRole(config.discord.guild_id, user.user_id, user.manual_data.role_id, user.user_name);
+                if (user.paygo_data.role_id) {
+                  await bot.assignRole(config.discord.guild_id, user.user_id, user.paygo_data.role_id, user.user_name);
                   if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
                 }
                 else {
@@ -503,7 +503,7 @@ const maintenance = {
               }
             }
           }
-          await database.runQuery(`UPDATE customers SET customer_type = ?, stripe_data = ?, manual_data = ?, qbo_data = ? WHERE user_id = ?`, [user.customer_type, JSON.stringify(user.stripe_data), JSON.stringify(user.manual_data), JSON.stringify(user.qbo_data), user.user_id]);
+          await database.runQuery(`UPDATE customers SET customer_type = ?, stripe_data = ?, paygo_data = ?, qbo_data = ? WHERE user_id = ?`, [user.customer_type, JSON.stringify(user.stripe_data), JSON.stringify(user.paygo_data), JSON.stringify(user.qbo_data), user.user_id]);
 
           if (user.customer_type != 'inactive' && user.customer_type != 'lifetime-inactive') {
             let data = {};
@@ -649,9 +649,9 @@ const maintenance = {
               let verified = true;
               switch(true) {
                 case (record.customer_type == 'manual'): // check manual
-                  if (!record.manual_data || !record.manual_data.expiration || record.manual_data.expiration < unix) {
+                  if (!record.paygo_data || !record.paygo_data.expiration || record.paygo_data.expiration < unix) {
                     await bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
-                    await database.runQuery(`UPDATE customers SET customer_type = 'inactive', manual_data = NULL WHERE user_id = ?`, [record.user_id]);
+                    await database.runQuery(`UPDATE customers SET customer_type = 'inactive', paygo_data = NULL WHERE user_id = ?`, [record.user_id]);
                     if (config.service_zones.roles_enabled) { await database.updateZoneRoles(record[0].user_id, '', 'all', 'remove'); }
                     console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.user.stripe_data.id+") Manually Tracked User Expired, Removing Role & Flags.");
                     bot.sendDM(member, 'Service Access Ended', 'Your access has expired. Please sign up again to continue.', 'FFFF00');
@@ -660,8 +660,8 @@ const maintenance = {
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return maintenance.checkLifetime(); }
                   }
                   else {
-                    if (record.manual_data.role_id) {
-                      if (record.manual_data.role_id != config.stripe.price_ids[i].role_id) {
+                    if (record.paygo_data.role_id) {
+                      if (record.paygo_data.role_id != config.stripe.price_ids[i].role_id) {
                         await bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                         console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.user.stripe_data.id+") Manually Tracked User in Wrong Role, Removing Role.");
                         verified = false;
@@ -827,7 +827,7 @@ const maintenance = {
       });
     }
     if (activeNoDB.length === 0 && activeNoRole.length === 0 && inactiveNoDB.length === 0 && inactiveNoRole.length === 0 && removeActiveRole.length === 0) {
-      console.info("["+bot.getTime("stamp")+"] [maintenance.js] All known Lifetime Users are in Roles and Database.");
+      console.info("["+bot.getTime("stamp")+"] [maintenance.js] All "+((activeUsers.length)+(inactiveUsers.length))+" known Lifetime Users are in the Database and Guild members have roles.");
       return maintenance.doneDiscordRoles();
     }
   },

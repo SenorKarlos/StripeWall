@@ -58,5 +58,5 @@ ALTER TABLE `customers`
 	DROP COLUMN `stripe_id`,
 	DROP COLUMN `price_id`;
 	CHANGE COLUMN `token_expiration` `token_expiration` INT(10) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci' AFTER `refresh_token`;
-  ADD COLUMN `manual_data` JSON NULL AFTER `stripe_data`,
+  ADD COLUMN `paygo_data` JSON NULL AFTER `stripe_data`,
 	DROP COLUMN `expiration`;

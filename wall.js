@@ -247,7 +247,7 @@ server.get("/login", async (req, res) => {
         await bot.removeRole(config.discord.guild_id, dbuser.user_id, config.discord.lifetime_role, dbuser.user_name);
         if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, '', 'all', 'remove'); }
       }
-      else {        
+      else if (dbuser.customer_type == 'lifetime-active') {
         await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.discord.lifetime_role, dbuser.user_name);
         await bot.removeRole(config.discord.guild_id, dbuser.user_id, config.discord.inactive_lifetime_role, dbuser.user_name);
         if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
@@ -262,6 +262,7 @@ server.get("/login", async (req, res) => {
                 await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
                 if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
                 verified = true;
+                dbuser.paygo_data = null;
               }
             }
           }
@@ -276,58 +277,22 @@ server.get("/login", async (req, res) => {
       }
     }
     else if (dbuser.customer_type == 'pay-as-you-go') {
-      if (dbuser.stripe_data.metadata.pay_as_you_go != 'false' && dbuser.stripe_data.metadata.expiration != '0') {
+      if (dbuser.paygo_data && dbuser.paygo_data.expiration && dbuser.paygo_data.expiration > unix && dbuser.paygo_data.price_id) {
         for (let i = 0; i < config.stripe.price_ids.length; i++) {
-          if (dbuser.stripe_data.metadata.pay_as_you_go == config.stripe.price_ids[i].id && unix < Number(dbuser.stripe_data.metadata.expiration)) {
-            await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
+          if (dbuser.paygo_data.price_id == config.stripe.price_ids[i].id) {
+            await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i], dbuser.user_name);
             if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
             verified = true;
           }
         }
       }
       if (!verified) {
-        dbuser.customer_type = 'inactive';
-        let body = {
-          metadata: {
-            pay_as_you_go: 'false',
-            expiration: '0'
-          }
-        };
-        dbuser.stripe_data = await stripe.customer.update(dbuser.stripe_data.id, body);
-        dbuser.customer_type = 'inactive';
         for (let i = 0; i < config.stripe.price_ids.length; i++) {
           await bot.removeRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
         }
         if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, '', 'all', 'remove'); }
-      }
-    }
-    else if (dbuser.customer_type == 'manual') {
-      if (dbuser.manual_data && dbuser.manual_data.expiration) {
-        if (dbuser.manual_data.expiration > unix) {
-          verified = true;
-          if (dbuser.manual_data.role_id) {
-            await bot.assignRole(config.discord.guild_id, dbuser.user_id, dbuser.manual_data.role_id, dbuser.user_name);
-            if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
-          }
-          else {
-            console.info("["+bot.getTime("stamp")+"] [wall.js] User "+dbuser.user_name+" ("+dbuser.user_id+") has current manual expiry and no role_id. Assign role and Update the database.");
-            bot.sendEmbed(dbuser.user_name, dbuser.user_id, "FF0000", "Unable to assign role", "User "+dbuser.user_name+" ("+dbuser.user_id+") has current manual expiry and no role_id. Assign role and Update the database.", config.discord.log_channel);
-            if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
-          }
-        }
-      }
-      if (!verified) {
-        if (dbuser.manual_data.role_id) {
-          await bot.removeRole(config.discord.guild_id, dbuser.user_id, dbuser.manual_data.role_id, dbuser.user_name);
-        }
-        else {
-          for (let i = 0; i < config.stripe.price_ids.length; i++) {
-            await bot.removeRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
-          }
-        }
-        if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, '', 'all', 'remove'); }
         dbuser.customer_type = 'inactive';
-        dbuser.manual_data = null;
+        dbuser.paygo_data = null;
       }
     }
     if (dbuser.customer_type == 'inactive') {
@@ -339,52 +304,31 @@ server.get("/login", async (req, res) => {
                 await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
                 if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
                 dbuser.customer_type = 'subscriber';
-                let body = {
-                  metadata: {
-                    pay_as_you_go: 'false',
-                    expiration: '0'
-                  }
-                };
-                dbuser.stripe_data = await stripe.customer.update(dbuser.stripe_data.id, body);
+                dbuser.paygo_data = null;
               }
             }
           }
         }
       }
-      if (dbuser.stripe_data.metadata.pay_as_you_go != 'false') {
-        if (dbuser.stripe_data.metadata.expiration != '0') {
-          if (Number(dbuser.stripe_data.metadata.expiration) > unix) {
-            for (let i = 0; i < config.stripe.price_ids.length; i++) {
-              if (dbuser.stripe_data.metadata.pay_as_you_go == config.stripe.price_ids[i].id) {
-                await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
-                if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
-                dbuser.customer_type = 'pay-as-you-go';
-              }
+      if (dbuser.paygo_data) {
+        if (dbuser.paygo_data.expiration && dbuser.paygo_data.expiration > unix && dbuser.paygo_data.price_id) {
+          for (let i = 0; i < config.stripe.price_ids.length; i++) {
+            if (dbuser.paygo_data.price_id == config.stripe.price_ids[i].id) {
+              await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
+              if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
+              dbuser.customer_type = 'pay-as-you-go';
             }
           }
         }
         else {
-          console.info("["+bot.getTime("stamp")+"] [wall.js] User "+dbuser.user_name+" ("+dbuser.user_id+") inactive but has Pay-As-You-Go price id with no expiration, abort login to investigate.");
-          bot.sendEmbed(dbuser.user_name, dbuser.user_id, "FF0000", "Price ID Discrepancy Found", "User "+dbuser.user_name+" ("+dbuser.user_id+") inactive but has Pay-As-You-Go id with no expiration and cannot log in.", config.discord.log_channel);
-          return res.redirect(`/error`);
-        }
-      }
-      if (dbuser.manual_data) {
-        if (dbuser.manual_data.expiration && dbuser.manual_data.expiration > unix) {
-          dbuser.customer_type = 'manual';
-          if (dbuser.manual_data.role_id) {
-            await bot.assignRole(config.discord.guild_id, dbuser.user_id, dbuser.manual_data.role_id, dbuser.user_name);
-            if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
-          }
-          else {
-            console.info("["+bot.getTime("stamp")+"] [wall.js] User "+dbuser.user_name+" ("+dbuser.user_id+") was inactive but has current manual expiry and no role_id. Assign role and Update the database.");
-            bot.sendEmbed(dbuser.user_name, dbuser.user_id, "FF0000", "Unable to assign role", "User "+dbuser.user_name+" ("+dbuser.user_id+") was inactive but has current manual expiry and no role_id. Assign role and Update the database.", config.discord.log_channel);
-            if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
-          }
+          dbuser.paygo_data = null;
         }
       }
     }
-    await database.runQuery(`UPDATE customers SET customer_type = ?, stripe_data = ?, manual_data = ?, qbo_data = ? WHERE user_id = ?`, [dbuser.customer_type, JSON.stringify(dbuser.stripe_data), JSON.stringify(dbuser.manual_data), JSON.stringify(dbuser.qbo_data), dbuser.user_id]);
+    if (dbuser.paygo_data) {
+      dbuser.paygo_data = JSON.stringify(dbuser.paygo_data);
+    }
+    await database.runQuery(`UPDATE customers SET customer_type = ?, stripe_data = ?, paygo_data = ?, qbo_data = ? WHERE user_id = ?`, [dbuser.customer_type, JSON.stringify(dbuser.stripe_data), dbuser.paygo_data, JSON.stringify(dbuser.qbo_data), dbuser.user_id]);
       
 // Mark session logged in with id and redirect per status
     req.session.login = true;
@@ -458,7 +402,7 @@ server.get("/manage", async function(req, res) {
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
   let expiration = null;
   if (dbuser.customer_type == 'manual') {
-    expiration = dbuser.manual_data.expiration;
+    expiration = dbuser.paygo_data.expiration;
   }
   else if (dbuser.customer_type == 'pay-as-you-go') {
     expiration = Number(dbuser.stripe_data.metadata.expiration);
@@ -472,8 +416,6 @@ server.get("/manage", async function(req, res) {
       }
     }
   }
-  console.log(typeof unix, unix);
-  console.log(typeof expiration, expiration);
   return res.render(__dirname+"/html/manage.ejs", {
     terms: config.pages.general.terms,
     disclaimer: config.pages.general.disclaimer,
@@ -562,8 +504,8 @@ server.get("/zonemap", async function(req, res) {
     site_url: config.server.site_url,
     zone_form: config.service_zones.new_zone_form,
     radar_script: radar_script,
-    zoneSelection: user.zone_votes,
-    allocations: user.allocations,
+    zoneSelection: dbuser.zone_votes,
+    allocations: dbuser.allocations,
     zonesreviewed: dbuser.zones_reviewed,
     userid: dbuser.user_id,
     usertype: dbuser.customer_type,
@@ -580,7 +522,6 @@ server.post("/zonemap", async function(req, res) {
   let allocations = req.body.allocations;
   let reviewed = req.body.zonesreviewed;
   await database.updateZoneSelection(userid, selection, allocations, format);
-  await database.calcZones();
   if (usertype != 'inactive' && usertype != 'lifetime-inactive' && config.service_zones.roles_enabled) {
     await database.updateZoneRoles(userid, selection);
   }
