@@ -242,20 +242,34 @@ const database = {
       amortized = 0;
       real = 0;
       natural = 0;
-      if (total === 1) {
-        if (zones.length > 1) {
-          for (let i = 0; i < zones.length; i++) {
-            if (i === 0) {
-              zones[i].votes = 1;
+      if (total < zones.length) {
+          indexes = [];
+          highest = 0;
+          for (let i = 0; i < zones.length; i++) {    
+            if(allocations[i].percent > highest)
+            {
+              highest = allocations[i].percent;
+              indexes = [i];
             }
-            else {
-              zones[i].votes = 0;
+            else if (allocations[i].percent == highest)
+            {
+              indexes.push(i);
             }
+            zones[i].votes = 0;
           }
-        }
-        else {
-          zones[0].votes = 1;
-        }
+          remaining = total;
+          for (let i = 0; i < indexes.length; i++) { 
+            if(remaining > 0)
+            {
+              zones[indexes[i]].votes = Math.floor(total / indexes.length);
+              remaining -= Math.floor(total / indexes.length);
+            }
+          }  
+          while(remaining > 0)
+          {
+            zones[indexes[0]].votes++;
+            remaining--;
+          }
       }
       else {
         if(percentage == 100) {
