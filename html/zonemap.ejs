@@ -1,179 +1,179 @@
-<%- include('./includes/head.ejs') %>
-<% var userzones = [];
-if (zoneSelection) {
-	for (let i = 0 ; i < zoneSelection.length ; i++) {
-		userzones.push(zoneSelection[i].zone_name);
-	}
-} %>
-
-<style>
-  @media (min-width: 320px) and (max-width: 599px) {
-    .column-4 {
-      float: left;
-      display: inline;
-      width: 80%;
-      height: 150px;
-      padding: 10px;
-      margin:5px;
-      border-color: black;
-      border-style: solid;
-      background-color: grey;
-      word-wrap: break-word;
-      overflow-x:auto;
-      cursor: pointer;
-    }
-    .btn {
-      width:70%;
-      margin-bottom: 10px;
-    }
-  }
-
-  @media (min-width: 600px) and (max-width: 1024px) {
-    .column-4 {
-      float: left;
-      display: inline;
-      width: 40%;
-      height: 150px;
-      padding: 10px;
-      margin:5px;
-      border-color: black;
-      border-style: solid;
-      background-color: grey;
-      word-wrap: break-word;
-      overflow-x:auto;
-      cursor: pointer;
-    }
-    .btn {
-      width:150px;
-      margin-right: 10px; 
-      float:right;
-    }
-  }
-
-  @media (min-width: 1025px) and (max-width: 5000px) {
-    .column-4 {
-      float: left;
-      display: inline;
-      width: 21%;
-      height: 150px;
-      padding: 10px;
-      margin:5px;
-      border-color: black;
-      border-style: solid;
-      background-color: grey;
-      word-wrap: break-word;
-      cursor: pointer;
-    }
-    .btn {
-      width:150px;
-      margin-right: 10px; 
-      float:right;
-    }
-  }
-
-  h3 {
-    word-wrap: break-word;
-  }
-
-  .cornerbutton {
-    position:absolute;
-    bottom:0;
-    right:0;
-  }
-</style>
-
-<div class="rcorners1 background">
-  <center>
-    <div>
-      <div>
-        <br>
-        <h1><font color="white">Service Zone Information </font></h1>
-        <button type="button" class="btn" style="background-color: white;" onclick="window.location='<%= zone_form %>'">Request a Zone</button>
-        <button type="button" class="btn" style="background-color: white;" onclick="window.location='/manage'">Manage Zones</button>
-        <button type="button" class="btn" style="background-color: white; " onclick="window.location='/report'">Zone Report</button>
-        <div style="clear: both;"></div>
-        <% if (zonesreviewed == 'false') { %>
-          <h3><font color="white">You must select at least one zone before proceeding</font></h3>
-        <% } %>
-        <p><strong><font color="white">Select District to see Zones</font></strong></p>
-      </div>
-      <div>
-      <% var parentids = [];
-      for (let i = 0; i < zones.length; i++) {
-        if (zones[i].parent_zone === null) {
-          parentids.push(zones[i].zone_name); %>
-          <div class="column-4" onclick="showZones('<%= zones[i].zone_name %>')" style="text-align: center;background-image: url('<%= zones[i].img_url %>');background-size: contain;background-repeat: no-repeat;">
-            <h4 style="padding: 40px 0;"><%= zones[i].zone_name %></h4>
-          </div>
-        <% }
-      } %>
-      </div>
-      <div style="clear: both;"></div>
-      <br>
-      <br>
-      <hr>
-      <form id="zoneForm" method="POST">
-        <input type="hidden" name='selection' id='selection' value="">          
-        <input type="hidden" name='allocations' id='allocations' value="">          
-        <input type="hidden" name='newZone' id='newZone' value="">          
-        <input type="hidden" name='newParentZone' id='newParentZone' value="">          
-        <input type="hidden" name='userid' id='userid' value="<%= userid %>">
-        <input type="hidden" name='usertype' id='usertype' value="<%= usertype %>">
-        <input type="hidden" name='format' id='format' value="<%= format %>">
-        <input type="hidden" name='zonesreviewed' value="<%= zonesreviewed %>">
-        <% for (let i = 0; i < parentids.length; i++) { %>
-          <div class="zones" id="zone<%= parentids[i] %>" style="display:none;">
-            <% for (let j = 0; j < zones.length; j++) {
-              if(zones[j].parent_zone == parentids[i]) { %>
-              <div style="float:left; width: 100%">
-              <div style="text-align:center;display:inline-block;position:relative; background-image: url('<%= zones[j].img_url%>');background-size: cover; background-repeat: no-repeat;" class="column-4">
-              <h4 style="padding: 40px 0;"><%= zones[j].zone_name %></h4>
-              <% if (userzones.includes(zones[j].zone_name) == false) { %>
-                <input type="button" class="cornerbutton" value="Add Zone" onclick="addZone('<%= zones[j].zone_name %>', '<%= zones[j].parent_name %>')"/>
-              <% } %>
-              </div>
-              <span style="float: left; margin-top:15px;">
-                Active Users: <%= zones[j].total_users %><br>
-                Zone Votes: <%= zones[j].total_votes %><br>
-                Assigned Workers: <%= zones[j].assigned_workers %>
-              </span>
-              </div>
-              <% } 
-            } %>
-          </div>
-        <% } %>
-      </form>
-      <div style="clear: both;"></div>
-    </div>     
-  </center>
-</div>
-
-<script>
-function showZones(id) {
-  var divsToHide = document.getElementsByClassName("zones"); //divsToHide is an array
-  for (let i = 0; i < divsToHide.length; i++) {
-    divsToHide[i].style.display = "none"; // depending on what you're doing
-  }
-  document.getElementById('zone'+id).style.display="block";
-}
-function addZone(zoneName, parentName) {
-  if (confirm("Are you sure you want to add this zone to your profile?") == true) {
-    jsonValue = '[';
-    ajson = '[';
-    <% if(zoneSelection) {
-      for (let i = 0; i < zoneSelection.length; i++) { %>
-        jsonValue += '{"zone_name":"<%= zoneSelection[i].zone_name %>","parent_name":"<%= zoneSelection[i].parent_name %>","votes":<%= zoneSelection[i].votes %>,"role_level":<%= zoneSelection[i].role_level %>},';
-        ajson += '{"zone_name":"<%= allocations[i].zone_name %>","percent":<%= allocations[i].percent %>},';
-      <% }
+    <%- include('./includes/head.ejs') %>
+    <% var userzones = [];
+    if (zoneSelection) {
+      for (let i = 0 ; i < zoneSelection.length ; i++) {
+        userzones.push(zoneSelection[i].zone_name);
+      }
     } %>
-    jsonValue += '{"zone_name":"'+zoneName+'","parent_name":"'+parentName+'","votes":0,"role_level":0}]';
-    ajson += '{"zone_name":"'+zoneName+'","percent":0}]';
-    document.getElementById('selection').value = jsonValue;
-    document.getElementById('allocations').value = ajson;
-    document.getElementById('newZone').value = zoneName;
-    document.getElementById('newParentZone').value = parentName;
-    document.getElementById('zoneForm').submit();
-  }
-}
-</script>
-<%- include('./includes/end.ejs') %>
+
+    <style>
+      @media (min-width: 320px) and (max-width: 599px) {
+        .column-4 {
+          float: left;
+          display: inline;
+          width: 80%;
+          height: 150px;
+          padding: 10px;
+          margin:5px;
+          border-color: black;
+          border-style: solid;
+          background-color: grey;
+          word-wrap: break-word;
+          overflow-x:auto;
+          cursor: pointer;
+        }
+        .btn {
+          width:70%;
+          margin-bottom: 10px;
+        }
+      }
+
+      @media (min-width: 600px) and (max-width: 1024px) {
+        .column-4 {
+          float: left;
+          display: inline;
+          width: 40%;
+          height: 150px;
+          padding: 10px;
+          margin:5px;
+          border-color: black;
+          border-style: solid;
+          background-color: grey;
+          word-wrap: break-word;
+          overflow-x:auto;
+          cursor: pointer;
+        }
+        .btn {
+          width:150px;
+          margin-right: 10px; 
+          float:right;
+        }
+      }
+
+      @media (min-width: 1025px) and (max-width: 5000px) {
+        .column-4 {
+          float: left;
+          display: inline;
+          width: 21%;
+          height: 150px;
+          padding: 10px;
+          margin:5px;
+          border-color: black;
+          border-style: solid;
+          background-color: grey;
+          word-wrap: break-word;
+          cursor: pointer;
+        }
+        .btn {
+          width:150px;
+          margin-right: 10px; 
+          float:right;
+        }
+      }
+
+      h3 {
+        word-wrap: break-word;
+      }
+
+      .cornerbutton {
+        position:absolute;
+        bottom:0;
+        right:0;
+      }
+    </style>
+
+    <div class="rcorners1 background">
+      <center>
+        <div>
+          <div>
+            <br>
+            <h1><font color="white">Service Zone Information </font></h1>
+            <button type="button" class="btn" style="background-color: white;" onclick="window.location='<%= zone_form %>'">Request a Zone</button>
+            <button type="button" class="btn" style="background-color: white;" onclick="window.location='/manage'">Manage Zones</button>
+            <button type="button" class="btn" style="background-color: white; " onclick="window.location='/report'">Zone Report</button>
+            <div style="clear: both;"></div>
+            <% if (zonesreviewed == 'false') { %>
+              <h3><font color="white">You must select at least one zone before proceeding</font></h3>
+            <% } %>
+            <p><strong><font color="white">Select District to see Zones</font></strong></p>
+          </div>
+          <div>
+          <% var parentids = [];
+          for (let i = 0; i < zones.length; i++) {
+            if (zones[i].parent_zone === null) {
+              parentids.push(zones[i].zone_name); %>
+              <div class="column-4" onclick="showZones('<%= zones[i].zone_name %>')" style="text-align: center;background-image: url('<%= zones[i].img_url %>');background-size: contain;background-repeat: no-repeat;">
+                <h4 style="padding: 40px 0;"><%= zones[i].zone_name %></h4>
+              </div>
+            <% }
+          } %>
+          </div>
+          <div style="clear: both;"></div>
+          <br>
+          <br>
+          <hr>
+          <form id="zoneForm" method="POST">
+            <input type="hidden" name='selection' id='selection' value="">          
+            <input type="hidden" name='allocations' id='allocations' value="">          
+            <input type="hidden" name='newZone' id='newZone' value="">          
+            <input type="hidden" name='newParentZone' id='newParentZone' value="">          
+            <input type="hidden" name='userid' id='userid' value="<%= userid %>">
+            <input type="hidden" name='usertype' id='usertype' value="<%= usertype %>">
+            <input type="hidden" name='format' id='format' value="<%= format %>">
+            <input type="hidden" name='zonesreviewed' value="<%= zonesreviewed %>">
+            <% for (let i = 0; i < parentids.length; i++) { %>
+              <div class="zones" id="zone<%= parentids[i] %>" style="display:none;">
+                <% for (let j = 0; j < zones.length; j++) {
+                  if(zones[j].parent_zone == parentids[i]) { %>
+                  <div style="float:left; width: 100%">
+                  <div style="text-align:center;display:inline-block;position:relative; background-image: url('<%= zones[j].img_url%>');background-size: cover; background-repeat: no-repeat;" class="column-4">
+                  <h4 style="padding: 40px 0;"><%= zones[j].zone_name %></h4>
+                  <% if (userzones.includes(zones[j].zone_name) == false) { %>
+                    <input type="button" class="cornerbutton" value="Add Zone" onclick="addZone('<%= zones[j].zone_name %>', '<%= zones[j].parent_name %>')"/>
+                  <% } %>
+                  </div>
+                  <span style="float: left; margin-top:15px;">
+                    Active Users: <%= zones[j].total_users %><br>
+                    Zone Votes: <%= zones[j].total_votes %><br>
+                    Assigned Workers: <%= zones[j].assigned_workers %>
+                  </span>
+                  </div>
+                  <% } 
+                } %>
+              </div>
+            <% } %>
+          </form>
+          <div style="clear: both;"></div>
+        </div>     
+      </center>
+    </div>
+
+    <script>
+    function showZones(id) {
+      var divsToHide = document.getElementsByClassName("zones"); //divsToHide is an array
+      for (let i = 0; i < divsToHide.length; i++) {
+        divsToHide[i].style.display = "none"; // depending on what you're doing
+      }
+      document.getElementById('zone'+id).style.display="block";
+    }
+    function addZone(zoneName, parentName) {
+      if (confirm("Are you sure you want to add this zone to your profile?") == true) {
+        jsonValue = '[';
+        ajson = '[';
+        <% if(zoneSelection) {
+          for (let i = 0; i < zoneSelection.length; i++) { %>
+            jsonValue += '{"zone_name":"<%= zoneSelection[i].zone_name %>","parent_name":"<%= zoneSelection[i].parent_name %>","votes":<%= zoneSelection[i].votes %>,"role_level":<%= zoneSelection[i].role_level %>},';
+            ajson += '{"zone_name":"<%= allocations[i].zone_name %>","percent":<%= allocations[i].percent %>},';
+          <% }
+        } %>
+        jsonValue += '{"zone_name":"'+zoneName+'","parent_name":"'+parentName+'","votes":0,"role_level":0}]';
+        ajson += '{"zone_name":"'+zoneName+'","percent":0}]';
+        document.getElementById('selection').value = jsonValue;
+        document.getElementById('allocations').value = ajson;
+        document.getElementById('newZone').value = zoneName;
+        document.getElementById('newParentZone').value = parentName;
+        document.getElementById('zoneForm').submit();
+      }
+    }
+    </script>
+    <%- include('./includes/end.ejs') %>

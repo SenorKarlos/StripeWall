@@ -80,7 +80,7 @@ const maintenance = {
 
     let stripeNoDB = stripe_customers.filter(o1 => !records.some(o2 => o1.description === o2.user_id));
     if (stripeNoDB.length > 0) {
-      console.info("["+bot.getTime("stamp")+"] [maintenance.js] Inserting "+stripeNoDB.length+" users into the Database, est "+((timeout*stripeNoDB.length)/1000)+" seconds.")
+      console.info("["+bot.getTime("stamp")+"] [maintenance.js] Inserting "+stripeNoDB.length+" users into the Database, est "+((timeout * stripeNoDB.length) / 1000)+" seconds.")
       await stripeNoDB.forEach((customer, index) => {
         setTimeout(async function() {
           let data = [];
@@ -114,7 +114,7 @@ const maintenance = {
 
     let dbNoStripe = records.filter(o1 => !stripe_customers.some(o2 => o1.user_id === o2.description));
     if (dbNoStripe.length > 0) {
-      console.info("["+bot.getTime("stamp")+"] [maintenance.js] Creating "+dbNoStripe.length+" users in Stripe, est "+((timeout*dbNoStripe.length)/1000)+" seconds.")
+      console.info("["+bot.getTime("stamp")+"] [maintenance.js] Creating "+dbNoStripe.length+" users in Stripe, est "+((timeout * dbNoStripe.length) / 1000)+" seconds.")
       await dbNoStripe.forEach((record, index) => {
         setTimeout(async function() {
           let created = await stripe.customer.create(record.user_name, record.user_id, record.email);
@@ -182,7 +182,7 @@ const maintenance = {
 
       let qboDB = qbo_customers.filter(o1 => records.some(o2 => o1.CompanyName == o2.user_id));
       if (qboDB.length > 0) {
-        console.info("["+bot.getTime("stamp")+"] [maintenance.js] Updating "+qboDB.length+" DB records with current QBO Data, est "+((timeout*qboDB.length)/1000)+" seconds.");
+        console.info("["+bot.getTime("stamp")+"] [maintenance.js] Updating "+qboDB.length+" DB records with current QBO Data, est "+((timeout * qboDB.length) / 1000)+" seconds.");
         await qboDB.forEach((customer, index) => {
           setTimeout(async function() {
             records.forEach((record) => {
@@ -211,7 +211,7 @@ const maintenance = {
 
       let qboNoDB = qbo_customers.filter(o1 => !records.some(o2 => o1.CompanyName == o2.user_id));
       if (qboNoDB.length > 0) {
-        console.info("["+bot.getTime("stamp")+"] [maintenance.js] Inserting "+qboNoDB.length+" users into the Database and Creating in Stripe, est "+(((timeout*qboNoDB.length)+timeout)/1000)+" seconds.")
+        console.info("["+bot.getTime("stamp")+"] [maintenance.js] Inserting "+qboNoDB.length+" users into the Database and Creating in Stripe, est "+(((timeout * qboNoDB.length) + timeout) / 1000)+" seconds.")
         await qboNoDB.forEach((customer, index) => {
           setTimeout(async function() {
             let data = [];
@@ -258,7 +258,7 @@ const maintenance = {
 
       let dbNoQBO = records.filter(o1 => !qbo_customers.some(o2 => o1.user_id == o2.CompanyName));
       if (dbNoQBO.length > 0) {
-      console.info("["+bot.getTime("stamp")+"] [maintenance.js] Creating "+dbNoQBO.length+" users in QBO, est "+(((timeout*dbNoQBO.length)+(timeout*3))/1000)+" seconds.")
+      console.info("["+bot.getTime("stamp")+"] [maintenance.js] Creating "+dbNoQBO.length+" users in QBO, est "+(((timeout * dbNoQBO.length) + (timeout * 3)) / 1000)+" seconds.")
         await dbNoQBO.forEach((record, index) => {
           setTimeout(async function() {
             let created = await qbo.createCustomer(record.user_name, record.user_id, record.email);
@@ -310,77 +310,72 @@ const maintenance = {
     }
 
     console.info("["+bot.getTime("stamp")+"] [maintenance.js] Checking for Discord profile updates and record validity on "+records.length+" Database Users.");
-    records.forEach((user, index) => {
+    records.forEach((dbuser, index) => {
       let indexcounter = index + 1;
       setTimeout(async function() {
         let member;
         let db_updated = false;
 // Determine guild membership status
         try {
-          member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(user.user_id);
+          member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(dbuser.user_id);
         } catch (e) {
-          return console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") Unable to check Guild Membership.", e);
+          return console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") Unable to check Guild Membership.", e);
         }
 // Cancel any active statuses or subscriptions if they have left, preserve lifetime status as inactive
         if (!member) {
-          if (user.customer_type == "manual" || user.customer_type == "pay-as-you-go" || user.customer_type == "subscriber") {
-            if (user.stripe_data && user.stripe_data.subscriptions.data[0]) {
-              for (let x = 0; x < user.stripe_data.subscriptions.data.length; x++) {
-                await stripe.subscription.cancel(user.user_name, user.user_id, user.stripe_data.subscriptions.data[x].id);
+          if (dbuser.customer_type == "pay-as-you-go" || dbuser.customer_type == "subscriber") {
+            if (dbuser.stripe_data && dbuser.stripe_data.subscriptions.data[0]) {
+              for (let x = 0; x < dbuser.stripe_data.subscriptions.data.length; x++) {
+                await stripe.subscription.cancel(dbuser.user_name, dbuser.user_id, dbuser.stripe_data.subscriptions.data[x].id);
               }
             }
-            let body = {
-              metadata: {
-                pay_as_you_go: 'false',
-                expiration: '0'
-              }
-            };
-            await stripe.customer.update(user.stripe_data.id, body);
-            await database.runQuery(`UPDATE customers SET access_token = NULL, refresh_token = NULL, token_expiration = NULL, customer_type = 'inactive', paygo_data = NULL WHERE user_id = ?`, [user.user_id]);
-            if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, '', 'all', 'remove'); }
+            await database.runQuery(`UPDATE customers SET access_token = NULL, refresh_token = NULL, token_expiration = NULL, customer_type = 'inactive', paygo_data = NULL WHERE user_id = ?`, [dbuser.user_id]);
+            if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, '', 'all', 'remove'); }
             db_updated = true;
-            console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") Member Left Guild. Cancelled Subscriptions/Access.");
-            bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Cancelled Subscriptions/Access.', config.discord.log_channel);
+            console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") Member Left Guild. Cancelled Subscriptions/Access.");
+            bot.sendEmbed(dbuser.user_name, dbuser.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Member Left Guild. Cancelled Subscriptions/Access.', config.discord.log_channel);
             if (indexcounter === records.length) { return maintenance.doneDetails(); }
           }
-          else if (user.customer_type == "lifetime-active" || user.customer_type == "lifetime-inactive" && user.access_token != 'Left Guild') {
-            await database.runQuery(`UPDATE customers SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, customer_type = 'lifetime-inactive' WHERE user_id = ?`, [user.user_id]);
-            if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, '', 'all', 'remove'); }
+          else if (dbuser.customer_type == "lifetime-active" || dbuser.customer_type == "lifetime-inactive" && dbuser.access_token != 'Left Guild') {
+            await database.runQuery(`UPDATE customers SET access_token = 'Left Guild', refresh_token = NULL, token_expiration = NULL, customer_type = 'lifetime-inactive' WHERE user_id = ?`, [dbuser.user_id]);
+            if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, '', 'all', 'remove'); }
             db_updated = true;
-            console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") Lifetime Member Left Guild. Set inactive.");
-            bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Lifetime Member Left Guild. Set inactive.', config.discord.log_channel);
+            console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") Lifetime Member Left Guild. Set inactive.");
+            bot.sendEmbed(dbuser.user_name, dbuser.user_id, 'FF0000', 'Found Database Discrepency ⚠', 'Lifetime Member Left Guild. Set inactive.', config.discord.log_channel);
             if (indexcounter === records.length) { return maintenance.doneDetails(); }
           }
           else {
-            console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") Not a Guild member, User admin or already inactive.");
+            console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") Not a Guild member, User admin or already inactive.");
             if (indexcounter === records.length) { return maintenance.doneDetails(); }
           }
         }
         else {
 // Verify customer_type, roles & record accuracy
           let verified = false;      
-          if (user.customer_type == 'administrator' || user.customer_type == 'lifetime-active' || user.customer_type == 'lifetime-inactive') {
+          if (dbuser.customer_type == 'administrator' || dbuser.customer_type == 'lifetime-active' || dbuser.customer_type == 'lifetime-inactive') {
             verified = true;
-            if (user.customer_type == 'lifetime-inactive') {
-              await bot.assignRole(config.discord.guild_id, user.user_id, config.discord.inactive_lifetime_role, user.user_name);
-              await bot.removeRole(config.discord.guild_id, user.user_id, config.discord.lifetime_role, user.user_name);
-              if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, '', 'all', 'remove'); }
+            dbuser.paygo_data = null;
+            if (dbuser.customer_type == 'lifetime-inactive') {
+              await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.discord.inactive_lifetime_role, dbuser.user_name);
+              await bot.removeRole(config.discord.guild_id, dbuser.user_id, config.discord.lifetime_role, dbuser.user_name);
+              if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, '', 'all', 'remove'); }
             }
-            else if (user.customer_type == 'lifetime-active') {        
-              await bot.assignRole(config.discord.guild_id, user.user_id, config.discord.lifetime_role, user.user_name);
-              await bot.removeRole(config.discord.guild_id, user.user_id, config.discord.inactive_lifetime_role, user.user_name);
-              if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
+            else if (dbuser.customer_type == 'lifetime-active') {
+              await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.discord.lifetime_role, dbuser.user_name);
+              await bot.removeRole(config.discord.guild_id, dbuser.user_id, config.discord.inactive_lifetime_role, dbuser.user_name);
+              if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
             }
           }
-          else if (user.customer_type == 'subscriber') {
-            if (user.stripe_data.subscriptions && user.stripe_data.subscriptions.total_count > 0) {
-              for (let x = 0; x < user.stripe_data.subscriptions.data.length; x++) {
+          else if (dbuser.customer_type == 'subscriber') {
+            if (dbuser.stripe_data.subscriptions && dbuser.stripe_data.subscriptions.total_count > 0) {
+              for (let x = 0; x < dbuser.stripe_data.subscriptions.data.length; x++) {
                 for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                  if (user.stripe_data.subscriptions.data[x].items.data[0].price.id && user.stripe_data.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
-                    if (user.stripe_data.subscriptions.data[x].status == 'active') {
-                      await bot.assignRole(config.discord.guild_id, user.user_id, config.stripe.price_ids[i].role_id, user.user_name);
-                      if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
+                  if (dbuser.stripe_data.subscriptions.data[x].items.data[0].price.id && dbuser.stripe_data.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
+                    if (dbuser.stripe_data.subscriptions.data[x].status == 'active') {
+                      await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
+                      if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
                       verified = true;
+                      dbuser.paygo_data = null;
                     }
                   }
                 }
@@ -388,147 +383,90 @@ const maintenance = {
             }
             if (!verified) {
               for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                await bot.removeRole(config.discord.guild_id, user.user_id, config.stripe.price_ids[i].role_id, user.user_name);
+                await bot.removeRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
               }
-              if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, '', 'all', 'remove'); }
-              user.customer_type = 'inactive';
+              if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, '', 'all', 'remove'); }
+              dbuser.customer_type = 'inactive';
             }
           }
-          else if (user.customer_type == 'pay_as_you_go') {
-            if (user.stripe_data.metadata.pay_as_you_go != 'false' && user.stripe_data.metadata.expiration != '0') {
+          else if (dbuser.customer_type == 'pay-as-you-go') {
+            if (dbuser.paygo_data && dbuser.paygo_data.expiration && dbuser.paygo_data.expiration > unix && dbuser.paygo_data.price_id) {
               for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                if (user.stripe_data.metadata.pay_as_you_go == config.stripe.price_ids[i].id && unix < Number(user.stripe_data.metadata.expiration)) {
-                  await bot.assignRole(config.discord.guild_id, user.user_id, config.stripe.price_ids[i].role_id, user.user_name);
-                  if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
+                if (dbuser.paygo_data.price_id == config.stripe.price_ids[i].id) {
+                  await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i], dbuser.user_name);
+                  if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
                   verified = true;
                 }
               }
             }
             if (!verified) {
-              user.customer_type = 'inactive';
-              let body = {
-                metadata: {
-                  pay_as_you_go: 'false',
-                  expiration: '0'
-                }
-              };
-              user.stripe_data = await stripe.customer.update(user.stripe_data.id, body);
-              user.customer_type = 'inactive';
               for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                await bot.removeRole(config.discord.guild_id, user.user_id, config.stripe.price_ids[i].role_id, user.user_name);
+                await bot.removeRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
               }
-              if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, '', 'all', 'remove'); }
+              if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, '', 'all', 'remove'); }
+              dbuser.customer_type = 'inactive';
+              dbuser.paygo_data = null;
             }
           }
-          else if (user.customer_type == 'manual') {
-            if (user.paygo_data && user.paygo_data.expiration) {
-              if (user.paygo_data.expiration > unix) {
-                verified = true;
-                if (user.paygo_data.role_id) {
-                  await bot.assignRole(config.discord.guild_id, user.user_id, user.paygo_data.role_id, user.user_name);
-                  if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
-                }
-                else {
-                  console.info("["+bot.getTime("stamp")+"] [wall.js] User "+user.user_name+" ("+user.user_id+") has current manual expiry and no role_id. Assign role and Update the database.");
-                  bot.sendEmbed(user.user_name, user.user_id, "FF0000", "Unable to assign role", "User "+user.user_name+" ("+user.user_id+") has current manual expiry and no role_id. Assign role and Update the database.", config.discord.log_channel);
-                  if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
-                }
-              }
-            }
-            if (!verified) {
-              if (user.paygo_data.role_id) {
-                await bot.removeRole(config.discord.guild_id, user.user_id, user.paygo_data.role_id, user.user_name);
-              }
-              else {
+          if (dbuser.customer_type == 'inactive') {
+            if (dbuser.stripe_data.subscriptions && dbuser.stripe_data.subscriptions.total_count > 0) {
+              for (let x = 0; x < dbuser.stripe_data.subscriptions.data.length; x++) {          
                 for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                  await bot.removeRole(config.discord.guild_id, user.user_id, config.stripe.price_ids[i].role_id, user.user_name);
-                }
-              }
-              if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, '', 'all', 'remove'); }
-              user.customer_type = 'inactive';
-              user.paygo_data = null;
-            }
-          }
-          if (user.customer_type == 'inactive') {
-            if (user.stripe_data.subscriptions && user.stripe_data.subscriptions.total_count > 0) {
-              for (let x = 0; x < user.stripe_data.subscriptions.data.length; x++) {          
-                for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                  if (user.stripe_data.subscriptions.data[x].items.data[0].price.id && user.stripe_data.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
-                    if (user.stripe_data.subscriptions.data[x].status != 'active') {
-                      await bot.assignRole(config.discord.guild_id, user.user_id, config.stripe.price_ids[i].role_id, user.user_name);
-                      if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
-                      user.customer_type = 'subscriber';
-                      let body = {
-                        metadata: {
-                          pay_as_you_go: 'false',
-                          expiration: '0'
-                        }
-                      };
-                      user.stripe_data = await stripe.customer.update(user.stripe_data.id, body);
+                  if (dbuser.stripe_data.subscriptions.data[x].items.data[0].price.id && dbuser.stripe_data.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
+                    if (dbuser.stripe_data.subscriptions.data[x].status != 'active') {
+                      await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
+                      if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
+                      dbuser.customer_type = 'subscriber';
+                      dbuser.paygo_data = null;
                     }
                   }
                 }
               }
             }
-            if (user.stripe_data.metadata.pay_as_you_go != 'false') {
-              if (user.stripe_data.metadata.expiration != '0') {
-                if (Number(user.stripe_data.metadata.expiration) > unix) {
-                  for (let i = 0; i < config.stripe.price_ids.length; i++) {
-                    if (user.stripe_data.metadata.pay_as_you_go == config.stripe.price_ids[i].id) {
-                      await bot.assignRole(config.discord.guild_id, user.user_id, config.stripe.price_ids[i].role_id, user.user_name);
-                      if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
-                      user.customer_type = 'pay-as-you-go';
-                    }
+            if (dbuser.paygo_data) {
+              if (dbuser.paygo_data.expiration && dbuser.paygo_data.expiration > unix && dbuser.paygo_data.price_id) {
+                for (let i = 0; i < config.stripe.price_ids.length; i++) {
+                  if (dbuser.paygo_data.price_id == config.stripe.price_ids[i].id) {
+                    await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
+                    if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
+                    dbuser.customer_type = 'pay-as-you-go';
                   }
                 }
               }
               else {
-                console.info("["+bot.getTime("stamp")+"] [wall.js] User "+user.user_name+" ("+user.user_id+") inactive but has Pay-As-You-Go price id with no expiration, abort login to investigate.");
-                bot.sendEmbed(user.user_name, user.user_id, "FF0000", "Price ID Discrepancy Found", "User "+user.user_name+" ("+user.user_id+") inactive but has Pay-As-You-Go id with no expiration and cannot log in.", config.discord.log_channel);
-                return res.redirect(`/error`);
-              }
-            }
-            if (user.paygo_data) {
-              if (user.paygo_data.expiration && user.paygo_data.expiration > unix) {
-                user.customer_type = 'manual';
-                if (user.paygo_data.role_id) {
-                  await bot.assignRole(config.discord.guild_id, user.user_id, user.paygo_data.role_id, user.user_name);
-                  if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
-                }
-                else {
-                  console.info("["+bot.getTime("stamp")+"] [wall.js] User "+user.user_name+" ("+user.user_id+") was inactive but has current manual expiry and no role_id. Assign role and Update the database.");
-                  bot.sendEmbed(user.user_name, user.user_id, "FF0000", "Unable to assign role", "User "+user.user_name+" ("+user.user_id+") was inactive but has current manual expiry and no role_id. Assign role and Update the database.", config.discord.log_channel);
-                  if (config.service_zones.roles_enabled) { await database.updateZoneRoles(user.user_id, ''); }
-                }
+                dbuser.paygo_data = null;
               }
             }
           }
-          await database.runQuery(`UPDATE customers SET customer_type = ?, stripe_data = ?, paygo_data = ?, qbo_data = ? WHERE user_id = ?`, [user.customer_type, JSON.stringify(user.stripe_data), JSON.stringify(user.paygo_data), JSON.stringify(user.qbo_data), user.user_id]);
-
-          if (user.customer_type != 'inactive' && user.customer_type != 'lifetime-inactive') {
+          if (dbuser.paygo_data) {
+            dbuser.paygo_data = JSON.stringify(dbuser.paygo_data);
+          }
+          await database.runQuery(`UPDATE customers SET customer_type = ?, stripe_data = ?, paygo_data = ?, qbo_data = ? WHERE user_id = ?`, [dbuser.customer_type, JSON.stringify(dbuser.stripe_data), dbuser.paygo_data, JSON.stringify(dbuser.qbo_data), dbuser.user_id]);
+// Verify discord account details with oauth or member data if active
+          if (dbuser.customer_type != 'inactive' && dbuser.customer_type != 'lifetime-inactive') {
             let data = {};
-            if (user.access_token && user.refresh_token) {
-              if (!user.token_expiration) { user.token_expiration = 1 }
-              if (unix-86400 > user.token_expiration) {
+            if (dbuser.access_token && dbuser.refresh_token) {
+              if (!dbuser.token_expiration) { dbuser.token_expiration = 1 }
+              if (unix - 86400 > dbuser.token_expiration) {
                 try {
-                  data = await oauth2.refreshAccessToken(user.refresh_token, user);
+                  data = await oauth2.refreshAccessToken(dbuser.refresh_token, dbuser.user_id, dbuser.user_name);
                   if (data.response) {
                     throw data.response;
                   }
                 } catch (e) {
                   if (e.status === 400) {
-                    await database.runQuery(`UPDATE customers SET access_token = NULL, refresh_token = NULL, token_expiration = NULL WHERE user_id = ?`, [user.user_id]);
+                    await database.runQuery(`UPDATE customers SET access_token = NULL, refresh_token = NULL, token_expiration = NULL WHERE user_id = ?`, [dbuser.user_id]);
                     db_updated = true;
-                    console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") Unable to refresh Discord token, cleared Tokens.");
+                    console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") Unable to refresh Discord token, cleared Tokens.");
                     if (indexcounter === records.length) { return maintenance.doneDetails(); }
                   }
                   else {
-                    console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") Unable to refresh Discord token.", e);
+                    console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") Unable to refresh Discord token.", e);
                     if (indexcounter === records.length) { return maintenance.doneDetails(); }
                   }
                 }
               }
-              else { data.access_token = user.access_token; }
+              else { data.access_token = dbuser.access_token; }
               let discord;
               try {
                 discord = await oauth2.fetchUser(data.access_token);
@@ -537,63 +475,63 @@ const maintenance = {
                 }
               } catch (e) {
                 if (e.status === 401) {
-                  await database.runQuery(`UPDATE customers SET access_token = NULL, refresh_token = NULL, token_expiration = NULL WHERE user_id = ?`, [user.user_id]);
+                  await database.runQuery(`UPDATE customers SET access_token = NULL, refresh_token = NULL, token_expiration = NULL WHERE user_id = ?`, [dbuser.user_id]);
                   db_updated = true;
-                  console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") Unable to fetch Discord information, cleared Tokens.");
+                  console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") Unable to fetch Discord information, cleared Tokens.");
                   if (indexcounter === records.length) { return maintenance.doneDetails(); }
                 }
                 else {
-                  console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") Unable to fetch Discord information.", e);
+                  console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") Unable to fetch Discord information.", e);
                   if (indexcounter === records.length) { return maintenance.doneDetails(); }
                 }
               }
-              if (discord.id != user.user_id) { // check if token pulled right ID result, log and alert if not
-                console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") User Fetch resulted in ID mismatch, Administration should investigate (Discord Check).");
-                bot.sendEmbed(user.user_name, user.user_id, 'FF0000', 'User Fetch resulted in ID mismatch ⚠', 'Administration should investigate (Discord Check)', config.discord.log_channel);
+              if (discord.id != dbuser.user_id) { // check if token pulled right ID result, log and alert if not
+                console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") User Fetch resulted in ID mismatch, Administration should investigate (Discord Check).");
+                bot.sendEmbed(dbuser.user_name, dbuser.user_id, 'FF0000', 'User Fetch resulted in ID mismatch ⚠', 'Administration should investigate (Discord Check)', config.discord.log_channel);
                 if (indexcounter === records.length) { return maintenance.doneDetails(); }
               }
               else { // end ID/Token result mismatch
-                if (discord.username != user.user_name || discord.email != user.email) {
+                if (discord.username != dbuser.user_name || discord.email != dbuser.email) {
                   let body = {
                     name: discord.username,
                     email: discord.email
                   };
-                  let stripe_data = await stripe.customer.update(user.stripe_data.id, body);
-                  let qbo_data = user.qbo_data;
+                  let stripe_data = await stripe.customer.update(dbuser.stripe_data.id, body);
+                  let qbo_data = dbuser.qbo_data;
                   if (config.qbo.enabled) {
                     qbo_data.GivenName = qbo_data.DisplayName = qbo_data.PrintOnCheckName = discord.username;
                     qbo_data.PrimaryEmailAddr.Address = discord.email;
                     qbo_data = await qbo.updateCustomer(qbo_data);
                   }
-                  database.runQuery(`UPDATE customers SET user_name = ?, email = ?, stripe_data = ?, qbo_data = ? WHERE user_id = ?`, [discord.username, discord.email, JSON.stringify(stripe_data), JSON.stringify(qbo_data), user.user_id]);
+                  database.runQuery(`UPDATE customers SET user_name = ?, email = ?, stripe_data = ?, qbo_data = ? WHERE user_id = ?`, [discord.username, discord.email, JSON.stringify(stripe_data), JSON.stringify(qbo_data), dbuser.user_id]);
                   db_updated = true;
                 } // end detail mismatch
               } // end ID/Token result match
             }
             else { // end access and refresh token found
-              if (member.user.username != user.user_name) { // check username on member object only
+              if (member.user.username != dbuser.user_name) { // check username on member object only
                 let body = { name: member.user.username };
-                let stripe_data = await stripe.customer.update(user.stripe_data.id, body);
-                let qbo_data = user.qbo_data;
+                let stripe_data = await stripe.customer.update(dbuser.stripe_data.id, body);
+                let qbo_data = dbuser.qbo_data;
                 if (config.qbo.enabled) {
                   qbo_data.GivenName = qbo_data.DisplayName = qbo_data.PrintOnCheckName = discord.username;
                   qbo_data = await qbo.updateCustomer(qbo_data);
                 }
-                database.runQuery(`UPDATE customers SET user_name = ?, stripe_data = ?, qbo_data = ? WHERE user_id = ?`, [member.user.username, JSON.stringify(stripe_data), JSON.stringify(qbo_data), user.user_id]);
+                database.runQuery(`UPDATE customers SET user_name = ?, stripe_data = ?, qbo_data = ? WHERE user_id = ?`, [member.user.username, JSON.stringify(stripe_data), JSON.stringify(qbo_data), dbuser.user_id]);
                 db_updated = true;
               } // end detail mismatch
             } // end access and refresh token not found
             if (db_updated) {
-              console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") Updated Database details.");
+              console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") Updated Database details.");
               if (indexcounter === records.length) { return maintenance.doneDetails(); }
             }
             else {
-              console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") Verified Database details.");
+              console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") Verified Database details.");
               if (indexcounter === records.length) { return maintenance.doneDetails(); }
             }
           }
           else { // end type not inactive
-            console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+user.user_name+" ("+user.user_id+" | "+user.stripe_data.id+") User is Inactive, Skip.");
+            console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+records.length+") "+dbuser.user_name+" ("+dbuser.user_id+" | "+dbuser.stripe_data.id+") User is Inactive, Skip.");
             if (indexcounter === records.length) { return maintenance.doneDetails(); }
           }
         } // end is guild member
@@ -616,7 +554,7 @@ const maintenance = {
         let members = guild.roles.cache.find(role => role.id === config.stripe.price_ids[i].role_id).members.map(m => m); // map role members from price
         roleArray.push(members);
         let timer = members.length * 1000;
-        if (timer == 0) { timer = 1000; }
+        if (timer === 0) { timer = 1000; }
         timer = timer + delayArray[i];
         delayArray.push(timer);
         if (i === config.stripe.price_ids.length - 1) { return maintenance.checkDiscordRoles(roleArray, delayArray); }
@@ -627,7 +565,7 @@ const maintenance = {
     let unix = moment().unix();
     roleArray.forEach((members, i) => {
       setTimeout(function() {
-        if (members.length == 0) {
+        if (members.length === 0) {
           console.info("["+bot.getTime("stamp")+"] [maintenance.js] "+members.length+" Users in Role "+config.stripe.price_ids[i].role_id+".");
           if (i === config.stripe.price_ids.length - 1) { return maintenance.checkLifetime(); }
         }
@@ -648,38 +586,12 @@ const maintenance = {
               record = record[0][0];
               let verified = true;
               switch(true) {
-                case (record.customer_type == 'manual'): // check manual
-                  if (!record.paygo_data || !record.paygo_data.expiration || record.paygo_data.expiration < unix) {
+                case (record.customer_type == 'pay-as-you-go'):
+                  if (!record.paygo_data || !record.paygo_data.expiration || record.paygo_data.expiration < unix || !record.paygo_data.price_id || record.paygo_data.price_id != config.stripe.price_ids[i].price_id) {
                     await bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                     await database.runQuery(`UPDATE customers SET customer_type = 'inactive', paygo_data = NULL WHERE user_id = ?`, [record.user_id]);
-                    if (config.service_zones.roles_enabled) { await database.updateZoneRoles(record[0].user_id, '', 'all', 'remove'); }
-                    console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.user.stripe_data.id+") Manually Tracked User Expired, Removing Role & Flags.");
-                    bot.sendDM(member, 'Service Access Ended', 'Your access has expired. Please sign up again to continue.', 'FFFF00');
-                    bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Manually Tracked User Expired ⚠', 'Removed Role & Flags. (Role Check)', config.discord.log_channel);
-                    verified = false;
-                    if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return maintenance.checkLifetime(); }
-                  }
-                  else {
-                    if (record.paygo_data.role_id) {
-                      if (record.paygo_data.role_id != config.stripe.price_ids[i].role_id) {
-                        await bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
-                        console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.user.stripe_data.id+") Manually Tracked User in Wrong Role, Removing Role.");
-                        verified = false;
-                      }
-                    }
-                    else {
-                      console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.user.stripe_data.id+") Manually Tracked User has no stored Role ID, Correct database ASAP. (Role Check)");
-                      bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Manually Tracked User has no stored Role ID ⚠', 'Correct database ASAP. (Role Check)', config.discord.log_channel);
-                      verified = false;
-                      if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return maintenance.checkLifetime(); }
-                    }
-                  }
-                  break;
-                case (record.customer_type == 'pay-as-you-go'):
-                  if (!record.stripe_data || record.stripe_data.metadata.pay_as_you_go != config.stripe.price_ids[i].id || Number(record.stripe_data.metadata.expiration) < unix) {
-                    bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
-                    console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.user.stripe_data.id+") User found expired or without/wrong Price ID, Removed Role.");
-                    bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'User found expired or without a Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                    console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.user.stripe_data.id+") Pay-As-You-Go User in role without valid information, Removed Role.");
+                    bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Pay-As-You-Go User in role without valid information ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                     verified = false;
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return maintenance.checkLifetime(); }
                   }
@@ -687,25 +599,23 @@ const maintenance = {
                 case (record.customer_type == 'subscriber'):
                   if (!record.stripe_data || !record.stripe_data.subscriptions || record.stripe_data.subscriptions.total_count === 0) {
                     bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
-                    console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.user.stripe_data.id+") User found with missing stripe/subscription info, Removed Role.");
-                    bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'User found with missing stripe/subscription info ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                    console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.user.stripe_data.id+") Subscriber found in role without valid information, Removed Role.");
+                    bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Subscriber found in role with missing stripe/subscription info ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                     verified = false;
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return maintenance.checkLifetime(); }
                   }
-                  else {
-                    let id_found = false;
-                    for (let x = 0; x > record.stripe_data.subscriptions.data.length; x++) {
-                      if (record.stripe_data.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
-                        id_found = true;
-                      }
+                  let id_found = false;
+                  for (let x = 0; x > record.stripe_data.subscriptions.data.length; x++) {
+                    if (record.stripe_data.subscriptions.data[x].items.data[0].price.id == config.stripe.price_ids[i].id) {
+                      id_found = true;
                     }
-                    if (id_found) {
-                      bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
-                      console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.user.stripe_data.id+") User found in role without Price ID, Removed Role.");
-                      bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'User found in role without Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
-                      verified = false;
-                      if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return maintenance.checkLifetime(); }
-                    }
+                  }
+                  if (!id_found) {
+                    bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
+                    console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.user.stripe_data.id+") Subscriber found in role without matching Price ID, Removed Role.");
+                    bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Subscriber found in role without matching Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                    verified = false;
+                    if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return maintenance.checkLifetime(); }
                   }
                   break;
                 case (record.customer_type == 'inactive' || record.customer_type == 'lifetime-active' || record.customer_type == 'lifetime-inactive'):

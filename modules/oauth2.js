@@ -30,7 +30,7 @@ const oauth2 = {
 //------------------------------------------------------------------------------
 //  REFRESH ACCESS TOKEN
 //------------------------------------------------------------------------------
-  refreshAccessToken: function(refresh_token, user) {
+  refreshAccessToken: function(refresh_token, user_id, user_name) {
     return new Promise(async function(resolve) {
       let unix = moment().unix();
       let data = `client_id=${oauth2.client_id}&client_secret=${oauth2.client_secret}&grant_type=refresh_token&refresh_token=${refresh_token}&redirect_uri=${config.discord.redirect_url}&scope=${oauth2.scope}`;
@@ -41,9 +41,9 @@ const oauth2 = {
         headers: headers
       }).then(async function(response) {
         console.info('['+bot.getTime('stamp')+'] [oauth2.js] Successfully Refreshed a Token', response.data);
-        let token_expiration = (unix+response.data.expires_in);
-        database.runQuery(`UPDATE customers SET access_token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?`, [response.data.access_token, response.data.refresh_token, token_expiration, user.user_id]);
-        console.info('['+bot.getTime('stamp')+'] [oauth2.js] '+user.user_name+' ('+user.user_id+') Updated Discord OAuth2 info in Database.');
+        let token_expiration = (unix + response.data.expires_in);
+        database.runQuery(`UPDATE customers SET access_token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?`, [response.data.access_token, response.data.refresh_token, token_expiration, user_id]);
+        console.info('['+bot.getTime('stamp')+'] [oauth2.js] '+user_name+' ('+user_id+') Updated Discord OAuth2 info in Database.');
         return resolve(response.data);
       }).catch(error => {
         return resolve(error);

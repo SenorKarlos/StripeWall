@@ -73,7 +73,7 @@ server.get("/login", async (req, res) => {
     return res.redirect(`https://discord.com/api/oauth2/authorize?response_type=code&client_id=${oauth2.client_id}&scope=${oauth2.scope}&redirect_uri=${config.discord.redirect_url}`);
   }
   else {
-// Fetch user tokens with code
+// Fetch discord tokens with code
     try {
       data = await oauth2.fetchAccessToken(req.query.code);
       if (data.response) {
@@ -84,7 +84,7 @@ server.get("/login", async (req, res) => {
       console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to fetch Tokens", e);
       return res.redirect(`/error`);
     }
-    let token_expiration = (unix+data.expires_in);
+    let token_expiration = (unix + data.expires_in);
     try {
       user = await oauth2.fetchUser(data.access_token);
       if (user.response) {
@@ -155,10 +155,6 @@ server.get("/login", async (req, res) => {
           name: dbuser.user_name,
           description: dbuser.user_id,
           email: dbuser.email,
-          metadata: {
-            pay_as_you_go: 'false',
-            expiration: '0'
-          }
         }
         dbuser.stripe_data = await stripe.customer.create(body);
       } catch (e) {
@@ -172,22 +168,6 @@ server.get("/login", async (req, res) => {
         bot.sendEmbed(dbuser.user_name, dbuser.user_id, "FF0000", "User ID Discrepancy Found", "User "+dbuser.user_name+"'s Discord ID ("+dbuser.user_id+") not found on matched Stripe Record ("+dbuser.stripe_data.id+","+dbuser.stripe_data.description+")", config.discord.log_channel);
         req.session = null;
         return res.redirect(`/error`);
-      }
-      if (JSON.stringify(dbuser.stripe_data.metadata) === '{}') {
-        try {
-          let body = {
-            metadata: {
-              pay_as_you_go: 'false',
-              expiration: '0'
-            }
-          };
-          dbuser.stripe_data = await stripe.customer.update(dbuser.stripe_data.id, body);
-          dbuser.stripe_data = await stripe.customer.fetch(dbuser.stripe_data.id);
-        } catch (e) {
-          req.session = null;
-          console.info("["+bot.getTime("stamp")+"] [wall.js] Failed to Update Stripe Customer", e);
-          return res.redirect(`/error`);
-        }
       }
       if (dbuser.email != dbuser.stripe_data.email || dbuser.user_name != dbuser.stripe_data.name) {
         try {
@@ -242,6 +222,7 @@ server.get("/login", async (req, res) => {
     let verified = false;      
     if (dbuser.customer_type == 'administrator' || dbuser.customer_type == 'lifetime-active' || dbuser.customer_type == 'lifetime-inactive') {
       verified = true;
+      dbuser.paygo_data = null;
       if (dbuser.customer_type == 'lifetime-inactive') {
         await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.discord.inactive_lifetime_role, dbuser.user_name);
         await bot.removeRole(config.discord.guild_id, dbuser.user_id, config.discord.lifetime_role, dbuser.user_name);
@@ -401,11 +382,8 @@ server.get("/manage", async function(req, res) {
   let radar_script = '';
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
   let expiration = null;
-  if (dbuser.customer_type == 'manual') {
+  if (dbuser.customer_type == 'pay-as-you-go') {
     expiration = dbuser.paygo_data.expiration;
-  }
-  else if (dbuser.customer_type == 'pay-as-you-go') {
-    expiration = Number(dbuser.stripe_data.metadata.expiration);
   }
   else if (dbuser.customer_type == 'subscriber') {
     for (let x = 0; x < dbuser.stripe_data.subscriptions.data.length; x++) {
