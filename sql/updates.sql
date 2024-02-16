@@ -60,3 +60,4 @@ ALTER TABLE `customers`
 	CHANGE COLUMN `token_expiration` `token_expiration` INT(10) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci' AFTER `refresh_token`;
   ADD COLUMN `paygo_data` JSON NULL AFTER `stripe_data`,
 	DROP COLUMN `expiration`;
+  ADD COLUMN `donation_data` JSON NULL DEFAULT NULL AFTER `paygo_data`;

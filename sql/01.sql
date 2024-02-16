@@ -46,6 +46,7 @@ CREATE TABLE `customers` (
 	`zones_reviewed` VARCHAR(255) NULL DEFAULT 'false' COLLATE 'utf8mb4_unicode_ci',
 	`stripe_data` JSON NULL DEFAULT NULL,
 	`paygo_data` JSON NULL DEFAULT NULL,
+	`donation_data` JSON NULL DEFAULT NULL,
 	`tax_rate` FLOAT NULL DEFAULT NULL,
 	`charge_list` JSON NULL DEFAULT NULL,
 	`total_spend` FLOAT NOT NULL DEFAULT '0',
