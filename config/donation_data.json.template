@@ -1,5 +1,6 @@
 {
   "counter": 0,
   "total": 0,
-  "role_ids" ["<sub_role_id>", "<pmt_role_id>"]
+  "sub_active": false,
+  "role_ids": ["<all_role_id>", "<sub_role_id>"]
 }

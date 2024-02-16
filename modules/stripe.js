@@ -152,8 +152,8 @@ const stripe = {
             quantity: 1,
           },
         ],
-        success_url: config.pages.checkout.success_url,
-        cancel_url: config.pages.checkout.cancel_url,
+        success_url: config.pages.manage.success_url,
+        cancel_url: config.pages.manage.cancel_url,
       };
       if (config.stripe.taxes.active) {
         if (config.stripe.taxes.automatic) {
@@ -212,7 +212,7 @@ const stripe = {
         let customerID = req.body.customerID;
         let session = await stripe_js.billingPortal.sessions.create({
           customer: customerID,
-          return_url: config.server.site_url,
+          return_url: config.pages.manage.return_url,
         });
         return res.redirect(session.url);
       } catch (e) {
@@ -459,19 +459,22 @@ const stripe = {
                   dbuser.donation_data = {};
                   dbuser.donation_data.counter = 1;
                   dbuser.donation_data.total = fee_amount;
+                  dbuser.donation_data.sub_active = false;
                   dbuser.donation_data.role_ids = ["", ""];
                 }
                 else {
                   dbuser.donation_data.counter = dbuser.donation_data.counter + 1;
                   dbuser.donation_data.total = dbuser.donation_data.total + fee_amount;
-                }
-                if (config.stripe.donation_ids[d].role_id) {
-                  await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.donation_ids[d].role_id, dbuser.user_name, dbuser.access_token);
-                  if (data.object.mode == 'subscription') {
-                    dbuser.donation_data.role_ids[0] = config.stripe.donation_ids[d].role_id;
+                  if (config.stripe.donation_ids[d].mode == 'subscription') {
+                    dbuser.donation_data.sub_active = true;
                   }
-                  else if (data.object.mode == 'payment') {
-                    dbuser.donation_data.role_ids[1] = config.stripe.donation_ids[d].role_id;
+                }
+                if (config.stripe.donation_ids[0].role_id != "") {
+                  dbuser.donation_data.role_ids[0] = config.stripe.donation_ids[0].role_id;
+                  await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.donation_ids[0].role_id, dbuser.user_name, dbuser.access_token);
+                  if (data.object.mode == 'subscription' && config.stripe.donation_ids[1].role_id != "" && config.stripe.donation_ids[1].role_id != config.stripe.donation_ids[0].role_id) {
+                    dbuser.donation_data.role_ids[1] = config.stripe.donation_ids[1].role_id;
+                    await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.donation_ids[1].role_id, dbuser.user_name, dbuser.access_token);
                   }
                 }
                 let welcome = config.discord.donation_welcome.replace('%usertag%', '<@'+dbuser.user_id+'>');
@@ -559,16 +562,8 @@ const stripe = {
                   fee_amount = data.object.amount / 100;
                   tax_amount = 0;
                   type_text = '✅ Donation Payment to '+config.server.site_name+' Successful! 💰';
-                  if (!dbuser.donation_data) {
-                    dbuser.donation_data = {};
-                    dbuser.donation_data.counter = 1;
-                    dbuser.donation_data.total = fee_amount;
-                    dbuser.donation_data.role_ids = ["", ""];
-                  }
-                  else {
-                    dbuser.donation_data.counter = dbuser.donation_data.counter + 1;
-                    dbuser.donation_data.total = dbuser.donation_data.total + fee_amount;
-                  }
+                  dbuser.donation_data.counter = dbuser.donation_data.counter + 1;
+                  dbuser.donation_data.total = dbuser.donation_data.total + fee_amount;
                 }
                 tax_info = '**(Fee: $'+parseFloat(fee_amount).toFixed(2)+', Tax: $'+parseFloat(tax_amount).toFixed(2)+')**';
                 if (member) { bot.sendDM(member, type_text, 'Amount: **$'+parseFloat(data.object.amount / 100).toFixed(2)+'** '+tax_info, '00FF00'); }
@@ -749,12 +744,13 @@ const stripe = {
               }
             }
             for (let d = 0; d < config.stripe.donation_ids.length; d++) {
-              if (checkout.line_items.data[0].price.id == config.stripe.donation_ids[d].id) {
+              if (data.object.items.data[0].price.id == config.stripe.donation_ids[d].id) {
                 bot.sendDM(member, 'Donation Subscription Deleted! ⚰', 'Thank you again for your generosity! If you did not cancel, your payment has failed. Please log in and select a new plan if you wish to continue.', 'FF0000');
                 bot.sendEmbed(dbuser.user_name, dbuser.user_id, 'FF0000', 'Donation Subscription Deleted! ⚰', '', config.discord.log_channel);
-                if (dbuser.donation_data.role_ids[0] != "" && dbuser.donation_data.role_ids[0] != dbuser.donation_data.role_ids[1]) {
-                  bot.removeRole(config.discord.guild_id, dbuser.user_id, dbuser.donation_data.role_ids[0], dbuser.user_name);
-                  dbuser.donation_data.role_ids[0] = "";
+                dbuser.donation_data.sub_active = false;
+                if (dbuser.donation_data.role_ids[1] != "" && dbuser.donation_data.role_ids[1] != dbuser.donation_data.role_ids[0]) {
+                  bot.removeRole(config.discord.guild_id, dbuser.user_id, dbuser.donation_data.role_ids[1], dbuser.user_name);
+                  dbuser.donation_data.role_ids[1] = "";
                 }
                 return database.runQuery(`UPDATE customers SET stripe_data = ?, donation_data = ? WHERE user_id = ?`, [JSON.stringify(customer), JSON.stringify(dbuser.donation_data), dbuser.user_id]);
               }
@@ -765,6 +761,17 @@ const stripe = {
 //------------------------------------------------------------------------------
       case 'customer.subscription.updated':
         console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Updated Subcscription webhook for '+data.object.customer);
+        let subscription_type;
+        for (let i = 0; i < config.stripe.price_ids.length; i++) {
+          if (data.object.items.data[0].price.id == config.stripe.price_ids[i].id) {
+            subscription_type = 'service';
+          }
+        }
+        for (let d = 0; d < config.stripe.donation_ids.length; d++) {
+          if (data.object.items.data[0].price.id == config.stripe.donation_ids[d].id) {
+            subscription_type = 'donation';
+          }
+        }
         customer = await stripe.customer.fetch(data.object.customer);
         dbuser = await database.fetchUser(customer.description);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
@@ -776,22 +783,34 @@ const stripe = {
           case (!data.previous_attributes.cancel_at_period_end && data.object.cancel_at_period_end):
             database.runQuery(`UPDATE customers SET stripe_data = ? WHERE user_id = ?`, [JSON.stringify(customer), dbuser.user_id]);
             let cancel = new Date(data.object.cancel_at * 1000).toLocaleString(config.server.tz_locale, { timeZone: config.server.time_zone });
-            bot.sendEmbed(dbuser.user_name, dbuser.user_id, 'FF0000', 'Subscription Pending Cancellation. ⚰', 'Canceles at: '+cancel+', '+config.server.tz_text+'.', config.discord.log_channel);
-            return bot.sendDM(member, 'Subscription Pending Cancellation. ⚰', 'Canceles at: '+cancel+'.\nIf you change your mind, simply log back in and resume!', 'FF0000');
+            if (subscription_type == 'service') {
+              type_text = 'Services Subscription Pending Cancellation. ⚰'
+            }
+            else if (subscription_type = 'donation') {
+              type_text = 'Donation Subscription Pending Cancellation. ⚰'
+            }
+            bot.sendEmbed(dbuser.user_name, dbuser.user_id, 'FF0000', type_text, 'Canceles at: '+cancel+', '+config.server.tz_text+'.', config.discord.log_channel);
+            return bot.sendDM(member, type_text, 'Canceles at: '+cancel+', '+config.server.tz_text+'.\nIf you change your mind, simply log back in and resume!', 'FF0000');
           case (data.previous_attributes.cancel_at_period_end && !data.object.cancel_at_period_end):
             database.runQuery(`UPDATE customers SET stripe_data = ? WHERE user_id = ?`, [JSON.stringify(customer), dbuser.user_id]);
-            bot.sendEmbed(dbuser.user_name, dbuser.user_id, '00FF00', 'Subscription Resumed! ✅', '', config.discord.log_channel);
-            return bot.sendDM(member, 'Subscription Resumed! ✅', 'Thank you for continuing! Your business is appreciated!', '00FF00');
+            if (subscription_type == 'service') {
+              type_text = 'Services Subscription Resumed! ✅'
+            }
+            else if (subscription_type = 'donation') {
+              type_text = 'Donation Subscription Resumed! ✅'
+            }
+            bot.sendEmbed(dbuser.user_name, dbuser.user_id, '00FF00', type_text, '', config.discord.log_channel);
+            return bot.sendDM(member, type_text, 'Thank you for continuing! Your business is appreciated!', '00FF00');
           default:
             if (data.object.status == "active" && data.previous_attributes.items) {
               for (let i = 0; i < config.stripe.price_ids.length; i++) {
                 if (data.object.items.data[0].price.id == config.stripe.price_ids[i].id) {
                   bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name, dbuser.access_token);
-                  bot.sendDM(member, 'Subscription Sucessfully Updated! ✅', 'Thank you for your continuing business!', '00FF00');
+                  bot.sendDM(member, 'Services Subscription Sucessfully Updated! ✅', 'Thank you for your continuing business!', '00FF00');
                   bot.sendEmbed(dbuser.user_name, dbuser.user_id, '00FF00', 'Subscription Sucessfully Updated! ✅', '', config.discord.log_channel);
                   database.runQuery(`UPDATE customers SET stripe_data = ? WHERE user_id = ?`, [JSON.stringify(customer), dbuser.user_id]);
                   for (let x = 0; x < config.stripe.price_ids.length; x++) {
-                    if (data.previous_attributes.items.data[0].price.id == config.stripe.price_ids[x].id) {
+                    if (data.previous_attributes.items.data[0].price.id == config.stripe.price_ids[x].id && data.previous_attributes.items.data[0].price.id != data.object.items.data[0].price.id) {
                       bot.removeRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[x].role_id, dbuser.user_name);
                     }
                   }
@@ -801,7 +820,7 @@ const stripe = {
             }
             else {
               database.runQuery(`UPDATE customers SET stripe_data = ? WHERE user_id = ?`, [JSON.stringify(customer), dbuser.user_id]);
-              return console.info('['+bot.getTime('stamp')+'] [stripe.js] Webhook for '+data.object.customer+' likely requires no action, saved customer object and logging.\n', data);
+              return console.info('['+bot.getTime('stamp')+'] [stripe.js] Webhook for '+data.object.customer+' likely requires no action, saved customer object and logging:', data);
             }
         } return;
     } return;
