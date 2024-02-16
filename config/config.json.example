@@ -65,6 +65,8 @@
       "terms": "Do not redistribute scanned data. The sole exception being Raids you plan to attend ONLY. Doing so will result in immediate revokation of all access.",
       "disclaimer": "We are not associated with Niantic, ThePokemonCompany, Nintendo, or any related subsidiaries.",
       "warning": "All services are subject to downtimes for various reasons. Please monitor the Discord Server for Updates.",
+      "active_life_intro": "Your services are currently activated. Press the button below to deactivate services.",
+      "inactive_life_intro": "Your services are currently deactivated. Press the button below to reactivate services.",
       "background": "https://i.imgur.com/lOllpRn.png",
       "outer_background": "white",
       "border_color": "FF0000",
@@ -72,17 +74,10 @@
       "text_color": "red"
     },
     "checkout": {
-      "welcome": "Choose your preferred billing frequency and commitment below to get started. A Valid <Country> address & payment method are required. Applicable taxes will be calculated and added during checkout. Thank you for your support!",
+      "product_intro": "Choose your preferred billing frequency and commitment below to get started. A Valid <Country> address & payment method are required. Applicable taxes will be calculated and added during checkout. Thank you for your support!",
+      "donation_intro": "Donate below to increase votes and help maintain and improve services!",
       "success_url": "https://yourdomain.site/manage",
       "cancel_url": "https://yourdomain.site/manage"
-    },
-    "lifetime": {
-      "active_life_intro": "Your services are currently activated. Please visit the #setup-instructions channel in Discord to ensure all required steps have been completed.",
-      "inactive_life_intro": "Your services are currently deactivated."
-    },
-    "manual": {
-      "manual_intro": "Your plan is currently being handled manually by Administration.",
-      "manual_text": "You may purchase a new plan up to 24 hours before, or after:"
     },
     "blocked": {
       "background": "https://i.imgur.com/uNBScc6.png",

@@ -90,7 +90,7 @@ bot.assignRole = async function (server_id, user_id, role_id, username, access_t
   }
   else {
     console.info('['+bot.getTime('stamp')+'] [bot.js] User already has role.');
-    return false;
+    return true;
   }
 }
 //------------------------------------------------------------------------------
@@ -103,7 +103,7 @@ bot.removeRole = async function (server_id, user_id, role_id, username) {
     member = await bot.guilds.cache.get(server_id).members.cache.get(user_id);
   } catch (e) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Bot likely not in server or lacking permissions. ', e);
-    return;
+    return false;
   }
   if (!member) {
     console.info('['+bot.getTime('stamp')+'] [bot.js] Unable to remove the role from the User.');
@@ -116,7 +116,7 @@ bot.removeRole = async function (server_id, user_id, role_id, username) {
   }
   else {
     console.info('['+bot.getTime('stamp')+'] [bot.js] User does not have role.');
-    return false;
+    return true;
   }
 }
 //------------------------------------------------------------------------------

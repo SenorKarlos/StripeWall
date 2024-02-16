@@ -306,6 +306,14 @@ server.get("/login", async (req, res) => {
         }
       }
     }
+    if (dbuser.donation_data) {
+      if (dbuser.donation_data.role_ids[0] != "") {
+        await bot.assignRole(config.discord.guild_id, dbuser.user_id, dbuser.donation_data.role_ids[0], dbuser.user_name);
+      }
+      if (dbuser.donation_data.role_ids[1] != "") {
+        await bot.assignRole(config.discord.guild_id, dbuser.user_id, dbuser.donation_data.role_ids[1], dbuser.user_name);
+      }
+    }
     if (dbuser.paygo_data) {
       dbuser.paygo_data = JSON.stringify(dbuser.paygo_data);
     }
@@ -313,7 +321,7 @@ server.get("/login", async (req, res) => {
       
 // Mark session logged in with id and redirect per status
     req.session.login = true;
-    req.session.discord_id = user.id;
+    req.session.discord_id = dbuser.user_id;
     if (dbuser.terms_reviewed == 'false') {
       return res.redirect(`/terms`);
     }
@@ -409,10 +417,14 @@ server.get("/manage", async function(req, res) {
     tz_locale: config.server.tz_locale,
     time_zone: config.server.time_zone,
     lifetime_role: config.discord.lifetime_role,
+    lifetime_intro: config.pages.general.active_lifetime_intro,
     inactive_lifetime_role: config.discord.inactive_lifetime_role,
+    inactive_lifetime_intro: config.pages.general.inactive_lifetime_intro,
     tz_text: config.server.tz_text,
     plans: config.stripe.price_ids,
+    product_intro: config.pages.checkout.product_intro,
     donations: config.stripe.donation_ids,
+    donation_intro: config.pages.checkout.donation_intro,
     voteworth: config.service_zones.vote_worth,
     available: dbuser.total_votes,
     allocations: dbuser.allocations,

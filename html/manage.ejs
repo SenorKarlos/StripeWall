@@ -14,6 +14,13 @@
       else {
         allocations[i] = JSON.parse('{"zone_name":"'+zones[i].zone_name+'","percent":0}');
       }
+    }
+    var expireDate = '';
+    if (expiration) {
+      expireDate = new Date(expiration * 1000).toLocaleString(tz_locale, { timeZone: time_zone })+' '+tz_text;
+    } 
+    else {
+      expireDate = 'N/A';
     } %>
 
     <style>
@@ -168,14 +175,7 @@
             <h2 style="color:white">You currently have <u><%= cx_type %></u> access</h1>
           <% } %>
           <br>
-          <% if(cx_type == 'subscriber') {
-            var expireDate = '';
-            if (expiration) {
-              expireDate = new Date(expiration * 1000).toLocaleString(tz_locale, { timeZone: time_zone })+' '+tz_text;
-            } 
-            else {
-              expireDate = 'N/A'
-            } %>
+          <% if(cx_type == 'subscriber') { %>
             <div>
               <p><strong><font color="white">Your current subscription renews on <b><%= expireDate %></b></font></strong></p>
               <p><strong><font color="white">Manage your subscription using the customer portal below</font></strong></p>
@@ -187,14 +187,7 @@
               <br>
             </div>
           <% }
-          else if (cx_type == 'pay-as-you-go') {
-            var expireDate = '';
-             if (expiration) {
-              expireDate = new Date(expiration * 1000).toLocaleString(tz_locale, { timeZone: time_zone })+' '+tz_text;
-            } 
-            else {
-              expireDate = 'N/A'
-            } %>
+          else if (cx_type == 'pay-as-you-go') { %>
             <div>
               <p><strong><font color="white">Your Pay-As-You-Go access purchase expires on <b><%= expireDate %></b></font></strong></p>
               <p><strong><font color="white">Top up or subscribe during the last 48 hours using the checkout below</font></strong></p>
@@ -217,7 +210,7 @@
           <% }
           else if (cx_type == 'inactive') { %>
             <div>
-              <p><strong><font color="white">To have access to services and have your votes counted to the pool, choose one of the plans below.</b></font></strong></p>
+              <p><strong><font color="white"><%= product_intro %></b></font></strong></p>
               <form id="planForm" action="/create-checkout-session" method="POST">
                 <select class="planSelect" name="checkout" id="checkout">
                   <option value="none" selected disabled>See plans</option>
@@ -241,7 +234,7 @@
                 <div>
                   <form action="/lifetime-toggle" method="POST" id="lifetimeForm">
                     <input name="action" type="hidden" value ="activate">
-                    <p><strong><font color="white">Your services are currently deactivated. Press the button below to reactivate services</b></font></strong></p>
+                    <p><strong><font color="white"><%= inactive_lifetime_intro %></b></font></strong></p>
                     <br>
                     <br>
                     <button type="button" onclick="confirmToggle()">Switch to active</button>
@@ -254,8 +247,7 @@
                 <div>
                   <form action="/lifetime-toggle" method="POST" id="lifetimeForm">
                     <input name="action" type="hidden" value ="deactivate">
-                    <p><strong><font color="white"> Your services are currently activated. Please visit the #setup-instructions channel in Discord to ensure all required steps have been completed.</b></font></strong></p>
-                    <p><strong><font color="white">To disable services and remove your votes from the pool, press the button below.</b></font></strong></p>
+                    <p><strong><font color="white"><%= active_lifetime_intro %></b></font></strong></p>
                     <br>
                     <br>
                     <button type="button" onclick="confirmToggle()">Switch to inactive</button>
@@ -266,7 +258,7 @@
               <% } 
             }
             else { %>
-              <p><strong><font color="white"> Your services are currently activated. Please visit the #setup-instructions channel in Discord to ensure all required steps have been completed.</b></font></strong></p>
+              <p><strong><font color="white"><%= active_lifetime_intro %></b></font></strong></p>
             <% }
           } %>
           <p><strong><font color="black">Questions? Tips? Issues? Check out our FAQ <a href="#">here</a> or support chat <a href="#">here</a>. Travelling? Join other Alert servers by setting temporary zones with no votes on your profile!</font>
@@ -341,7 +333,7 @@
             <br>
             <br>
             <% if (cx_type != 'lifetime-inactive' && cx_type != 'inactive') { %>
-              <p><strong><font color="white">Donate below to increase votes and help maintain and improve services!</font></strong></p>
+              <p><strong><font color="white"><%= donation_intro %></font></strong></p>
               <form action="/create-checkout-session" method="POST">
                 <select class="donateSelect" name="donate">
                   <option selected disabled>See donations</option>
