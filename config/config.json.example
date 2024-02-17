@@ -71,7 +71,7 @@
       "title_color": "black",
       "text_color": "red"
     },
-    "checkout": {
+    "manage": {
       "product_intro": "Choose your preferred billing frequency and commitment below to get started. A Valid <Country> address & payment method are required. Applicable taxes will be calculated and added during checkout. Thank you for your support!",
       "donation_intro": "Donate below to increase votes and help maintain and improve services!",
       "active_life_intro": "Your services are currently activated. Press the button below to deactivate services.",
