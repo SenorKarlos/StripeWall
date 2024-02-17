@@ -230,72 +230,64 @@ const database = {
     }
   },
   allocateVotes: async function(userid, allocations, percentage) {
-    let query = `SELECT customer_type, total_votes, zone_votes FROM customers WHERE user_id = ?`;
-    let data = [userid];
-    result = await database.db.query(query, data);
+    result = await database.db.query(`SELECT customer_type, total_votes, zone_votes FROM customers WHERE user_id = ?`, [userid]);
     if(result[0][0].zone_votes != null) {
-      allocations = JSON.parse(allocations)
-      zones = result[0][0].zone_votes;
-      total = result[0][0].total_votes;
-      type = result[0][0].customer_type;
-      sum = 0;
-      amortized = 0;
-      real = 0;
-      natural = 0;
-      if (total < zones.length) {
-          indexes = [];
-          highest = 0;
-          for (let i = 0; i < zones.length; i++) {    
-            if(allocations[i].percent > highest)
-            {
-              highest = allocations[i].percent;
-              indexes = [i];
-            }
-            else if (allocations[i].percent == highest)
-            {
-              indexes.push(i);
-            }
-            zones[i].votes = 0;
-          }
-          remaining = total;
-          for (let i = 0; i < indexes.length; i++) { 
-            if(remaining > 0)
-            {
-              zones[indexes[i]].votes = Math.floor(total / indexes.length);
-              remaining -= Math.floor(total / indexes.length);
-            }
-          }  
-          while(remaining > 0)
-          {
-            zones[indexes[0]].votes++;
-            remaining--;
-          }
+      if (typeof allocations == "string") {
+        allocations = JSON.parse(allocations);
       }
-      else {
-        if(percentage == 100) {
-          length = zones.length - 1;
+      let zones = [];
+      result[0][0].zone_votes.forEach(zone => {
+        zones.push(zone);
+      });
+      let remaining = total = result[0][0].total_votes;
+      let voteCalc = 0;
+      // Sort the allocations array
+      allocations.sort((a, b) => { // If percent is the same, maintain the original order
+        if (a.percent === b.percent) {
+          return 0;
         }
-        else {
-          length = zones.length;
-        }
-        for (let i = 0; i < length; i++) {
-          real = (allocations[i].percent/100) * total + amortized;
-          natural = Math.floor(real);
-          amortized = real - natural;
-          zones[i].votes = natural;
-          sum += natural;        
-          if(percentage == 100) {
-            zones[i].votes = total - sum;
+        return b.percent - a.percent; // Otherwise, sort by percent in descending order
+      });
+      // Sort the zones array based on allocations order
+      zones = zones.sort((a, b) => { // Find the indexes of a.zone_name and b.zone_name in allocations array
+        let index_a = allocations.findIndex(item => item.zone_name === a.zone_name);
+        let index_b = allocations.findIndex(item => item.zone_name === b.zone_name);
+        return index_a - index_b; // Compare the indexes
+      });
+      for (let i = 0; i < zones.length; i++) {
+        if (remaining > 0) { // we have votes to allocate
+          voteCalc = Math.floor(total * (allocations[i].percent / 100)); // see what the math says, starting with highest %
+          if (voteCalc < 1) { voteCalc = 1; } // as we run into low %, protect partial votes
+          remaining = remaining - voteCalc; // deduct our votes from the remaining
+          if (remaining < 0) { // if this resulted in a negative remaining
+            voteCalc = voteCalc + remaining; // put it back
+            remaining = 0; // set reamining to zero
           }
+        }
+        else { // no votes left
+          voteCalc = 0; // give the zone no votes
+        }
+        zones[i].votes = voteCalc
+      }
+      if (remaining > 0) { // if we have leftovers
+        for (let i = 0; i < zones.length; i++) {
+          if (remaining > 0) { // add one and take one from remaining to highest %'s until gone
+            zones[i].votes++
+            remaining--
+          }
+          else { break; } // quit when none left
         }
       }
-      zone_votes = JSON.stringify(zones);
-      query = `UPDATE customers SET zone_votes = ? WHERE user_id = ?`;
-      data = [zone_votes, userid];
-      await database.db.query(query, data);
+      // Restore the zones array back to original order
+      zones = zones.sort((a, b) => {
+        let index_a = result[0][0].zone_votes.findIndex(item => item.zone_name === a.zone_name);
+        let index_b = result[0][0].zone_votes.findIndex(item => item.zone_name === b.zone_name);
+        return index_a - index_b;
+      });
+      database.runQuery(`UPDATE customers SET zone_votes = ? WHERE user_id = ?`, [JSON.stringify(zones), userid]);
     }
   },
-  updateZoneOverride: async function(value,zone) {
+  updateZoneOverride: async function(value, zone) {
     if (value == '') {
       value = 0;
     }

@@ -393,7 +393,7 @@ const maintenance = {
             if (dbuser.paygo_data && dbuser.paygo_data.expiration && dbuser.paygo_data.expiration > unix && dbuser.paygo_data.price_id) {
               for (let i = 0; i < config.stripe.price_ids.length; i++) {
                 if (dbuser.paygo_data.price_id == config.stripe.price_ids[i].id) {
-                  await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i], dbuser.user_name);
+                  await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
                   if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
                   verified = true;
                 }

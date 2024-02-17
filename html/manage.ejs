@@ -175,10 +175,10 @@
             <h2 style="color:white">You currently have <u><%= cx_type %></u> access</h1>
           <% } %>
           <br>
-          <% if(cx_type == 'subscriber') { %>
+          <% if (cx_type == 'subscriber') { %>
             <div>
-              <p><strong><font color="white">Your current subscription renews on <b><%= expireDate %></b></font></strong></p>
-              <p><strong><font color="white">Manage your subscription using the customer portal below</font></strong></p>
+              <p><strong><font color="white">Your current service subscription renews on <b><%= expireDate %></b></font></strong></p>
+              <p><strong><font color="white">Manage your service <% if (cx_type == 'subscriber') { %>or donation <% } %>subscription using the customer portal below</font></strong></p>
               <form action="/create-customer-portal-session" method="POST">
                 <input type="hidden" name="customerID" value="<%= stripe_id %>">
                 <input type="submit" value="Customer Portal">
@@ -260,7 +260,19 @@
             else { %>
               <p><strong><font color="white"><%= active_lifetime_intro %></b></font></strong></p>
             <% }
-          } %>
+          }
+          if (donation_sub && cx_type != 'subscriber') { %>
+            <div>
+              <p><strong><font color="white">You currently have an active donation subscription. Thank you for your ongoing support!</b></font></strong></p>
+              <p><strong><font color="white">Manage your subscription using the customer portal below</font></strong></p>
+              <form action="/create-customer-portal-session" method="POST">
+                <input type="hidden" name="customerID" value="<%= stripe_id %>">
+                <input type="submit" value="Customer Portal">
+              </form>
+              <br>
+              <br>
+            </div>
+          <% } %>
           <p><strong><font color="black">Questions? Tips? Issues? Check out our FAQ <a href="#">here</a> or support chat <a href="#">here</a>. Travelling? Join other Alert servers by setting temporary zones with no votes on your profile!</font>
           <br>
           <hr>
@@ -338,9 +350,11 @@
               <form id="donateForm" action="/create-checkout-session" method="POST">
                 <select class="donateSelect" id="donate" name="donate">
                   <option value="none" selected disabled>See donations</option>
-                  <% for (let i = 0; i < donations.length; i++) { %>
-                    <option value="<%= stripe_id + ':' + donations[i].id + ':' + donations[i].mode + ':donation' %>"><%= donations[i].title %></option>
-                  <% } %>
+                  <% for (let i = 0; i < donations.length; i++) {
+                    if (donations[i].mode == 'payment' || donations[i].mode == 'subscription' && !donation_sub) { %>
+                      <option value="<%= stripe_id + ':' + donations[i].id + ':' + donations[i].mode + ':donation' %>"><%= donations[i].title %></option>
+                    <% }
+                  } %>
                 </select>
                <br>
                <br>

@@ -261,7 +261,7 @@ server.get("/login", async (req, res) => {
       if (dbuser.paygo_data && dbuser.paygo_data.expiration && dbuser.paygo_data.expiration > unix && dbuser.paygo_data.price_id) {
         for (let i = 0; i < config.stripe.price_ids.length; i++) {
           if (dbuser.paygo_data.price_id == config.stripe.price_ids[i].id) {
-            await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i], dbuser.user_name);
+            await bot.assignRole(config.discord.guild_id, dbuser.user_id, config.stripe.price_ids[i].role_id, dbuser.user_name);
             if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, ''); }
             verified = true;
           }
@@ -402,6 +402,10 @@ server.get("/manage", async function(req, res) {
       }
     }
   }
+  let donation_sub = false;
+  if (dbuser.donation_data) {
+    donation_sub = dbuser.donation_data.sub_active;
+  }
   return res.render(__dirname+"/html/manage.ejs", {
     terms: config.pages.general.terms,
     disclaimer: config.pages.general.disclaimer,
@@ -425,6 +429,7 @@ server.get("/manage", async function(req, res) {
     product_intro: config.pages.manage.product_intro,
     donations: config.stripe.donation_ids,
     donation_intro: config.pages.manage.donation_intro,
+    donation_sub: donation_sub,
     voteworth: config.service_zones.vote_worth,
     available: dbuser.total_votes,
     allocations: dbuser.allocations,
