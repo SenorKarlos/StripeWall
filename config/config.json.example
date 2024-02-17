@@ -69,7 +69,9 @@
       "outer_background": "white",
       "border_color": "FF0000",
       "title_color": "black",
-      "text_color": "red"
+      "text_color": "red",
+      "highlight_color": "blue",
+      "button_color": "white"
     },
     "manage": {
       "product_intro": "Choose your preferred billing frequency and commitment below to get started. A Valid <Country> address & payment method are required. Applicable taxes will be calculated and added during checkout. Thank you for your support!",

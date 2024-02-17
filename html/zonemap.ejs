@@ -87,15 +87,15 @@
         <div>
           <div>
             <br>
-            <h1><font color="white">Service Zone Information </font></h1>
-            <button type="button" class="btn" style="background-color: white;" onclick="window.location='<%= zone_form %>'">Request a Zone</button>
-            <button type="button" class="btn" style="background-color: white;" onclick="window.location='/manage'">Manage Zones</button>
-            <button type="button" class="btn" style="background-color: white; " onclick="window.location='/report'">Zone Report</button>
+            <h1><font color="<%= title_color %>">Service Zone Information </font></h1>
+            <button type="button" class="btn" style="background-color: <%= button_color %>;" onclick="window.location='<%= zone_form %>'">Request a Zone</button>
+            <button type="button" class="btn" style="background-color: <%= button_color %>;" onclick="window.location='/manage'">Manage Zones</button>
+            <button type="button" class="btn" style="background-color: <%= button_color %>; " onclick="window.location='/report'">Zone Report</button>
             <div style="clear: both;"></div>
             <% if (zonesreviewed == 'false') { %>
-              <h3><font color="white">You must select at least one zone before proceeding</font></h3>
+              <h3><font color="<%= text_color %>">You must select at least one zone before proceeding</font></h3>
             <% } %>
-            <p><strong><font color="white">Select District to see Zones</font></strong></p>
+            <p><strong><font color="<%= title_color %>">Select District to see Zones</font></strong></p>
           </div>
           <div>
           <% var parentids = [];
