@@ -670,6 +670,16 @@ ontime({
   ot.done();
   return;
 });
+if (config.maintenance.on_startup) {
+  console.info("["+bot.getTime("stamp")+"] [wall.js] Starting Maintenance Routines.");
+  maintenance.checkDetails();
+}
+if (config.service_zones.enabled) {
+  let zones = await database.fetchZones();
+  if (!zones) {
+    
+  }
+}
 //------------------------------------------------------------------------------
 //  LISTEN ON SPECIFIED PORT
 //------------------------------------------------------------------------------

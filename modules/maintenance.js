@@ -595,11 +595,11 @@ const maintenance = {
               let verified = true;
               switch(true) {
                 case (record.customer_type == 'pay-as-you-go'):
-                  if (!record.paygo_data || !record.paygo_data.expiration || record.paygo_data.expiration < unix || !record.paygo_data.price_id || record.paygo_data.price_id != config.stripe.price_ids[i].price_id) {
+                  if (!record.paygo_data || !record.paygo_data.expiration || record.paygo_data.expiration < unix || !record.paygo_data.price_id || record.paygo_data.price_id != config.stripe.price_ids[i].id) {
                     await bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                     await database.runQuery(`UPDATE customers SET customer_type = 'inactive', paygo_data = NULL WHERE user_id = ?`, [record.user_id]);
                     console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.stripe_data.id+") Pay-As-You-Go User in role without valid information, Removed Role.");
-                    bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Pay-As-You-Go User in role without valid information ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                    bot.sendEmbed(member.user.username, member.user.id, 'FF0000', 'Pay-As-You-Go User in role without valid information ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                     verified = false;
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return maintenance.checkLifetime(); }
                   }
@@ -608,7 +608,7 @@ const maintenance = {
                   if (!record.stripe_data || !record.stripe_data.subscriptions || record.stripe_data.subscriptions.total_count === 0) {
                     bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                     console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.stripe_data.id+") Subscriber found in role without valid information, Removed Role.");
-                    bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Subscriber found in role with missing stripe/subscription info ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                    bot.sendEmbed(member.user.username, member.user.id, 'FF0000', 'Subscriber found in role with missing stripe/subscription info ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                     verified = false;
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return maintenance.checkLifetime(); }
                   }
@@ -621,14 +621,14 @@ const maintenance = {
                   if (!id_found) {
                     bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
                     console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | "+record.stripe_data.id+") Subscriber found in role without matching Price ID, Removed Role.");
-                    bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Subscriber found in role without matching Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                    bot.sendEmbed(member.user.username, member.user.id, 'FF0000', 'Subscriber found in role without matching Price ID ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                     verified = false;
                     if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return maintenance.checkLifetime(); }
                   }
                   break;
                 case (record.customer_type == 'inactive' || record.customer_type == 'lifetime-active' || record.customer_type == 'lifetime-inactive'):
                   bot.removeRole(config.discord.guild_id, member.user.id, config.stripe.price_ids[i].role_id, member.user.username);
-                  bot.sendEmbed(member.user.username, member.user.user_id, 'FF0000', 'Lifetime or Inactive User found with a Price Role ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
+                  bot.sendEmbed(member.user.username, member.user.id, 'FF0000', 'Lifetime or Inactive User found with a Price Role ⚠', 'Removed Role. (Role Check)', config.discord.log_channel);
                   console.info("["+bot.getTime("stamp")+"] [maintenance.js] ("+indexcounter+" of "+members.length+") "+member.user.username+" ("+member.user.id+" | Not Found) is Lifetime or Inactive, removed Role.");
                   verified = false;
                   if (i === config.stripe.price_ids.length - 1 && indexcounter === members.length) { return maintenance.checkLifetime(); }
@@ -660,9 +660,7 @@ const maintenance = {
       }
       let activeUsers = [];
       let inactiveUsers = [];
-      let query = `SELECT * FROM customers WHERE customer_type = 'lifetime-active' OR customer_type = 'lifetime-inactive'`;
-      let data = [];
-      records = await database.db.query(query, data);
+      records = await database.db.query(`SELECT * FROM customers WHERE customer_type = 'lifetime-active' OR customer_type = 'lifetime-inactive'`, []);
       if (!records[0]) {
         return maintenance.syncLifetime(active, inactive, activeUsers, inactiveUsers);
       }

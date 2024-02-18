@@ -33,10 +33,8 @@ const database = {
 //  USER TABLE FETCH
 //------------------------------------------------------------------------------
   fetchUser: async function(user_id) {
-    let query = `SELECT * FROM customers WHERE user_id = ?`;
-    let data = [user_id];
-    result = await database.db.query(query, data)
-    if(result[0][0]) {
+    result = await database.db.query(`SELECT * FROM customers WHERE user_id = ?`, [user_id]);
+    if (result[0][0]) {
       return result[0][0];
     }
     else {
@@ -47,30 +45,21 @@ const database = {
 //  USER TERMS REVIEWED
 //------------------------------------------------------------------------------
   termsReviewed: async function(user_id) {
-    let query = `UPDATE customers SET terms_reviewed = 'true' WHERE user_id = ?`;
-    let data = [user_id];
-    await database.db.query(query, data)
+    await database.db.query(`UPDATE customers SET terms_reviewed = 'true' WHERE user_id = ?`, [user_id]);
   },
 //------------------------------------------------------------------------------
 //  ZONE VOTE/WORKER FUNCTIONS
 //------------------------------------------------------------------------------
   updateZoneSelection: async function(user_id, selection, allocations, format) {
-    let query = '';
-    let data = [];
     if (selection != '') {
-      query = `UPDATE customers SET zone_votes = ?, allocations = ?, zones_reviewed = ?, format = ? WHERE user_id = ?`;
-      data = [selection, allocations, 'true', format, user_id];
+      await database.db.query(`UPDATE customers SET zone_votes = ?, allocations = ?, zones_reviewed = ?, format = ? WHERE user_id = ?`, [selection, allocations, 'true', format, user_id]);
     }
     else {
-      query = `UPDATE customers SET allocations = ?, zones_reviewed = ?, format = ? WHERE user_id = ?`;
-      data = [allocations, 'true', format, user_id];
+      await database.db.query(`UPDATE customers SET allocations = ?, zones_reviewed = ?, format = ? WHERE user_id = ?`, [allocations, 'true', format, user_id]);
     }
-      await database.db.query(query, data);
   },
   updateZoneRoles: async function(user_id, selection, target = 'all', action = 'add', roleLevel = 0) {
-    query = "SELECT user_name, access_token, zone_votes FROM customers WHERE user_id = ?";
-    data = [user_id];
-    result = await database.db.query(query, data);
+    result = await database.db.query(`SELECT user_name, access_token, zone_votes FROM customers WHERE user_id = ?`, [user_id]);
     username = result[0][0].user_name;
     access_token = result[0][0].access_token;
     if (selection == '') { // this happens when on $ mode. This will be set later.
@@ -95,9 +84,7 @@ const database = {
       }
       update = false;  // flag. If any changes happen with upcoming loop, update zone_votes.
       for (let i = 0; i < zones.length; i++) {
-        query = "SELECT zone_roles FROM service_zones WHERE zone_name = ?";
-        data = [zones[i].zone_name];
-        result = await database.db.query(query, data);
+        result = await database.db.query(`SELECT zone_roles FROM service_zones WHERE zone_name = ?`, [zones[i].zone_name]);
         if (result[0][0].zone_roles != null) {
           roles = result[0][0].zone_roles;
           originalLevel = zones[i].role_level;
@@ -105,7 +92,7 @@ const database = {
           for (let j = 0 ; j < roles.length ; j++) {
             if (roles[j].assign_on == 'any_area') {
               if (action == 'remove') {
-                if (zones[i].role_level > 0) { //this triggers when user is going inactive
+                if (zones[i].role_level > 0) { // this triggers when user is going inactive
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed any_area role:", zones[i].zone_name, roles[j].roleID, username);
                   bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
                   temp_level = 0;
@@ -121,7 +108,7 @@ const database = {
             }
             else if (roles[j].assign_on == 'any_votes') {
               if (action == 'remove') {
-                if (zones[i].role_level > 1) { //this triggers when user is going inactive
+                if (zones[i].role_level > 1) { // this triggers when user is going inactive
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed any_votes role:", zones[i].zone_name, roles[j].roleID, username);
                   bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
                   temp_level = 0;
@@ -134,7 +121,7 @@ const database = {
                   bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token)
                   if (temp_level < 2) { temp_level = 2; }
                 }
-                else if (zones[i].votes == 0 && zones[i].role_level > 1) { //votes went from non-zero to zero. Remove role.
+                else if (zones[i].votes == 0 && zones[i].role_level > 1) { // votes went from non-zero to zero. Remove role.
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed any_votes role:", zones[i].zone_name, roles[j].roleID, username);
                   bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
                   if (temp_level == 0) { temp_level = 1; }
@@ -143,14 +130,14 @@ const database = {
             }
             else if (roles[j].assign_on == 'most_votes') {
               if (action == 'remove') {
-                if (zones[i].role_level > 2) { //this triggers when user is going inactive
+                if (zones[i].role_level > 2) { // this triggers when user is going inactive
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed most_votes role:", zones[i].zone_name, roles[j].roleID, username);
                   bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
                   temp_level = 0;
                 }
               }
               else {
-                if (lastHighestZone == zones[i].zone_name && lastHighestZone != highestZone) { //previous highest vote has been outvoted. Remove role
+                if (lastHighestZone == zones[i].zone_name && lastHighestZone != highestZone) { // previous highest vote has been outvoted. Remove role
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed most_votes role:", zones[i].zone_name, roles[j].roleID, username);
                   bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
                   if (zones[i].votes == 0) {
@@ -160,7 +147,7 @@ const database = {
                     temp_level = 2;
                   }
                 }
-                else if (highestZone == zones[i].zone_name && lastHighestZone != zones[i].zone_name) { //if zone is new highest, assign.
+                else if (highestZone == zones[i].zone_name && lastHighestZone != zones[i].zone_name) { // if zone is new highest, assign.
                   console.info("["+bot.getTime("stamp")+"] [database.js] Added most_votes role:", zones[i].zone_name, roles[j].roleID, username);
                   bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token);
                   temp_level = 3;
@@ -175,15 +162,11 @@ const database = {
         }
       }
       if (update) {
-        query = 'UPDATE customers SET zone_votes = ? WHERE user_id = ?';
-        data = [JSON.stringify(zones),user_id];
-        await database.db.query(query, data);
+        await database.db.query(`UPDATE customers SET zone_votes = ? WHERE user_id = ?`, [JSON.stringify(zones),user_id]);
       }
     }
-    else { //one zone specified. This means we're removing roles
-      query = "SELECT zone_roles FROM service_zones WHERE zone_name = ?";
-      data = [target];
-      result = await database.db.query(query, data);
+    else { // one zone specified. This means we're removing roles
+      result = await database.db.query(`SELECT zone_roles FROM service_zones WHERE zone_name = ?`, [target]);
       if (result[0][0].zone_roles != null) {
         roles = result[0][0].zone_roles;
         for (let j = 0; j < roles.length; j++) {
@@ -200,20 +183,18 @@ const database = {
             bot.removeRole(roles[j].serverID, user_id,roles[j].roleID, username)
           }
         }
-        if (roleLevel == 3) { //this zone had the most votes. Find the next zone with most votes.
+        if (roleLevel == 3) { // this zone had the most votes. Find the next zone with most votes.
           highest = 0;
           selection = -1;
-          for (let i = 0 ; i < zones.length ; i++) { //find highest vote before assigning roles
+          for (let i = 0 ; i < zones.length ; i++) { // find highest vote before assigning roles
             if (zones[i].votes > highest) {
               highest = zones[i].votes;
               selection = i;
             }
           }
-          if (selection != -1) {  //next highest vote count found. Search zone role and update
+          if (selection != -1) { // next highest vote count found. Search zone role and update
             zones[selection].role_level = 3;
-            query = "SELECT zone_roles FROM service_zones WHERE zone_name = ?";
-            data = [zones[selection].zone_name];
-            result = await database.db.query(query, data);
+            result = await database.db.query(`SELECT zone_roles FROM service_zones WHERE zone_name = ?`, [zones[selection].zone_name]);
             roles = result[0][0].zone_roles;
             for (let i = 0 ; i < roles.length ; i++) {
               if (roles[i].assign_on == 'most_votes') {
@@ -221,9 +202,7 @@ const database = {
                 bot.assignRole(roles[i].serverID,user_id,roles[i].roleID, username, access_token);
               }
             }
-            query = 'UPDATE customers SET zone_votes = ? WHERE user_id = ?';
-            data = [JSON.stringify(zones),user_id];
-            await database.db.query(query, data);
+            await database.db.query(`UPDATE customers SET zone_votes = ? WHERE user_id = ?`, [JSON.stringify(zones),user_id]);
           }
         }
       }
@@ -341,8 +320,7 @@ const database = {
         });
       });
     }
-    query = `SELECT zone_name FROM service_zones`;
-    zones = await database.db.query(query, []);
+    zones = await database.db.query(`SELECT zone_name FROM service_zones`, []);
     if (zones[0][0]) {
       zones = zones[0];
       for (let z = 0; z < zones.length; z++) {
@@ -353,9 +331,7 @@ const database = {
       }
     }
     for (let u = 1; u < user_counts.length; u++) {
-      query = 'UPDATE service_zones SET total_users = ?, total_votes = ? WHERE zone_name = ?';
-      data = [user_counts[u].count, user_counts[u].votes, user_counts[u].zone_name];
-      await database.db.query(query, data);
+      await database.db.query(`UPDATE service_zones SET total_users = ?, total_votes = ? WHERE zone_name = ?`, [user_counts[u].count, user_counts[u].votes, user_counts[u].zone_name]);
     }
     return user_counts;
   },
@@ -394,9 +370,7 @@ const database = {
           voteCalc = voteCalc + remaining; // clear any +/- workers from rounding and low zone protection - will always be on highest vote due to sort earlier
         }
         assigned = voteCalc + children[i].admin_worker_override;
-        query = 'UPDATE service_zones SET calc_workers = ? , assigned_workers = ? WHERE zone_name = ?';
-        data = [voteCalc, assigned, children[i].zone_name];
-        await database.db.query(query, data);
+        await database.db.query(`UPDATE service_zones SET calc_workers = ? , assigned_workers = ? WHERE zone_name = ?`, [voteCalc, assigned, children[i].zone_name]);
         for (let p = 0; p < parents.length; p++) {
           if (children[i].parent_zone == parents[p].zone_name) { // push worker totals to parent counters
             parents[p].calcWorkerCounter = parents[p].calcWorkerCounter + voteCalc;
@@ -405,9 +379,7 @@ const database = {
         }
       }
       for (let t = 0; t < parents.length; t++) { //loop through parents to update counts in DB
-        query = 'UPDATE service_zones SET calc_workers = ? , assigned_workers = ? WHERE zone_name = ?';
-        data = [parents[t].calcWorkerCounter, parents[t].assignWorkerCounter, parents[t].zone_name];
-        await database.db.query(query, data);
+        await database.db.query(`UPDATE service_zones SET calc_workers = ? , assigned_workers = ? WHERE zone_name = ?`, [parents[t].calcWorkerCounter, parents[t].assignWorkerCounter, parents[t].zone_name]);
       }
     }
   },
@@ -415,7 +387,7 @@ const database = {
 //  ZONE FETCH TABLE FETCH
 //------------------------------------------------------------------------------
   fetchZones: async function() {
-    result = await database.db.query(`SELECT * FROM service_zones`);
+    result = await database.db.query(`SELECT * FROM service_zones`, []);
     if (result[0]) {
       return result[0];
     }
