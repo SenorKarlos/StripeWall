@@ -137,10 +137,6 @@ bot.on('ready', () => {
       });
     }).catch(console.info);
   }
-  if (config.maintenance.on_startup) {
-    console.info("["+bot.getTime("stamp")+"] [bot.js] Starting Maintenance Routines.");
-    maintenance.checkDetails();
-  }
   return bot.user.setActivity(config.discord.status_text, {
     type: config.discord.status_type
   });

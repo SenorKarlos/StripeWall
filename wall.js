@@ -674,11 +674,24 @@ if (config.maintenance.on_startup) {
   console.info("["+bot.getTime("stamp")+"] [wall.js] Starting Maintenance Routines.");
   maintenance.checkDetails();
 }
-if (config.service_zones.enabled) {
-  let zones = await database.fetchZones();
-  if (!zones) {
-    
-  }
+if (config.service_zones.zones_enabled) {
+  setTimeout(async function() {
+    let zones = await database.fetchZones();
+    if (!zones) {
+      let geojson;
+      if (config.service_zones.init_source == 'geojson') {
+        const geojsonFile = 'config/geojson.json';
+        //geojson = await JSON.parse(fs.readFileSync(geojsonFile, 'utf8'));
+      }
+      else {
+        // planned koji integration
+      }
+      if (!geojson) {
+        console.info("["+bot.getTime("stamp")+"] [wall.js] Error Reading geojson source, terminating bot.");
+        process.exit(4);
+      }
+    }
+  }, 1000);
 }
 //------------------------------------------------------------------------------
 //  LISTEN ON SPECIFIED PORT

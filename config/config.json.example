@@ -52,7 +52,7 @@
 
   "service_zones": {
     "zones_enabled": true,
-    "init_source": "geofence.json",
+    "init_source": "geojson",
     "new_zone_form": "",
     "roles_enabled": false,
     "votes_enabled": false,

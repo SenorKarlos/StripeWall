@@ -740,7 +740,7 @@ const stripe = {
                   cx_type = 'inactive';
                   if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, '', 'all', 'remove'); }
                 }
-                return database.runQuery(`UPDATE customers SET customer_type = ?, stripe_data = ?, WHERE user_id = ?`, [cx_type, JSON.stringify(customer), dbuser.user_id]);
+                return database.runQuery(`UPDATE customers SET customer_type = ?, stripe_data = ? WHERE user_id = ?`, [cx_type, JSON.stringify(customer), dbuser.user_id]);
               }
             }
             for (let d = 0; d < config.stripe.donation_ids.length; d++) {

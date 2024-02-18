@@ -101,8 +101,8 @@ const database = {
               else {
                 if (zones[i].role_level < 1) {
                   console.info("["+bot.getTime("stamp")+"] [database.js] Added any_area role:", zones[i].zone_name, roles[j].roleID, username);
-                  temp_level = 1;
                   bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token);
+                  temp_level = 1;
                 }
               }
             }
