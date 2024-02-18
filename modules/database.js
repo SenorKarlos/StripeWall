@@ -415,7 +415,7 @@ const database = {
 //  ZONE FETCH TABLE FETCH
 //------------------------------------------------------------------------------
   fetchZones: async function() {
-    result = await database.db.query(`SELECT sz.*,sz2.zone_name as parent_name FROM service_zones sz LEFT JOIN service_zones sz2 ON sz.parent_zone = sz2.zone_name`, []);
+    result = await database.db.query(`SELECT * FROM service_zones`);
     if (result[0]) {
       return result[0];
     }
