@@ -443,7 +443,9 @@ server.get("/manage", async function(req, res) {
     user_name: dbuser.user_name,
     cx_type: dbuser.customer_type,
     stripe_id: dbuser.stripe_data.id,
-    vote_format: dbuser.format
+    vote_format: dbuser.format,
+    zone_background: config.pages.manage.zone_background,
+    zone_text: config.pages.manage.zone_text
   });
 });
 
@@ -549,8 +551,6 @@ server.get("/report", async function(req, res) {
     background: config.pages.general.background,
     outer_background: config.pages.general.outer_background,
     border_color: config.pages.general.border_color,
-    title_color: config.pages.general.title_color,
-    text_color: config.pages.general.text_color,
     highlight_color: config.pages.general.highlight_color,
     button_color: config.pages.general.button_color,
     site_name: config.server.site_name,
@@ -559,7 +559,9 @@ server.get("/report", async function(req, res) {
     usertype : dbuser.customer_type,
     zones: zones,
     workers: config.service_zones.workers,
-    allAreaTotal: allAreaTotal
+    allAreaTotal: allAreaTotal,
+    title_color: config.pages.report.title_color,
+    text_color: config.pages.report.text_color
   });
 });
 

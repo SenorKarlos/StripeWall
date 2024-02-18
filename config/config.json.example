@@ -80,7 +80,13 @@
       "inactive_life_intro": "Your services are currently deactivated. Press the button below to reactivate services.",
       "success_url": "https://yourdomain.site/manage",
       "cancel_url": "https://yourdomain.site/manage",
-      "return_url": "https://yourdomain.site/manage"
+      "return_url": "https://yourdomain.site/manage",
+      "zone_background": "radial-gradient(circle farthest-side, #fceabb, #f8b500)",
+      "zone_text":"black"
+    },
+    "report": {
+      "title_color": "red",
+      "text_color": "white"
     },
     "blocked": {
       "background": "https://i.imgur.com/uNBScc6.png",

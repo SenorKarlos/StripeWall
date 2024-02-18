@@ -24,38 +24,46 @@
     } %>
 
     <style>
-      @media (min-width: 320px) and (max-width: 599px) { 
-        .column-4 {
+      .column-4 {
+        float: left;
+        display: inline;
+        margin:5px;
+        padding: 10px;
+        border-color: black;
+        border-style: solid;
+        color: <%= zone_text %>;
+        background-image: <%= zone_background %>;
+        word-wrap: break-word;
+        overflow-y: auto;
+        overflow-x: auto;
+        text-overflow: inherit;
+        white-space: normal;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .column-new {
           float: left;
           display: inline;
-          width: 80%;
-          height: 300px;
-          padding: 10px;
           margin:5px;
-          border-color: black;
-          border-style: solid;
-          background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
-          word-wrap: break-word;
-          overflow-y: auto;
-          overflow-x: auto;
-          text-overflow: inherit;
-          white-space: normal;
-          text-align: left;
-          cursor: pointer;
-        }
-        .column-new {
-          float: left;
-          display: inline;
-          width: 80%;
-          height: 300px;
-          margin:5px;
-          padding: 10px;
           border-style: solid;
           background-color: grey;
           word-wrap: break-word;
           overflow:auto;
           cursor: pointer;
-          background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
+          background-image: <%= zone_background %>;
+      }
+      .column-new > p{
+        color: <%= zone_text %>;
+      }
+      @media (min-width: 320px) and (max-width: 599px) { 
+        .column-4 {
+          width: 80%;
+          height: 300px;
+        }
+        .column-new {
+          width: 80%;
+          height: 300px;
         }
         .planSelect {
           height:50px;
@@ -68,36 +76,12 @@
       }
       @media (min-width: 600px) and (max-width: 1024px) { 
         .column-4 {
-          float: left;
-          display: inline;
           width: 40%;
           height: 300px;
-          padding: 10px;
-          margin:5px;
-          border-color: black;
-          border-style: solid;
-          background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
-          word-wrap: break-word;
-          overflow-y: auto;
-          overflow-x: auto;
-          text-overflow: inherit;
-          white-space: normal;
-          text-align: left;
-          cursor: pointer;
         }
         .column-new {
-          float: left;
-          display: inline;
           width: 40%;
           height: 300px;
-          margin:5px;
-          padding: 10px;
-          border-style: solid;
-          background-color: grey;
-          word-wrap: break-word;
-          overflow:auto;
-          cursor: pointer;
-          background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
         }
         .planSelect {
           height:50px;
@@ -111,35 +95,12 @@
       }
       @media (min-width: 1025px) and (max-width: 5000px) {
         .column-4 {
-          float: left;
-          display: inline;
           width: 21%;
           height: 250px;
-          padding: 10px;
-          margin:5px;
-          border-color: black;
-          border-style: solid;
-          background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
-          word-wrap: break-word;
-          cursor: pointer;
-          overflow-y: auto;
-          overflow-x: auto;
-          text-overflow: inherit;
-          white-space: normal;
-          text-align: left;
         }
        .column-new {
-          float: left;
-          display: inline;
           width: 21%;
           height: 250px;
-          margin:5px;
-          border-style: solid;
-          background-color: grey;
-          word-wrap: break-word;
-          overflow:auto;
-          cursor: pointer;
-          background-image: radial-gradient(circle farthest-side, #fceabb, #f8b500);
         }
         .planSelect {
           height:50px;

@@ -18,6 +18,14 @@
     }
 
     %>
+    <style>
+      .title, th{
+        color: <%= title_color %>;
+      }
+      td, p{
+        color: <%= text_color %>
+      }
+    </style>
     <div class="rcorners1 background" style="overflow-x: auto;">
       <button type="button" class="btn" style="background-color: <%= button_color %>;float:right;margin-right:50px;width:150px;" onclick="window.location='/manage'">Manage Zones</button>&emsp;&emsp;
       <button type="button" class="btn" style="background-color: <%= button_color %>;float:right;margin-right:10px;width:150px;" onclick="window.location='/zonemap'">Zone Map</button>
@@ -28,7 +36,7 @@
         <div class="container">
           <div class="row justify-content-center">
             <div class="col-md-6 text-center mb-5">
-              <h1>Service Zones Report</h1>
+              <h1 class="title">Service Zones Report</h1>
               <p><strong><font size="6px">Placeholder</font></strong></p>
             </div>
           </div>
