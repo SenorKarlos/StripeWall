@@ -675,13 +675,15 @@ if (config.maintenance.on_startup) {
   maintenance.checkDetails();
 }
 if (config.service_zones.zones_enabled) {
+  console.info("["+bot.getTime("stamp")+"] [wall.js] Check or Create Service Zone Table.");
   setTimeout(async function() {
     let zones = await database.fetchZones();
     if (!zones) {
+      console.info("["+bot.getTime("stamp")+"] [wall.js] No Service Zone Table Present, Create.");
       let geojson;
       if (config.service_zones.init_source == 'geojson') {
         const geojsonFile = 'config/geojson.json';
-        //geojson = await JSON.parse(fs.readFileSync(geojsonFile, 'utf8'));
+        geojson = await JSON.parse(fs.readFileSync(geojsonFile, 'utf8'));
       }
       else {
         // planned koji integration
@@ -690,6 +692,10 @@ if (config.service_zones.zones_enabled) {
         console.info("["+bot.getTime("stamp")+"] [wall.js] Error Reading geojson source, terminating bot.");
         process.exit(4);
       }
+      
+    }
+    else {
+      console.info("["+bot.getTime("stamp")+"] [wall.js] Service Zone Table Present.");
     }
   }, 1000);
 }

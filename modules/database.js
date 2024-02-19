@@ -94,15 +94,15 @@ const database = {
               if (action == 'remove') {
                 if (zones[i].role_level > 0) { // this triggers when user is going inactive
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed any_area role:", zones[i].zone_name, roles[j].roleID, username);
-                  bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
-                  temp_level = 0;
+                  let changed = await bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
+                  if (changed) { temp_level = 0; }
                 }
               }
               else {
                 if (zones[i].role_level < 1) {
                   console.info("["+bot.getTime("stamp")+"] [database.js] Added any_area role:", zones[i].zone_name, roles[j].roleID, username);
-                  bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token);
-                  temp_level = 1;
+                  let changed = await bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token);
+                  if (changed) { temp_level = 1; }
                 }
               }
             }
@@ -110,21 +110,21 @@ const database = {
               if (action == 'remove') {
                 if (zones[i].role_level > 1) { // this triggers when user is going inactive
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed any_votes role:", zones[i].zone_name, roles[j].roleID, username);
-                  bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
-                  temp_level = 0;
+                  let changed = await bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
+                  if (changed) { temp_level = 0; }
                   
                 }
               }
               else {
                 if (zones[i].votes > 0 && zones[i].role_level < 2) {
                   console.info("["+bot.getTime("stamp")+"] [database.js] Added any_votes role:", zones[i].zone_name, roles[j].roleID, username);
-                  bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token)
-                  if (temp_level < 2) { temp_level = 2; }
+                  let changed = await bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token)
+                  if (changed && temp_level < 2) { temp_level = 2; }
                 }
                 else if (zones[i].votes == 0 && zones[i].role_level > 1) { // votes went from non-zero to zero. Remove role.
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed any_votes role:", zones[i].zone_name, roles[j].roleID, username);
-                  bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
-                  if (temp_level == 0) { temp_level = 1; }
+                  let changed = await bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
+                  if (changed && temp_level == 0) { temp_level = 1; }
                 }
               }
             }
@@ -132,15 +132,15 @@ const database = {
               if (action == 'remove') {
                 if (zones[i].role_level > 2) { // this triggers when user is going inactive
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed most_votes role:", zones[i].zone_name, roles[j].roleID, username);
-                  bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
-                  temp_level = 0;
+                  let changed = await bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
+                  if (changed) { temp_level = 0; }
                 }
               }
               else {
                 if (lastHighestZone == zones[i].zone_name && lastHighestZone != highestZone) { // previous highest vote has been outvoted. Remove role
                   console.info("["+bot.getTime("stamp")+"] [database.js] Removed most_votes role:", zones[i].zone_name, roles[j].roleID, username);
-                  bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
-                  if (zones[i].votes == 0) {
+                  let changed = await bot.removeRole(roles[j].serverID,user_id,roles[j].roleID, username);
+                  if (changed && zones[i].votes == 0) {
                     temp_level = 1;
                   }
                   else {
@@ -149,8 +149,8 @@ const database = {
                 }
                 else if (highestZone == zones[i].zone_name && lastHighestZone != zones[i].zone_name) { // if zone is new highest, assign.
                   console.info("["+bot.getTime("stamp")+"] [database.js] Added most_votes role:", zones[i].zone_name, roles[j].roleID, username);
-                  bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token);
-                  temp_level = 3;
+                  let changed = await bot.assignRole(roles[j].serverID,user_id,roles[j].roleID, username, access_token);
+                  if (changed) { temp_level = 3; }
                 }
               }
             }
