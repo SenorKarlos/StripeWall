@@ -46,7 +46,7 @@
         .btn {
           width:150px;
           margin-right: 10px; 
-          float:right;
+          float: center;
         }
       }
 
@@ -67,7 +67,7 @@
         .btn {
           width:150px;
           margin-right: 10px; 
-          float:right;
+          float: center;
         }
       }
 
@@ -87,10 +87,12 @@
         <div>
           <div>
             <br>
-            <h1><font color="<%= title_color %>">Service Zone Information </font></h1>
+            <h1><font color="<%= title_color %>">Service Zone Information & Selection</font></h1>
             <button type="button" class="btn" style="background-color: <%= button_color %>;" onclick="window.location='<%= zone_form %>'">Request a Zone</button>
-            <button type="button" class="btn" style="background-color: <%= button_color %>;" onclick="window.location='/manage'">Manage Zones</button>
+            <button type="button" class="btn" style="background-color: <%= button_color %>;" onclick="window.location='/manage'">Manage Account</button>
             <button type="button" class="btn" style="background-color: <%= button_color %>; " onclick="window.location='/report'">Zone Report</button>
+            <br>
+            <br>
             <div style="clear: both;"></div>
             <% if (zonesreviewed == 'false') { %>
               <h3><font color="<%= text_color %>">You must select at least one zone before proceeding</font></h3>

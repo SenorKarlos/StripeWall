@@ -90,7 +90,7 @@
         .btn {
           width:150px;
           margin-right: 10px; 
-          float:right;
+          float: center;
         }
       }
       @media (min-width: 1025px) and (max-width: 5000px) {
@@ -108,7 +108,7 @@
         .btn {
           width:150px;
           margin-right: 10px; 
-          float:right;
+          float: center;
         }
       }
       .stretchedText {
@@ -123,8 +123,10 @@
     </style>
 
     <div class="rcorners1">
-      <button type="button" class="btn" style="background-color: <%= button_color %>;" onclick="window.location='/zonemap'">Zone Map</button>
+      <button type="button" class="btn" style="background-color: <%= button_color %>;" onclick="window.location='/zonemap'">Service Zones</button>
       <button type="button" class="btn" style="background-color: <%= button_color %>; " onclick="window.location='/report'">Zone Report</button>
+      <br>
+      <br>
       <div style="clear: both;"></div>
       <center>
         <div>
@@ -198,7 +200,7 @@
                     <p><strong><font color="<%= text_color %>"><%= inactive_lifetime_intro %></b></font></strong></p>
                     <br>
                     <br>
-                    <button type="button" class="btn" style="float:none; background-color: <%= button_color %>;" onclick="confirmToggle()">Switch to active</button>
+                    <button type="button" class="btn" style="background-color: <%= button_color %>;" onclick="confirmToggle()">Switch to active</button>
                     <br>
                     <br>
                   </form>
@@ -211,7 +213,7 @@
                     <p><strong><font color="<%= text_color %>"><%= lifetime_intro %></b></font></strong></p>
                     <br>
                     <br>
-                    <button type="button" class="btn" style="float:none; background-color: <%= button_color %>;" onclick="confirmToggle()">Switch to inactive</button>
+                    <button type="button" class="btn" style="background-color: <%= button_color %>;" onclick="confirmToggle()">Switch to inactive</button>
                     <br>
                     <br>
                   </form>
