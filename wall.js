@@ -354,6 +354,7 @@ server.get("/terms", async function(req, res) {
     border_color: config.pages.general.border_color,
     title_color: config.pages.general.title_color,
     text_color: config.pages.general.text_color,
+    highlight_color: config.pages.general.highlight_color,
     site_name: config.server.site_name,
     site_url: config.server.site_url,
     radar_script: radar_script,
@@ -551,6 +552,8 @@ server.get("/report", async function(req, res) {
     background: config.pages.general.background,
     outer_background: config.pages.general.outer_background,
     border_color: config.pages.general.border_color,
+    title_color: config.pages.general.title_color,
+    text_color: config.pages.general.text_color,
     highlight_color: config.pages.general.highlight_color,
     button_color: config.pages.general.button_color,
     site_name: config.server.site_name,
@@ -559,9 +562,7 @@ server.get("/report", async function(req, res) {
     usertype : dbuser.customer_type,
     zones: zones,
     workers: config.service_zones.workers,
-    allAreaTotal: allAreaTotal,
-    title_color: config.pages.report.title_color,
-    text_color: config.pages.report.text_color
+    allAreaTotal: allAreaTotal
   });
 });
 
@@ -678,7 +679,7 @@ if (config.service_zones.zones_enabled) {
   console.info("["+bot.getTime("stamp")+"] [wall.js] Check or Create Service Zone Table.");
   setTimeout(async function() {
     let zones = await database.fetchZones();
-    if (!zones) {
+    if (!zones || zones.length === 0) {
       console.info("["+bot.getTime("stamp")+"] [wall.js] No Service Zone Table Present, Create.");
       let geojson;
       if (config.service_zones.init_source == 'geojson') {
@@ -692,7 +693,35 @@ if (config.service_zones.zones_enabled) {
         console.info("["+bot.getTime("stamp")+"] [wall.js] Error Reading geojson source, terminating bot.");
         process.exit(4);
       }
-      
+      geojson.features.forEach((feature, i) => {
+        setTimeout(async function() {
+          let data = [];
+          data[0] = feature.properties.name;
+          if (feature.properties.parent) {
+            data[1] = feature.properties.parent;
+          }
+          else {
+            data[1] = null;
+          }
+          if (feature.properties.img_url) {
+            data[2] = feature.properties.img_url;
+          }
+          else {
+            data[2] = null;
+          }
+          if (feature.properties.zone_roles) {
+            data[3] = JSON.stringify(feature.properties.zone_roles);
+          }
+          else {
+            data[3] = null;
+          }
+          let saved = await database.runQuery(`INSERT INTO service_zones (zone_name, parent_zone, img_url, zone_roles) VALUES (?, ?, ?, ?)`, data);
+          if (!saved) {
+            console.info("["+bot.getTime("stamp")+"] [wall.js] Error writing zone to database, terminating bot. Investigate any issues, clear table, and try again.");
+            process.exit(4);
+          }
+        }, 100 * i);
+      });
     }
     else {
       console.info("["+bot.getTime("stamp")+"] [wall.js] Service Zone Table Present.");

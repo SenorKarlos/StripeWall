@@ -1,0 +1,11 @@
+<p id="termtext" <strong><font color="<%= text_color %>">P1 First line</font></u></strong></p>
+<p id="termtext" <strong><font color="<%= text_color %>">P1 Second line</font></u></strong></p>
+<p id="termtext" <strong><font color="<%= text_color %>">P1 Third line</font></u></strong></p>
+<br>
+<p id="termtext" <strong><font color="<%= text_color %>">P2 First line</font></u></strong></p>
+<p id="termtext" <strong><font color="<%= text_color %>">P2 Second line</font></u></strong></p>
+<p id="termtext" <strong><font color="<%= text_color %>">P2 Third line</font></u></strong></p>
+<br>
+<p id="termtext" <strong><font color="<%= text_color %>">P3 First line</font></u></strong></p>
+<p id="termtext" <strong><font color="<%= text_color %>">P3 Second line</font></u></strong></p>
+<p id="termtext" <strong><font color="<%= text_color %>">P3 Third line</font></u></strong></p>

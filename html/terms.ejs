@@ -6,14 +6,16 @@
           <div>
             <br>
             <h1><font color="<%= title_color %>">Welcome <%= username %> </font></h1>
-            <p><strong><font color="<%= text_color %>">Description of services</font></strong></p>
+            <h2><font color="<%= title_color %>">Description of Services</font></h2>
+            <%- include('../config/pages/fullDescription.ejs') %>
+            <br>
           </div>
           <div>
             <form method="POST">
               <input name="userid" type="hidden" value="<%= userid %>">
-              <h2><font color="<%= text_color %>">Review Terms of Service</font></h2>
+              <h2><font color="<%= highlight_color %>">Terms of Service</font></h2>
               <div>
-                <p id="termtext" <strong><font color="<%= text_color %>">Terms of service text</font></u></strong></p>
+                <%- include('../config/pages/fullTerms.ejs') %>
                 <input type="checkbox" onclick="agreeButton()" id="terms" name="agree" value="1">
                 <label><strong><font color="<%= text_color %>">I have read the <b>terms of service</b></font></strong></label>
               </div>

@@ -23,6 +23,7 @@
 hs_err_pid*
 
 /config/*.json
+/config/pages/*.ejs
 non-obfuscated
 SampleWebhooks
 node_modules/

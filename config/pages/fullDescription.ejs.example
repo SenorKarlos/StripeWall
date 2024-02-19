@@ -1,0 +1,5 @@
+<p><font color="<%= text_color %>">P1 Line 1</font></p>
+<p><font color="<%= text_color %>">P1 Line 2</font></p>
+<br>
+<p><font color="<%= text_color %>">P2 Line 1</font></p>
+<p><font color="<%= text_color %>">P2 Line 2</font></p>

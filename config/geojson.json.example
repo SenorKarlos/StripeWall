@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Parent Zone",
+        "parent": null,
+        "img_url": "https://images.your_site.com/parent.png",
+        "zone_roles": "see template"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": []
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Child Zone",
+        "parent": "Parent Zone",
+        "img_url": "https://images.your_site.com/child.png"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": []
+      }
+    }
+  ]
+}
