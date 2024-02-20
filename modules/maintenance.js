@@ -1,4 +1,4 @@
-var bot, database, oauth, qbo, qboData, stripe;
+var bot, database, oauth2, qbo, qboData, stripe, zones;
 const moment = require('moment');
 const config = require("../config/config.json");
 const maintenance = {
@@ -768,3 +768,4 @@ oauth2 = require(__dirname+'/oauth2.js');
 qbo = require(__dirname+'/qbo.js');
 qboData = require(__dirname+'/qboData.js');
 stripe = require(__dirname+'/stripe.js');
+zones = require(__dirname+'/zones.js');

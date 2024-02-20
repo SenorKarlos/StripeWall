@@ -173,7 +173,7 @@
           <% }
           else if (cx_type == 'inactive') { %>
             <div>
-              <p><strong><font color="<%= text_color %>"><%= product_intro %></b></font></strong></p>
+              <p><strong><font color="<%= text_color %>"><%- product_intro %></b></font></strong></p>
               <form id="planForm" action="/create-checkout-session" method="POST">
                 <select class="planSelect" name="checkout" id="checkout">
                   <option value="none" selected disabled>See plans</option>
@@ -251,9 +251,7 @@
             <p class="format0" <% if (vote_format == 1) { %>style="display:none" <% } %>><strong><font color="<%= text_color %>"><u>Allocate your votes below</u></font></strong></p>
             <p class="format1" <% if (vote_format == 0) { %>style="display:none" <% } %>><strong><font color="<%= text_color %>"><u>Distribute your votes below and votes will be totalled automatically</u></font></strong></p>
             <br>
-            <p class="format1" <% if (vote_format == 0) { %>style="display:none" <% } %>><strong><font color="<%= highlight_color %>">Note: Vote counts here will not update until percentages are submitted.</font></strong></p>
-            <br>
-            <p class="format1" <% if (vote_format == 0) { %>style="display:none" <% } %>><strong><font color="<%= highlight_color %>">If you have more voted zones than total votes, some zones may not receive votes.</font></strong></p>
+            <p class="format1" <% if (vote_format == 0) { %>style="display:none" <% } %>><strong><font color="<%= highlight_color %>">Note: Vote counts here will not update until percentages are submitted.<br>If you have more voted zones than total votes, some zones may not receive votes.</font></strong></p>
             <form method="POST" id="voteForm">   
               <div>
                 <input type="radio" <% if (vote_format == 0) { %>checked="checked" <% } %> onchange="changeFormat(0)" id="number" name="format" value="0">
@@ -327,19 +325,7 @@
           </div>
           <div style="clear: both;"></div> 
         </div>
-        <div>
-          <div class="content">
-            <div class="fineprint">
-              <p><font color="<%= text_color %>">We NEVER receive or store any sensitive customer credit card information.  All of our credit card processing is managed directly and solely by Stripe, a PCI Level 1 Compliant Service Provider.</font></p>
-              <a href=https://stripe.com/docs/security/stripe>https://stripe.com/docs/security/stripe</a>
-              <p><font color="<%= text_color %>"><%= terms %></font></p>
-              <p><font color="<%= text_color %>"><%= disclaimer %></font></p>
-              <p><strong><font color="<%= text_color %>"><%= warning %></font></strong></p>
-              <a href=<%= site_url %>/discord><%= site_url %>/discord</a>
-              <br>
-            </div>
-          </div>
-        </div>
+        <%- include('./includes/fineprint.ejs') %>
       </center>
     </div>
 

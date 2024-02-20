@@ -1,4 +1,4 @@
-var database, maintenance, oauth, qbo, qboData, stripe;
+var database, maintenance, oauth2, qbo, qboData, stripe, zones;
 const axios = require('axios');
 const moment = require('moment');
 const Discord = require('discord.js');
@@ -158,3 +158,4 @@ oauth2 = require(__dirname+'/oauth2.js');
 qbo = require(__dirname+'/qbo.js');
 qboData = require(__dirname+'/qboData.js');
 stripe = require(__dirname+'/stripe.js');
+zones = require(__dirname+'/zones.js');

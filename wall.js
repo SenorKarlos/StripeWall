@@ -12,6 +12,7 @@ const maintenance = require(__dirname+"/modules/maintenance.js");
 const oauth2 = require(__dirname+"/modules/oauth2.js");
 const qbo = require(__dirname+"/modules/qbo.js");
 const stripe = require(__dirname+"/modules/stripe.js");
+const zones = require(__dirname+"/modules/zones.js");
 const config = require(__dirname+"/config/config.json");
 
 //------------------------------------------------------------------------------
@@ -53,6 +54,7 @@ server.get("/", async function(req, res) {
     border_color: config.pages.general.border_color,
     title_color: config.pages.general.title_color,
     text_color: config.pages.general.text_color,
+    highlight_color: config.pages.general.highlight_color,
     site_name: config.server.site_name,
     site_url: config.server.site_url,
     login_url: config.discord.redirect_url,
@@ -464,7 +466,7 @@ server.post("/manage", async function(req, res) {
     await database.allocateVotes(userid, allocations, percentage)
   }
   if (usertype != 'inactive' && usertype != "lifetime-inactive" && config.service_zones.roles_enabled) { //adjust zone values only if active user
-    if(removeZone != '') { //removing a zone. Decrease total users from zone.
+    if (removeZone != '') { //removing a zone. Decrease total users from zone.
       await database.updateZoneRoles(userid, selection, removeZone, 'remove', removeRoleLevel)
     }
     else {
@@ -489,7 +491,7 @@ server.get("/zonemap", async function(req, res) {
   let radar_script = '';
   await database.calcZones();
   await database.updateWorkerCalc();
-  let zones = await database.fetchZones();
+  let service_zones = await zones.getServiceZones();
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
   return res.render(__dirname+"/html/zonemap.ejs", {
     terms: config.pages.general.terms,
@@ -512,7 +514,7 @@ server.get("/zonemap", async function(req, res) {
     userid: dbuser.user_id,
     usertype: dbuser.customer_type,
     format: dbuser.format,
-    zones: zones
+    zones: service_zones
   });
 });
 
@@ -543,7 +545,7 @@ server.get("/report", async function(req, res) {
   let user_totals = await database.calcZones();
   let allAreaTotal = user_totals[0].count;
   await database.updateWorkerCalc();
-  let zones = await database.fetchZones();
+  let service_zones = await zones.getServiceZones();
   if (config.stripe.radar_script) { radar_script = '<script async src="https://js.stripe.com/v3/"></script>'; }
   return res.render(__dirname+"/html/report.ejs", {
     terms: config.pages.general.terms,
@@ -560,7 +562,7 @@ server.get("/report", async function(req, res) {
     site_url: config.server.site_url,
     radar_script: radar_script,
     usertype : dbuser.customer_type,
-    zones: zones,
+    zones: service_zones,
     workers: config.service_zones.workers,
     allAreaTotal: allAreaTotal
   });
@@ -678,8 +680,8 @@ if (config.maintenance.on_startup) {
 if (config.service_zones.zones_enabled) {
   console.info("["+bot.getTime("stamp")+"] [wall.js] Check or Create Service Zone Table.");
   setTimeout(async function() {
-    let zones = await database.fetchZones();
-    if (!zones || zones.length === 0) {
+    let service_zones = await database.fetchZones();
+    if (!service_zones || service_zones.length === 0) {
       console.info("["+bot.getTime("stamp")+"] [wall.js] No Service Zone Table Present, Create.");
       let geojson;
       if (config.service_zones.init_source == 'geojson') {
@@ -726,7 +728,8 @@ if (config.service_zones.zones_enabled) {
     else {
       console.info("["+bot.getTime("stamp")+"] [wall.js] Service Zone Table Present.");
     }
-  }, 1000);
+    await zones.initializeServiceZones();
+  }, 100);
 }
 //------------------------------------------------------------------------------
 //  LISTEN ON SPECIFIED PORT

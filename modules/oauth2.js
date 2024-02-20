@@ -1,4 +1,4 @@
-var bot, database, maintenance, qbo, qboData, stripe;
+var bot, database, maintenance, qbo, qboData, stripe, zones;
 const axios = require('axios');
 const moment = require('moment');
 const config = require("../config/config.json");
@@ -93,3 +93,4 @@ maintenance = require(__dirname+'/maintenance.js');
 qbo = require(__dirname+'/qbo.js');
 qboData = require(__dirname+'/qboData.js');
 stripe = require(__dirname+'/stripe.js');
+zones = require(__dirname+'/zones.js');

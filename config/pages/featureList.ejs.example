@@ -1,3 +1,3 @@
-<li>1st feature</li>
-<li>2nd feature</li>
-<li>And so on</li>
+<li><font color="<%= text_color %>">1st feature</font></li>
+<li><font color="<%= text_color %>">2nd feature</font></li>
+<li><font color="<%= text_color %>">And so on</font></li>

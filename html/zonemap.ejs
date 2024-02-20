@@ -1,7 +1,7 @@
     <%- include('./includes/head.ejs') %>
     <% var userzones = [];
     if (zoneSelection) {
-      for (let i = 0 ; i < zoneSelection.length ; i++) {
+      for (let i = 0; i < zoneSelection.length; i++) {
         userzones.push(zoneSelection[i].zone_name);
       }
     } %>
@@ -97,7 +97,7 @@
             <% if (zonesreviewed == 'false') { %>
               <h3><font color="<%= text_color %>">You must select at least one zone before proceeding</font></h3>
             <% } %>
-            <p><strong><font color="<%= title_color %>">Select District to see Zones</font></strong></p>
+            <p><strong><font color="<%= title_color %>">Select District to see & Select Zones Below</font></strong></p>
           </div>
           <div>
           <% var parentids = [];
@@ -131,7 +131,7 @@
                   <div style="text-align:center;display:inline-block;position:relative; background-image: url('<%= zones[j].img_url%>');background-size: cover; background-repeat: no-repeat;" class="column-4">
                   <h4 style="padding: 40px 0;"><%= zones[j].zone_name %></h4>
                   <% if (userzones.includes(zones[j].zone_name) == false) { %>
-                    <input type="button" class="cornerbutton" value="Add Zone" onclick="addZone('<%= zones[j].zone_name %>', '<%= zones[j].parent_name %>')"/>
+                    <input type="button" class="cornerbutton" value="Add Zone" onclick="addZone('<%= zones[j].zone_name %>', '<%= zones[j].parent_zone %>')"/>
                   <% } %>
                   </div>
                   <span style="float: left; margin-top:15px;">

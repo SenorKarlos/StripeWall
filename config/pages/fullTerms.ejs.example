@@ -1,11 +1,9 @@
-<p id="termtext" <strong><font color="<%= text_color %>">P1 First line</font></u></strong></p>
-<p id="termtext" <strong><font color="<%= text_color %>">P1 Second line</font></u></strong></p>
-<p id="termtext" <strong><font color="<%= text_color %>">P1 Third line</font></u></strong></p>
+<p <strong><font color="<%= text_color %>">Paragraph made of lines, First line.<br>
+Second Line.<br>
+Third Line.<br>
 <br>
-<p id="termtext" <strong><font color="<%= text_color %>">P2 First line</font></u></strong></p>
-<p id="termtext" <strong><font color="<%= text_color %>">P2 Second line</font></u></strong></p>
-<p id="termtext" <strong><font color="<%= text_color %>">P2 Third line</font></u></strong></p>
+New paragraph. Lines can be as long as you need, if you want a continuous wrap of text instead of individual centred lines.</font></u></strong></p>
 <br>
-<p id="termtext" <strong><font color="<%= text_color %>">P3 First line</font></u></strong></p>
-<p id="termtext" <strong><font color="<%= text_color %>">P3 Second line</font></u></strong></p>
-<p id="termtext" <strong><font color="<%= text_color %>">P3 Third line</font></u></strong></p>
+<p <strong><font color="<%= highlight_color %>">Some text or paragraph you want highlighted.</font></u></strong></p>
+<br>
+<p <strong><font color="<%= text_color %>">Even more text if needed.</font></u></strong></p>
