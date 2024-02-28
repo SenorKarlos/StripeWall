@@ -1,4 +1,4 @@
-var bot, database, maintenance, oauth2, qboData, stripe, zones;
+var bot, database, maintenance, migration, oauth2, qboData, stripe, utils, zones;
 const moment = require('moment');
 const QuickBooks = require('node-quickbooks');
 const config = require("../config/config.json");
@@ -23,14 +23,14 @@ const qbo = {
   findAllCustomers: async function () {
     return new Promise(async function(resolve) {
       let data = await qboData.getData();
-      if (!data) { return resolve(console.info('['+bot.getTime('stamp')+'] [qbo.js] Data Fetch Failure, Need logic')) }
+      if (!data) { return resolve(console.info('['+utils.getTime('stamp')+'] [qbo.js] Data Fetch Failure, Need logic')) }
       qbo_js.token = data.oauth_token;
       qbo_js.refreshToken = data.refresh_token;
       qbo_js.findCustomers({
         fetchAll: true
       }, function(e, customers) {
         if (e) {
-          console.info('['+bot.getTime('stamp')+'] [qbo.js] QuickBooks function error: ', e);
+          console.info('['+utils.getTime('stamp')+'] [qbo.js] QuickBooks function error: ', e);
           return resolve(false);
         }
         else {
@@ -47,7 +47,7 @@ const qbo = {
   createCustomer: async function (DisplayName, CompanyName, Email) {
     return new Promise(async function(resolve) {
       let data = await qboData.getData();
-      if (!data) { return resolve(console.info('['+bot.getTime('stamp')+'] [qbo.js] Data Fetch Failure, Need logic')) }
+      if (!data) { return resolve(console.info('['+utils.getTime('stamp')+'] [qbo.js] Data Fetch Failure, Need logic')) }
       qbo_js.token = data.oauth_token;
       qbo_js.refreshToken = data.refresh_token;
       let body = {};
@@ -59,7 +59,7 @@ const qbo = {
       body.CustomerTypeRef = { value: data.customer_type_id };
       qbo_js.createCustomer(body, function(e, customer) {
         if (e) {
-          console.info('['+bot.getTime('stamp')+'] [qbo.js] QuickBooks function error: ', e);
+          console.info('['+utils.getTime('stamp')+'] [qbo.js] QuickBooks function error: ', e);
           return resolve(false);
         }
         else {
@@ -71,12 +71,12 @@ const qbo = {
   updateCustomer: async function (customer) {
     return new Promise(async function(resolve) {
       let data = await qboData.getData();
-      if (!data) { return resolve(console.info('['+bot.getTime('stamp')+'] [qbo.js] Token Fetch Failure, Need logic')) }
+      if (!data) { return resolve(console.info('['+utils.getTime('stamp')+'] [qbo.js] Token Fetch Failure, Need logic')) }
       qbo_js.token = data.oauth_token;
       qbo_js.refreshToken = data.refresh_token;
       qbo_js.updateCustomer(customer, function(e, newCustomer) {
         if (e) {
-          console.info('['+bot.getTime('stamp')+'] [qbo.js] QuickBooks function error: ', e);
+          console.info('['+utils.getTime('stamp')+'] [qbo.js] QuickBooks function error: ', e);
           return resolve(false);
         }
         else {
@@ -95,7 +95,9 @@ module.exports = qbo;
 bot = require(__dirname+'/bot.js');
 database = require(__dirname+'/database.js');
 maintenance = require(__dirname+'/maintenance.js');
+migration = require(__dirname+'/migration.js');
 oauth2 = require(__dirname+'/oauth2.js');
 qboData = require(__dirname+'/qboData.js');
 stripe = require(__dirname+'/stripe.js');
+utils = require(__dirname+'/utils.js');
 zones = require(__dirname+'/zones.js');

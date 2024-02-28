@@ -1,4 +1,4 @@
-var bot, database, maintenance, oauth2, qbo, stripe, zones;
+var bot, database, maintenance, migration, oauth2, qbo, stripe, utils, zones;
 const request = require('request')
 const moment = require('moment');
 const config = require('../config/config.json');
@@ -12,11 +12,11 @@ const qboData = {
         result = result[0][0];
       }
       else {
-        console.info('['+bot.getTime('stamp')+'] [qboData.js] Inital QBO Data not entered in the database. Please ensure setup has been completed.');
+        console.info('['+utils.getTime('stamp')+'] [qboData.js] Inital QBO Data not entered in the database. Please ensure setup has been completed.');
         return resolve(false);
       }
       if (!result.basic_auth_token || !result.refresh_token || !result.refresh_token_expiry || !result.customer_type_id || !result.service_product_id || !result.donation_product_id || !result.stripe_fee_expense_id || config.stripe.taxes.active && !result.tax_ids || !result.stripe_account_id || !result.bank_account_id || !result.invoice_sequence) {
-        console.info('['+bot.getTime('stamp')+'] [qboData.js] Required QBO information is missing from the database. Review log and setup instructions, and update as required.');
+        console.info('['+utils.getTime('stamp')+'] [qboData.js] Required QBO information is missing from the database. Review log and setup instructions, and update as required.');
         console.info('Current Result: ' + result);
         return resolve(false);
       }
@@ -38,13 +38,13 @@ const qboData = {
           }
         }, async function(err, response) {
           if (err) {
-            console.info('['+bot.getTime('stamp')+'] [qboData.js] Error during QBO oAuth request: ', err);
+            console.info('['+utils.getTime('stamp')+'] [qboData.js] Error during QBO oAuth request: ', err);
             return resolve(false);
           }
           else {
             json = JSON.parse(response.body);
             if (json.error) {
-              console.info('['+bot.getTime('stamp')+'] [qboData.js] Error during QBO oAuth request: ', json);
+              console.info('['+utils.getTime('stamp')+'] [qboData.js] Error during QBO oAuth request: ', json);
               return resolve(false);
             }
             result.oauth_token = json.access_token;
@@ -53,7 +53,7 @@ const qboData = {
             result.refresh_token_expiry = unix + json.x_refresh_token_expires_in;
             let saved = await database.db.query('UPDATE qbo_metadata SET refresh_token = ?, refresh_token_expiry = ?, oauth_token = ?, oauth_token_expiry = ? WHERE id = ?', [result.refresh_token, result.refresh_token_expiry, result.oauth_token, result.oauth_token_expiry, 1]);
             if (!saved) { 
-              console.info('['+bot.getTime('stamp')+'] [qboData.js] Database update failure, logging Data for manual update and admin investigation.');
+              console.info('['+utils.getTime('stamp')+'] [qboData.js] Database update failure, logging Data for manual update and admin investigation.');
               console.info('Data: ', result);
             }
             return resolve(result);
@@ -70,7 +70,9 @@ module.exports = qboData;
 bot = require(__dirname+'/bot.js');
 database = require(__dirname+'/database.js');
 maintenance = require(__dirname+'/maintenance.js');
+migration = require(__dirname+'/migration.js');
 oauth2 = require(__dirname+'/oauth2.js');
 qbo = require(__dirname+'/qbo.js');
 stripe = require(__dirname+'/stripe.js');
+utils = require(__dirname+'/utils.js');
 zones = require(__dirname+'/zones.js');

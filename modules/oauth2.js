@@ -1,4 +1,4 @@
-var bot, database, maintenance, qbo, qboData, stripe, zones;
+var bot, database, maintenance, migration, qbo, qboData, stripe, utils, zones;
 const axios = require('axios');
 const moment = require('moment');
 const config = require("../config/config.json");
@@ -40,10 +40,10 @@ const oauth2 = {
       axios.post("https://discord.com/api/oauth2/token", data, {
         headers: headers
       }).then(async function(response) {
-        console.info('['+bot.getTime('stamp')+'] [oauth2.js] Successfully Refreshed a Token', response.data);
+        console.info('['+utils.getTime('stamp')+'] [oauth2.js] Successfully Refreshed a Token', response.data);
         let token_expiration = (unix + response.data.expires_in);
         database.runQuery(`UPDATE customers SET access_token = ?, refresh_token = ?, token_expiration = ? WHERE user_id = ?`, [response.data.access_token, response.data.refresh_token, token_expiration, user_id]);
-        console.info('['+bot.getTime('stamp')+'] [oauth2.js] '+user_name+' ('+user_id+') Updated Discord OAuth2 info in Database.');
+        console.info('['+utils.getTime('stamp')+'] [oauth2.js] '+user_name+' ('+user_id+') Updated Discord OAuth2 info in Database.');
         return resolve(response.data);
       }).catch(error => {
         return resolve(error);
@@ -90,7 +90,9 @@ module.exports = oauth2;
 bot = require(__dirname+'/bot.js');
 database = require(__dirname+'/database.js');
 maintenance = require(__dirname+'/maintenance.js');
+migration = require(__dirname+'/migration.js');
 qbo = require(__dirname+'/qbo.js');
 qboData = require(__dirname+'/qboData.js');
 stripe = require(__dirname+'/stripe.js');
+utils = require(__dirname+'/utils.js');
 zones = require(__dirname+'/zones.js');

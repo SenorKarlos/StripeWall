@@ -25,6 +25,13 @@ COLLATE='utf8mb4_unicode_ci'
 ENGINE=InnoDB
 ;
 
+CREATE TABLE `metadata` (
+	`key` VARCHAR(50) NULL DEFAULT NULL,
+	`value` VARCHAR(50) NULL DEFAULT NULL
+)
+COLLATE='utf8mb4_unicode_ci'
+;
+
 CREATE TABLE `qbo_metadata` (
 	`id` INT(10) NOT NULL DEFAULT '1',
 	`basic_auth_token` VARCHAR(255) NULL DEFAULT NULL COLLATE 'utf8mb4_unicode_ci',

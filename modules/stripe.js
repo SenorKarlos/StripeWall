@@ -1,4 +1,4 @@
-var bot, database, maintenance, oauth2, qbo, qboData, zones;
+var bot, database, maintenance, migration, oauth2, qbo, qboData, utils, zones;
 const moment = require('moment');
 const config = require("../config/config.json");
 const stripe_js = require('stripe')(config.stripe.live_sk, {
@@ -18,11 +18,11 @@ const stripe = {
         body,
         function(err, customer) {
           if (err) {
-            console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Creating Customer.', err.message);
+            console.info('['+utils.getTime('stamp')+'] [stripe.js] Error Creating Customer.', err.message);
             return resolve('ERROR');
           }
           else {
-            console.info('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.name+' ('+customer.description+' | '+customer.id+') has been Created.');
+            console.info('['+utils.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.name+' ('+customer.description+' | '+customer.id+') has been Created.');
             return resolve(customer);
           }
         });
@@ -38,11 +38,11 @@ const stripe = {
           body,
           function(err, customer) {
             if (err) {
-              console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Updating Customer.', err.message);
+              console.info('['+utils.getTime('stamp')+'] [stripe.js] Error Updating Customer.', err.message);
               return resolve('ERROR');
             }
             else {
-              console.info('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.name+' ('+customer.description+' | '+customer.id+') has been Updated.');
+              console.info('['+utils.getTime('stamp')+'] [stripe.js] Stripe Customer '+customer.name+' ('+customer.description+' | '+customer.id+') has been Updated.');
               return resolve(customer);
             }
           }
@@ -58,7 +58,7 @@ const stripe = {
           customer_id, { expand: ['subscriptions.data', 'subscriptions.data.latest_invoice'], },
           function(err, customer) {
             if (err) {
-              console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Fetching Customer.', err.message);
+              console.info('['+utils.getTime('stamp')+'] [stripe.js] Error Fetching Customer.', err.message);
               return resolve('ERROR');
             }
             else {
@@ -77,11 +77,11 @@ const stripe = {
           customer_id,
           function(err, confirmation) {
             if (err) {
-              console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Deleting Customer.', err.message);
+              console.info('['+utils.getTime('stamp')+'] [stripe.js] Error Deleting Customer.', err.message);
               return resolve('ERROR');
             }
             else {
-              console.info('['+bot.getTime('stamp')+'] [stripe.js] Stripe Customer '+name+' ('+discord_id+' | '+customer_id+') has been Deleted.');
+              console.info('['+utils.getTime('stamp')+'] [stripe.js] Stripe Customer '+name+' ('+discord_id+' | '+customer_id+') has been Deleted.');
               return resolve(confirmation);
             }
           }
@@ -111,12 +111,12 @@ const stripe = {
           subscription_id,
           function(err, confirmation) {
             if (err) {
-              console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Canceling Subscription.', err.message);
+              console.info('['+utils.getTime('stamp')+'] [stripe.js] Error Canceling Subscription.', err.message);
               return resolve(null);
             }
             else {
               bot.sendEmbed(username, user_id, 'FF0000', 'Subscription Cancellation', '', config.discord.log_channel);
-              console.info("["+bot.getTime("stamp")+"] [stripe.js] "+username+"'s subscription has been cancelled due to leaving the Server.");
+              console.info("["+utils.getTime("stamp")+"] [stripe.js] "+username+"'s subscription has been cancelled due to leaving the Server.");
               return resolve(confirmation);
             }
           }
@@ -230,7 +230,7 @@ const stripe = {
           checkout_id, { expand: ['line_items.data','payment_intent','payment_intent.latest_charge'], },
           function(err, checkout) {
             if (err) {
-              console.info('['+bot.getTime('stamp')+'] [stripe.js] Error Fetching Checkout.', err.message);
+              console.info('['+utils.getTime('stamp')+'] [stripe.js] Error Fetching Checkout.', err.message);
               return resolve('ERROR');
             }
             else {
@@ -257,7 +257,7 @@ const stripe = {
           config.stripe.wh_secret
         );
       } catch (e) {
-        console.info("["+bot.getTime('stamp')+"] ⚠️  Webhook signature verification failed.", e);
+        console.info("["+utils.getTime('stamp')+"] ⚠️  Webhook signature verification failed.", e);
         return res.sendStatus(400);
       }
       data = event.data;
@@ -277,37 +277,37 @@ const stripe = {
 //   CUSTOMER CREATED
 //------------------------------------------------------------------------------
       case 'customer.created':
-        console.info('['+bot.getTime('stamp')+'] [stripe.js] Customer Created Webhook received for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
+        console.info('['+utils.getTime('stamp')+'] [stripe.js] Customer Created Webhook received for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
         dbuser = await database.fetchUser(data.object.description);
         if (!dbuser) {
           let saved = await database.runQuery(`INSERT INTO customers (user_id, user_name, email, stripe_data) VALUES (?, ?, ?, ?)`, [data.object.description, data.object.name, JSON.stringify(data.object)]);
           if (!saved) { 
-            console.info('['+bot.getTime('stamp')+'] [database.js] Database insert failure, logging Data for manual update and/or admin investigation.');
+            console.info('['+utils.getTime('stamp')+'] [database.js] Database insert failure, logging Data for manual update and/or admin investigation.');
             console.info('Data:', data);
             return;
           }
-          return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database record created for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
+          return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database record created for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
         }
         if (!dbuser.stripe_data || dbuser.stripe_data && dbuser.stripe_data.id != data.object.id) {
           let saved = await database.runQuery(`UPDATE customers SET stripe_data = ? WHERE user_id = ?`, [JSON.stringify(data.object), data.object.description]);
           if (!saved) { 
-            console.info('['+bot.getTime('stamp')+'] [database.js] Database update failure, logging Data for manual update and/or admin investigation.');
+            console.info('['+utils.getTime('stamp')+'] [database.js] Database update failure, logging Data for manual update and/or admin investigation.');
             console.info('Data:', data);
             return;
           }
-          return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database record created for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
+          return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database record created for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
         }
-        return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database record found with matching stripe info.');
+        return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database record found with matching stripe info.');
 
 //------------------------------------------------------------------------------
 //   CUSTOMER UPDATED
 //------------------------------------------------------------------------------
       case 'customer.updated':
-        console.info('['+bot.getTime('stamp')+'] [stripe.js] Customer Updated Webhook received for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
+        console.info('['+utils.getTime('stamp')+'] [stripe.js] Customer Updated Webhook received for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
         dbuser = await database.fetchUser(data.object.description, data.object.id);
         switch (true) {
-          case !dbuser: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
-          case !config.stripe.taxes.active: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Taxes are not active, nothing to change');
+          case !dbuser: return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+          case !config.stripe.taxes.active: return console.info('['+utils.getTime('stamp')+'] [stripe.js] Taxes are not active, nothing to change');
           default:
             if (data.previous_attributes.address && data.object.address && data.previous_attributes.address.state != data.object.address.state) {
               for (let t = 0; t < config.stripe.taxes.rate_maps.length; t++) {
@@ -321,17 +321,17 @@ const stripe = {
               return bot.sendEmbed(dbuser.user_name, dbuser.user_id, 'FF0000', '📋 Stripe Customer Changed Tax Jurisdiction.', 'Updated Tax information.', config.discord.log_channel);
             }
             else {
-              return console.info('['+bot.getTime('stamp')+'] [stripe.js] Tax jurisdiction same, nothing to change');
+              return console.info('['+utils.getTime('stamp')+'] [stripe.js] Tax jurisdiction same, nothing to change');
             }
         }
 //------------------------------------------------------------------------------
 //   CUSTOMER DELETED
 //------------------------------------------------------------------------------
       case 'customer.deleted':
-        console.info('['+bot.getTime('stamp')+'] [stripe.js] Customer Deleted Webhook received for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
+        console.info('['+utils.getTime('stamp')+'] [stripe.js] Customer Deleted Webhook received for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
         dbuser = await database.fetchUser(data.object.description, data.object.id);
         switch(true){
-          case !dbuser: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+          case !dbuser: return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
           default:
             if (dbuser.customer_type == 'subscriber' || dbuser.customer_type == 'pay-as-you-go') {
               if (config.service_zones.roles_enabled) { await database.updateZoneRoles(dbuser.user_id, '', 'all', 'remove'); }
@@ -344,9 +344,9 @@ const stripe = {
 //   CHECKOUT SESSION COMPLETED
 //------------------------------------------------------------------------------
       case 'checkout.session.completed':
-        console.info('['+bot.getTime('stamp')+'] [stripe.js] Checkout Session Completed Webhook received for '+data.object.customer);
+        console.info('['+utils.getTime('stamp')+'] [stripe.js] Checkout Session Completed Webhook received for '+data.object.customer);
         if (data.object.mode == 'setup') {
-          console.info('['+bot.getTime('stamp')+'] [stripe.js] StripeWall is not configured for setup type checkouts. If you get this message, please make a GitHub Report. Logging request.');
+          console.info('['+utils.getTime('stamp')+'] [stripe.js] StripeWall is not configured for setup type checkouts. If you get this message, please make a GitHub Report. Logging request.');
           return console.info(data);
         }
         customer = await stripe.customer.fetch(data.object.customer);
@@ -366,8 +366,8 @@ const stripe = {
           tax_info = '**(Fee: $'+parseFloat(fee_amount).toFixed(2)+', Tax: $'+tax_amount+')**';
         }
         switch(true){
-          case !dbuser: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
-          case !member: return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has left Guild during Checkout. Replay the webhook from your Stripe Dashboard after you deal with that.');
+          case !dbuser: return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+          case !member: return console.info('['+utils.getTime('stamp')+'] [stripe.js] User has left Guild during Checkout. Replay the webhook from your Stripe Dashboard after you deal with that.');
           default:
             total_spend = dbuser.total_spend + fee_amount;
             if (config.service_zones.votes_enabled) {
@@ -518,15 +518,15 @@ const stripe = {
 //   CHARGE SUCCEEDED
 //------------------------------------------------------------------------------
       case 'charge.succeeded':
-        console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Successful Charge webhook for '+data.object.customer);
+        console.info('['+utils.getTime('stamp')+'] [stripe.js] Received Successful Charge webhook for '+data.object.customer);
         setTimeout(async function() {
           customer = await stripe.customer.fetch(data.object.customer);
           dbuser = await database.fetchUser(customer.description);
           member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
           switch(true){
-            case !dbuser: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+            case !dbuser: return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
             case (data.object.calculated_statement_descriptor != config.stripe.service_product_descriptor && data.object.calculated_statement_descriptor != config.stripe.donation_product_descriptor):
-              console.info('['+bot.getTime('stamp')+'] [stripe.js] Charge webhook for '+data.object.customer+' is not in the bot scope. Logging request for review');
+              console.info('['+utils.getTime('stamp')+'] [stripe.js] Charge webhook for '+data.object.customer+' is not in the bot scope. Logging request for review');
               console.info(data);
               return bot.sendEmbed(dbuser.user_name, dbuser.user_id, '00FF00', 'Charge webhook for '+data.object.customer+' is not in the bot scope.', 'Logging request for review', config.discord.log_channel);
             default:
@@ -536,7 +536,7 @@ const stripe = {
                   if (charge.id == data.object.id) {
                     charge_list[i] = data.object;
                     charge_found = true;
-                    console.info('['+bot.getTime('stamp')+'] [stripe.js] Charge has been handled previously, likely checkout, updated record.');
+                    console.info('['+utils.getTime('stamp')+'] [stripe.js] Charge has been handled previously, likely checkout, updated record.');
                   }
                 });
                 if (!charge_found) { charge_list.splice(0, 0, data.object); }
@@ -547,7 +547,7 @@ const stripe = {
               if (!charge_found) {
                 if (data.object.calculated_statement_descriptor == config.stripe.service_product_descriptor) {
                   if (config.stripe.taxes.active) {
-                    if (dbuser.tax_rate === 0 || !dbuser.tax_rate) { return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has no tax rate but taxes enabled. Replay the webhook from your Stripe Dashboard after you deal with that.'); }
+                    if (dbuser.tax_rate === 0 || !dbuser.tax_rate) { return console.info('['+utils.getTime('stamp')+'] [stripe.js] User has no tax rate but taxes enabled. Replay the webhook from your Stripe Dashboard after you deal with that.'); }
                     fee_amount = Math.round(data.object.amount / (dbuser.tax_rate + 1));
                     tax_amount = (data.object.amount - fee_amount) / 100;
                     fee_amount = fee_amount / 100;
@@ -609,14 +609,14 @@ const stripe = {
 //   CHARGE REFUNDED
 //------------------------------------------------------------------------------
       case 'charge.refunded':
-        console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Charge Refund webhook for '+data.object.customer);
+        console.info('['+utils.getTime('stamp')+'] [stripe.js] Received Charge Refund webhook for '+data.object.customer);
         customer = await stripe.customer.fetch(data.object.customer);
         dbuser = await database.fetchUser(customer.description);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
         switch(true){
-          case !dbuser: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+          case !dbuser: return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
           case (data.object.calculated_statement_descriptor != config.stripe.service_product_descriptor && data.object.calculated_statement_descriptor != config.stripe.donation_product_descriptor):
-            console.info('['+bot.getTime('stamp')+'] [stripe.js] Charge refund webhook for '+data.object.customer+' is not in the bot scope. Logging request for review');
+            console.info('['+utils.getTime('stamp')+'] [stripe.js] Charge refund webhook for '+data.object.customer+' is not in the bot scope. Logging request for review');
             console.info(data);
             return bot.sendEmbed(dbuser.user_name, dbuser.user_id, '00FF00', 'Charge refund webhook for '+data.object.customer+' is not in the bot scope.', 'Logging request for review', config.discord.log_channel);
           default:
@@ -626,20 +626,20 @@ const stripe = {
                 if (charge.id == data.object.id) {
                   charge_list[i] = data.object;
                   charge_found = true;
-                  console.info('['+bot.getTime('stamp')+'] [stripe.js] Charge Refund id '+data.object.id+' for '+dbuser.user_name+', '+dbuser.user_id+', '+data.object.customer+' found, updated record. Admins should verify if any service or donation roles require removal, or status changed.');
+                  console.info('['+utils.getTime('stamp')+'] [stripe.js] Charge Refund id '+data.object.id+' for '+dbuser.user_name+', '+dbuser.user_id+', '+data.object.customer+' found, updated record. Admins should verify if any service or donation roles require removal, or status changed.');
                   bot.sendEmbed(dbuser.user_name, dbuser.user_id, '00FF00', 'Charge Refund id '+data.object.id+' for '+data.object.customer+' found, updated record.', 'Admins should verify if any service or donation roles require removal, or status changed.', config.discord.log_channel);
                 }
               });
             } 
             if (!charge_found) {
-              console.info('['+bot.getTime('stamp')+'] [stripe.js] Charge Refund id '+data.object.id+' for '+data.object.customer+' not found in user record. Logging request for review. Replay webhook from your Stripe Dashboard once you deal with it.');
+              console.info('['+utils.getTime('stamp')+'] [stripe.js] Charge Refund id '+data.object.id+' for '+data.object.customer+' not found in user record. Logging request for review. Replay webhook from your Stripe Dashboard once you deal with it.');
               console.info(data);
               return bot.sendEmbed(dbuser.user_name, dbuser.user_id, '00FF00', 'Charge Refund id '+data.object.id+' for '+data.object.customer+' not found in user record.', 'Logging request for review. Replay webhook from your Stripe Dashboard once you deal with it.', config.discord.log_channel);
             }
             else {
               if (data.object.calculated_statement_descriptor == config.stripe.service_product_descriptor) {
                 if (config.stripe.taxes.active) {
-                  if (dbuser.tax_rate === 0 || !dbuser.tax_rate) { return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has no tax rate but taxes enabled. Replay the webhook from your Stripe Dashboard after you deal with that.'); }
+                  if (dbuser.tax_rate === 0 || !dbuser.tax_rate) { return console.info('['+utils.getTime('stamp')+'] [stripe.js] User has no tax rate but taxes enabled. Replay the webhook from your Stripe Dashboard after you deal with that.'); }
                   fee_amount = Math.round(data.object.amount_refunded / (dbuser.tax_rate + 1));
                   tax_amount = (data.object.amount_refunded - fee_amount) / 100;
                   fee_amount = fee_amount / 100;
@@ -722,13 +722,13 @@ const stripe = {
 //   SUBSCRIPTION DELETED
 //------------------------------------------------------------------------------
       case 'customer.subscription.deleted':
-        console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Deleted Subcscription webhook for '+data.object.customer);
+        console.info('['+utils.getTime('stamp')+'] [stripe.js] Received Deleted Subcscription webhook for '+data.object.customer);
         customer = await stripe.customer.fetch(data.object.customer);
         dbuser = await database.fetchUser(customer.description);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
         switch(true){
-          case !dbuser: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
-          case !member: return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has left Guild');
+          case !dbuser: return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+          case !member: return console.info('['+utils.getTime('stamp')+'] [stripe.js] User has left Guild');
           default:
             cx_type = dbuser.customer_type;
             for (let i = 0; i < config.stripe.price_ids.length; i++) {
@@ -760,7 +760,7 @@ const stripe = {
 //   SUBSCRIPTION UPDATED
 //------------------------------------------------------------------------------
       case 'customer.subscription.updated':
-        console.info('['+bot.getTime('stamp')+'] [stripe.js] Received Updated Subcscription webhook for '+data.object.customer);
+        console.info('['+utils.getTime('stamp')+'] [stripe.js] Received Updated Subcscription webhook for '+data.object.customer);
         let subscription_type;
         for (let i = 0; i < config.stripe.price_ids.length; i++) {
           if (data.object.items.data[0].price.id == config.stripe.price_ids[i].id) {
@@ -776,10 +776,10 @@ const stripe = {
         dbuser = await database.fetchUser(customer.description);
         member = await bot.guilds.cache.get(config.discord.guild_id).members.cache.get(customer.description);
         switch (true) {
-          case !dbuser: return console.info('['+bot.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
-          case !member: return console.info('['+bot.getTime('stamp')+'] [stripe.js] User has left Guild');
+          case !dbuser: return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database Error, no user returned');
+          case !member: return console.info('['+utils.getTime('stamp')+'] [stripe.js] User has left Guild');
           case (data.object.status == "active" && data.previous_attributes.status == "incomplete"):
-            return console.info('['+bot.getTime('stamp')+'] [stripe.js] Provisioning handled by Checkout, Skipping');
+            return console.info('['+utils.getTime('stamp')+'] [stripe.js] Provisioning handled by Checkout, Skipping');
           case (!data.previous_attributes.cancel_at_period_end && data.object.cancel_at_period_end):
             database.runQuery(`UPDATE customers SET stripe_data = ? WHERE user_id = ?`, [JSON.stringify(customer), dbuser.user_id]);
             let cancel = new Date(data.object.cancel_at * 1000).toLocaleString(config.server.tz_locale, { timeZone: config.server.time_zone });
@@ -820,7 +820,7 @@ const stripe = {
             }
             else {
               database.runQuery(`UPDATE customers SET stripe_data = ? WHERE user_id = ?`, [JSON.stringify(customer), dbuser.user_id]);
-              return console.info('['+bot.getTime('stamp')+'] [stripe.js] Webhook for '+data.object.customer+' likely requires no action, saved customer object and logging:', data);
+              return console.info('['+utils.getTime('stamp')+'] [stripe.js] Webhook for '+data.object.customer+' likely requires no action, saved customer object and logging:', data);
             }
         } return;
     } return;
@@ -834,7 +834,9 @@ module.exports = stripe;
 bot = require(__dirname+'/bot.js');
 database = require(__dirname+'/database.js');
 maintenance = require(__dirname+'/maintenance.js');
+migration = require(__dirname+'/migration.js');
 oauth2 = require(__dirname+'/oauth2.js');
 qbo = require(__dirname+'/qbo.js');
 qboData = require(__dirname+'/qboData.js');
+utils = require(__dirname+'/utils.js');
 zones = require(__dirname+'/zones.js');
