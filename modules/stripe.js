@@ -95,7 +95,18 @@ const stripe = {
       let list = [];
       for await (const customer of stripe_js.customers.list({ limit: 100, expand: ['data.subscriptions', 'data.subscriptions.data.latest_invoice'] })) {
         list.push(customer);
-      } return list;
+      }
+      return list;
+    },
+//------------------------------------------------------------------------------
+//  LIST ALL CUSTOMER CHARGES
+//------------------------------------------------------------------------------
+    getCharges: async function (customer_id) {
+      let list = [];
+      for await (const charges of stripe_js.charges.list({ customer: customer_id, limit: 100 })) {
+        list.push(charges);
+      }
+      return list;
     }
   },
 //------------------------------------------------------------------------------
@@ -280,7 +291,7 @@ const stripe = {
         console.info('['+utils.getTime('stamp')+'] [stripe.js] Customer Created Webhook received for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
         dbuser = await database.fetchUser(data.object.description);
         if (!dbuser) {
-          let saved = await database.runQuery(`INSERT INTO customers (user_id, user_name, email, stripe_data) VALUES (?, ?, ?, ?)`, [data.object.description, data.object.name, JSON.stringify(data.object)]);
+          let saved = await database.runQuery(`INSERT INTO customers (user_id, user_name, email, stripe_data) VALUES (?, ?, ?, ?)`, [data.object.description, data.object.name, data.object.email, JSON.stringify(data.object)]);
           if (!saved) { 
             console.info('['+utils.getTime('stamp')+'] [database.js] Database insert failure, logging Data for manual update and/or admin investigation.');
             console.info('Data:', data);
@@ -295,7 +306,7 @@ const stripe = {
             console.info('Data:', data);
             return;
           }
-          return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database record created for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
+          return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database record updated for '+data.object.name+' ('+data.object.email+', '+data.object.description+', '+data.object.id+')');
         }
         return console.info('['+utils.getTime('stamp')+'] [stripe.js] Database record found with matching stripe info.');
 

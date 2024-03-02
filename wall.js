@@ -39,35 +39,38 @@ async function initialize() {
         console.info("["+utils.getTime("stamp")+"] [wall.js] Error Reading geojson source, terminating bot.");
         process.exit(4);
       }
-      geojson.features.forEach((feature, i) => {
-        setTimeout(async function() {
-          let data = [];
-          data[0] = feature.properties.name;
-          if (feature.properties.parent) {
-            data[1] = feature.properties.parent;
-          }
-          else {
-            data[1] = null;
-          }
-          if (feature.properties.img_url) {
-            data[2] = feature.properties.img_url;
-          }
-          else {
-            data[2] = null;
-          }
-          if (feature.properties.zone_roles) {
-            data[3] = JSON.stringify(feature.properties.zone_roles);
-          }
-          else {
-            data[3] = null;
-          }
-          let saved = await database.runQuery(`INSERT INTO service_zones (zone_name, parent_zone, img_url, zone_roles) VALUES (?, ?, ?, ?)`, data);
-          if (!saved) {
-            console.info("["+utils.getTime("stamp")+"] [wall.js] Error writing zone to database, terminating bot. Investigate any issues, clear table, and try again.");
-            process.exit(4);
-          }
-        }, 100 * i);
-      });
+      for (const feature of geojson.features) {
+        await new Promise(resolve => {
+          setTimeout(async () => {
+            let data = [];
+            data[0] = feature.properties.name;
+            if (feature.properties.parent) {
+              data[1] = feature.properties.parent;
+            }
+            else {
+              data[1] = null;
+            }
+            if (feature.properties.img_url) {
+              data[2] = feature.properties.img_url;
+            }
+            else {
+              data[2] = null;
+            }
+            if (feature.properties.zone_roles) {
+              data[3] = JSON.stringify(feature.properties.zone_roles);
+            }
+            else {
+              data[3] = null;
+            }
+            let saved = await database.runQuery(`INSERT INTO service_zones (zone_name, parent_zone, img_url, zone_roles) VALUES (?, ?, ?, ?)`, data);
+            if (!saved) {
+              console.info("["+utils.getTime("stamp")+"] [wall.js] Error writing zone to database, terminating bot. Investigate any issues, clear table, and try again.");
+              process.exit(4);
+            }
+            resolve();
+          }, config.maintenance.timeout);
+        });
+      };
     }
     else {
       console.info("["+utils.getTime("stamp")+"] [wall.js] Service Zone Table Present.");
@@ -82,7 +85,6 @@ async function initialize() {
   if (config.maintenance.on_startup) {
     console.info("["+utils.getTime("stamp")+"] [wall.js] Starting Maintenance Routines.");
     await maintenance.checkDetails();
-    console.log('await over')
   }
   console.info("["+utils.getTime("stamp")+"] [wall.js] Setting Maintenance Routine Schedule: "+config.maintenance.times);
   ontime({

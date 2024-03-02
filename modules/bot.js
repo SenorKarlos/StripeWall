@@ -133,7 +133,7 @@ bot.on('ready', () => {
 //------------------------------------------------------------------------------
 bot.initializeBot = async function () {
   console.info('['+utils.getTime('stamp')+'] [bot.js] Starting up the bot...');
-  bot.login(config.discord.bot_token);
+  await bot.login(config.discord.bot_token);
 }
 //------------------------------------------------------------------------------
 //  EXPORT BOT

@@ -60,6 +60,7 @@ const qbo = {
       qbo_js.createCustomer(body, function(e, customer) {
         if (e) {
           console.info('['+utils.getTime('stamp')+'] [qbo.js] QuickBooks function error: ', e);
+          console.info(e.Fault.Error[0]);
           return resolve(false);
         }
         else {
