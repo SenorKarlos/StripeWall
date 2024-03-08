@@ -40,6 +40,13 @@
     "guild_id": "000000000000000000",
     "lifetime_role": "",
     "inactive_lifetime_role": "",
+    "team_roles": [
+      {
+        "name": "",
+        "role_id": "",
+        "img_url": ""
+      }
+    ],
     "log_channel": "000000000000000000",
     "welcome_channel": "000000000000000000",
     "purchase_welcome": "Thank You For Your Purchase, %usertag%! First Time User? Return to your browser and vote for your service zones to gain full access! If you have closed it, [Click Here](%site_url%) and log in again!",

@@ -70,7 +70,7 @@ bot.assignRole = async function (server_id, user_id, role_id, username, access_t
       return false;
     }
   } 
-  if (!member.roles.cache.has(role_id)) {
+  if (!member.roles || !member.roles.cache.has(role_id)) {
     member.roles.add(role_id);
     console.info('['+utils.getTime('stamp')+'] [bot.js] Assigned the User a role.');
     return true;

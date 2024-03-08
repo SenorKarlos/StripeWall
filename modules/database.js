@@ -210,7 +210,7 @@ const database = {
     }
   },
   allocateVotes: async function(userid, allocations, percentage) {
-    result = await database.db.query(`SELECT customer_type, total_votes, zone_votes FROM customers WHERE user_id = ?`, [userid]);
+    result = await database.db.query(`SELECT total_votes, zone_votes FROM customers WHERE user_id = ?`, [userid]);
     if(result[0][0].zone_votes != null) {
       if (typeof allocations == "string") {
         allocations = JSON.parse(allocations);
@@ -281,7 +281,7 @@ const database = {
     let user_counts = [];
     user_counts[0] = { zone_name: "all_zones", count: 0, votes: 0 };
     let parent_counts = [];
-    result = await database.db.query(`SELECT user_id, customer_type, zone_votes FROM customers WHERE zone_votes IS NOT NULL AND customer_type <> 'inactive' AND customer_type <> 'lifetime-inactive'`, []);
+    result = await database.db.query(`SELECT user_id, customer_type, zone_votes FROM customers WHERE zone_votes IS NOT NULL`, []); //  AND customer_type <> 'inactive' AND customer_type <> 'lifetime-inactive'
     if (result[0][0]) {
       result = result[0];
       for (let i = 0; i < result.length; i++) {
@@ -349,9 +349,9 @@ const database = {
   },
   updateWorkerCalc: async function(workers = config.service_zones.workers) {
     let service_zones = await zones.getServiceZones();
-    service_zones.sort(function(a, b){return a.total_votes - b.total_votes}); // sort service_zones in ascending vote order
+    service_zones.sort(function(a, b){return a.total_votes - b.total_votes});
     let totalVotes = 0, voteCalc = 0, assigned = 0, remaining = workers, parents = [], children = [];
-    for (let z = 0; z < service_zones.length; z++) { // grab all zones vote total first from parents and sort into arrays
+    for (let z = 0; z < service_zones.length; z++) {
       if (service_zones[z].parent_zone == null) {
         totalVotes += service_zones[z].total_votes;
         let parentZone = { ...service_zones[z] }
@@ -366,39 +366,66 @@ const database = {
         children.push(childZone);
       }
     }
-    for (let i = 0; i < children.length; i++) { // loop children to update workers, respecting max
-      if (totalVotes === 0) { // if everything is empty, clear out remaining and skip calcs
+    for (let c = 0; c < children.length; c++) {
+      if (totalVotes === 0) {
         remaining = 0;
       }
-      else if (children[i].total_votes === 0) { // zero out empty voted zones
+      else if (children[c].total_votes === 0) {
         voteCalc = 0;
       }
-      else { // we have votes, do work
-        voteCalc = Math.round(children[i].total_votes * 100.0 / totalVotes) / 100;
-        voteCalc = Math.round(voteCalc * workers);
-        if (voteCalc < 1) { voteCalc = 1; } // protect low votes from 0 workers
-        remaining = remaining - voteCalc; // reduce remaining workers by calced amount
+      else {
+        voteCalc = children[c].total_votes / totalVotes;
+        voteCalc = Math.floor(voteCalc * workers);
+        if (voteCalc < 1) { voteCalc = 1; }
+        remaining = remaining - voteCalc;
       }
-      if (i == children.length-1) { // on last child
-        voteCalc = voteCalc + remaining; // clear any +/- workers from rounding and low zone protection - will always be on highest vote due to sort earlier
-      }
-      assigned = voteCalc + children[i].admin_worker_override;
-      service_zones[children[i].index].calc_workers = voteCalc;
-      service_zones[children[i].index].assigned_workers = assigned;
-      await zones.updateZone(children[i].zone_name, service_zones[children[i].index]);
-      database.db.query(`UPDATE service_zones SET calc_workers = ?, assigned_workers = ? WHERE zone_name = ?`, [voteCalc, assigned, children[i].zone_name]);
+      assigned = voteCalc + children[c].admin_worker_override;
+      service_zones[children[c].index].calc_workers = voteCalc;
+      service_zones[children[c].index].assigned_workers = assigned;
       for (let p = 0; p < parents.length; p++) {
-        if (children[i].parent_zone == parents[p].zone_name) { // push worker totals to parent totals
+        if (children[c].parent_zone == parents[p].zone_name) {
           parents[p].calc_workers += voteCalc;
           parents[p].assigned_workers += assigned;
         }
       }
     }
-    for (let p = 0; p < parents.length; p++) { // loop through parents to update counts in DB
+    if (remaining > 0) {
+      for (let c = children.length - 1; c >= 0 || remaining > 0; c--) {
+        voteCalc = Math.ceil(remaining * (children[c].total_votes / totalVotes));
+        if (voteCalc > remaining) { voteCalc = remaining; }
+        remaining = remaining - voteCalc;
+        service_zones[children[c].index].calc_workers += voteCalc;
+        service_zones[children[c].index].assigned_workers += voteCalc;
+        for (let p = 0; p < parents.length; p++) {
+          if (children[c].parent_zone == parents[p].zone_name) {
+            parents[p].calc_workers += voteCalc;
+            parents[p].assigned_workers += voteCalc;
+          }
+        }
+      }
+    }
+    else if (remaining < 0) {
+      for (let c = children.length - 1; c >= 0 || remaining < 0; c--) {
+        voteCalc = Math.floor(remaining * (children[c].total_votes / totalVotes));
+        if (voteCalc < remaining) { voteCalc = remaining; }
+        remaining = remaining - voteCalc;
+        service_zones[children[c].index].calc_workers += voteCalc;
+        service_zones[children[c].index].assigned_workers += voteCalc;
+        for (let p = 0; p < parents.length; p++) {
+          if (children[c].parent_zone == parents[p].zone_name) {
+            parents[p].calc_workers += voteCalc;
+            parents[p].assigned_workers += voteCalc;
+          }
+        }
+      }
+    }
+    for (let p = 0; p < parents.length; p++) {
       service_zones[parents[p].index].calc_workers = parents[p].calc_workers;
-      service_zones[parents[p].index].assigned_workers = parents[p].assigned_workers;
-      await zones.updateZone(parents[p].zone_name, service_zones[parents[p].index]);
-      database.db.query(`UPDATE service_zones SET calc_workers = ?, assigned_workers = ? WHERE zone_name = ?`, [parents[p].calc_workers, parents[p].assigned_workers, parents[p].zone_name]);
+      service_zones[parents[p].index].assigned_workers = parents[p].assigned_workers;      
+    }
+    for (let z = 0; z < service_zones.length; z++) {
+      await zones.updateZone(service_zones[z].zone_name, service_zones[z]);
+      database.db.query(`UPDATE service_zones SET calc_workers = ?, assigned_workers = ? WHERE zone_name = ?`, [service_zones[z].calc_workers, service_zones[z].assigned_workers, service_zones[z].zone_name]);
     }
   },
 //------------------------------------------------------------------------------

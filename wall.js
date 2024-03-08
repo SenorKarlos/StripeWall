@@ -291,6 +291,9 @@ function startServer() {
             req.session = null;
             return res.redirect(`/error`);
           }
+          if (!dbuser.qbo_data.PrimaryEmailAddr) {
+            dbuser.qbo_data.PrimaryEmailAddr = { Address: null };
+          }
           if (dbuser.email != dbuser.qbo_data.PrimaryEmailAddr.Address || dbuser.user_name != dbuser.qbo_data.GivenName || dbuser.user_name != dbuser.qbo_data.DisplayName || dbuser.user_name != dbuser.qbo_data.PrintOnCheckName) {
             try {
               dbuser.qbo_data.PrimaryEmailAddr.Address = dbuser.email;
