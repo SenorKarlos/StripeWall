@@ -8,6 +8,7 @@ CREATE TABLE `customers` (
 	`customer_type` VARCHAR(255) NOT NULL DEFAULT 'inactive' COLLATE 'utf8mb4_unicode_ci',
 	`terms_reviewed` VARCHAR(255) NULL DEFAULT 'false' COLLATE 'utf8mb4_unicode_ci',
 	`zones_reviewed` VARCHAR(255) NULL DEFAULT 'false' COLLATE 'utf8mb4_unicode_ci',
+	`team` VARCHAR(255) NULL DEFAULT 'false' COLLATE 'utf8mb4_unicode_ci',
 	`stripe_data` JSON NULL DEFAULT NULL,
 	`paygo_data` JSON NULL DEFAULT NULL,
 	`donation_data` JSON NULL DEFAULT NULL,
