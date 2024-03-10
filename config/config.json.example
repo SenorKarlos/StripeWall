@@ -89,7 +89,8 @@
       "cancel_url": "https://yourdomain.site/manage",
       "return_url": "https://yourdomain.site/manage",
       "zone_background": "radial-gradient(circle farthest-side, #fceabb, #f8b500)",
-      "zone_text":"black"
+      "zone_text":"black",
+      "team_color":"white"
     },
     "blocked": {
       "background": "https://i.imgur.com/uNBScc6.png",
