@@ -548,7 +548,7 @@ function startServer() {
 
   server.post("/manage", async function(req, res) {
     let userid = req.body.userid;
-    if(typeof req.body.oldTeam === 'undefined') { //changing votes
+    if (typeof req.body.oldTeam === 'undefined') { // changing votes
       let usertype = req.body.usertype;
       let selection = req.body.selection;
       let allocations = req.body.allocations;
@@ -557,11 +557,11 @@ function startServer() {
       let removeRoleLevel = req.body.remRoleLevel;
       let format = req.body.format;
       await database.updateZoneSelection(userid, selection, allocations, format);
-      if (format == 1) { //if user's format is set to automatic, start allocating votes.  
+      if (format == 1) { // if user's format is set to automatic, start allocating votes.  
         await database.allocateVotes(userid, allocations, percentage)
       }
-      if (usertype != 'inactive' && usertype != "lifetime-inactive" && config.service_zones.roles_enabled) { //adjust zone values only if active user
-        if (removeZone != '') { //removing a zone. Decrease total users from zone.
+      if (usertype != 'inactive' && usertype != "lifetime-inactive" && config.service_zones.roles_enabled) { // adjust zone values only if active user
+        if (removeZone != '') { // removing a zone. Decrease total users from zone.
           await database.updateZoneRoles(userid, selection, removeZone, 'remove', removeRoleLevel)
         }
         else {
@@ -569,27 +569,22 @@ function startServer() {
         }   
       }
     }
-    else  //changing teams
-    {
+    else { // changing teams
       let oldteam = req.body.oldTeam;
       let team = req.body.team;
-      teamRoles = config.discord.team_roles; //assign team role
-      for (let i = 0 ; i < teamRoles.length; i++) {
-        if(oldteam == teamRoles[i].name && oldteam != team) //team changed. Remove old team
-        {
+      teamRoles = config.discord.team_roles; // assign team role
+      for (let i = 0; i < teamRoles.length; i++) {
+        if(oldteam == teamRoles[i].name && oldteam != team) { // team changed. Remove old team
           bot.removeRole(config.discord.guild_id, req.session.discord_id, teamRoles[i].role_id, dbuser.user_name);
-          //console.log('removing ' + teamRoles[i].name);
+          console.info("["+utils.getTime("stamp")+"] [wall.js] Removing Team Role: "+teamRoles[i].name);
         }
-        if(team == teamRoles[i].name && oldteam != team)
-        {
+        if(team == teamRoles[i].name && oldteam != team) {
           bot.assignRole(config.discord.guild_id, req.session.discord_id, teamRoles[i].role_id, dbuser.user_name, dbuser.access_token);
-          //console.log('adding ' + teamRoles[i].name);
+          console.info("["+utils.getTime("stamp")+"] [wall.js] Adding Team Role: "+teamRoles[i].name);
         }
       }
       await database.runQuery("UPDATE customers SET team_role = ? WHERE user_id = ?", [team, userid]);
-    }
-    
-    
+    } 
     res.redirect('/manage');
   });
   //------------------------------------------------------------------------------
