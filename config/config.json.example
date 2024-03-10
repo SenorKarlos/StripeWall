@@ -85,7 +85,7 @@
       "donation_intro": "Donate below to increase votes and help maintain and improve services!",
       "active_life_intro": "Your services are currently activated. Press the button below to deactivate services.",
       "inactive_life_intro": "Your services are currently deactivated. Press the button below to reactivate services.",
-      "success_url": "https://yourdomain.site/manage",
+      "success_url": "https://yourdomain.site/login",
       "cancel_url": "https://yourdomain.site/manage",
       "return_url": "https://yourdomain.site/manage",
       "zone_background": "radial-gradient(circle farthest-side, #fceabb, #f8b500)",
