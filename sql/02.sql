@@ -1,1 +1,0 @@
-ALTER TABLE customers ADD COLUMN team_role VARCHAR(20) DEFAULT "";

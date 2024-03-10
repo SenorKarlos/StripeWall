@@ -541,7 +541,8 @@ function startServer() {
       zone_background: config.pages.manage.zone_background,
       zone_text: config.pages.manage.zone_text,
       team_roles: config.discord.team_roles,
-      team_color: config.pages.manage.team_color
+      team_intro: config.pages.manage.team_intro,
+      team_button_text: config.pages.manage.team_button_text
     });
   });
 

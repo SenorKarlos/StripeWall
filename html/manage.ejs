@@ -303,27 +303,27 @@
           <br>
           <br>      
           <div style="float:left; width: 100%">
-           <button onclick="submitVotes()">Confirm Votes</button>
+            <button onclick="submitVotes()">Confirm Votes</button>
             <br>
             <div style="clear: both;"></div> 
-              <% if(team_roles.length > 0) { %>
+            <% if(team_roles.length > 0) { %>
               <hr>
               <form method="POST">
                 <input type="hidden" name='userid' id='userid' value="<%= user_id %>">
                 <input type="hidden" name='oldTeam' id='oldTeam' value="<%= team %>">
-                <p><strong><font color="<%= text_color %>">Select Your Team</font></strong></p>
+                <p><strong><font color="<%= text_color %>"><%= team_intro %></font></strong></p>
                 <% for (let i = 0; i < team_roles.length; i++) {  %>
                   <label style="margin-right: 5px;">
                     <input type="radio" name="team" id="team_<%= team_roles[i].name %>" value="<%= team_roles[i].name %>" <%= (team == team_roles[i].name ? 'checked' : '') %>>
-                    <label style="color: <%= team_color %>" for="team_<%= team_roles[i].name %>"><%= team_roles[i].name %> [<img style="width:25px; height:25px;" src="<%= team_roles[i].img_url %>">]</label>
+                    <label style="color: <%= text_color %>" for="team_<%= team_roles[i].name %>"><%= team_roles[i].name %> <img style="width:25px; height:25px;" src="<%= team_roles[i].img_url %>"></label>
                   </label>
-                  <% } %>
-                    <br>
-                    <input type="submit" value="Confirm Team">
+                <% } %>
+                <br>
+                <input type="submit" value="<%= team_button_text %>">
               </form>
               <hr>
-              <% }
-             if (cx_type != 'lifetime-inactive' && cx_type != 'inactive') { %>
+            <% }
+            if (cx_type != 'lifetime-inactive' && cx_type != 'inactive') { %>
               <p><strong><font color="<%= text_color %>"><%= donation_intro %></font></strong></p>
               <form id="donateForm" action="/create-checkout-session" method="POST">
                 <select class="donateSelect" id="donate" name="donate">
